@@ -35,8 +35,12 @@ curl -fsSL https://release.smoothtechnology.work/install.sh | sudo bash
 **Windows** — dans PowerShell **en administrateur** :
 
 ```powershell
-irm https://release.smoothtechnology.work/install.ps1 | iex
+iex ([Text.Encoding]::UTF8.GetString((iwr https://release.smoothtechnology.work/install.ps1 -UseBasicParsing).RawContentStream.ToArray()))
 ```
+
+> Le décodage UTF-8 explicite évite l'affichage en « mojibake » de la bannière et
+> des accents (PowerShell 5.1 décode sinon la réponse en ISO-8859-1). Un simple
+> `irm … | iex` fonctionne aussi, mais l'affichage sera moins propre.
 
 L'installeur crée la base, patche l'`addons_path` et installe le méta-module
 `biodoo_attendance_suite` (sous Linux l'installation du module est automatique ;
