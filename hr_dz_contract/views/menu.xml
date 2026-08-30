@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Menu Contrats (versions avec employé) -->
+    <menuitem id="menu_hr_contracts"
+              name="Contrats"
+              parent="hr.menu_hr_root"
+              action="hr_contract_action"
+              sequence="10"
+              groups="hr.group_hr_user"/>
+
+    <!-- Menu Avenants -->
+    <menuitem id="menu_hr_contract_avenant"
+              name="Avenants"
+              parent="hr.menu_hr_root"
+              action="hr_contract_avenant_action"
+              sequence="15"
+              groups="hr.group_hr_user"/>
+
+    <!-- ================================================================
+         Configuration RH Algérie - Contrats
+         ================================================================ -->
+
+    <!-- Types de contrat -->
+    <menuitem id="menu_hr_contract_type"
+              name="Types de contrat"
+              parent="hr_dz_base.menu_hr_dz_config_root"
+              action="hr_contract_type_action"
+              sequence="60"/>
+
+    <!-- Modèles de contrat -->
+    <menuitem id="menu_hr_contract_modele"
+              name="Modèles de contrat"
+              parent="hr_dz_base.menu_hr_dz_config_root"
+              action="hr_contract_modele_action"
+              sequence="61"/>
+
+    <!-- Articles de contrat -->
+    <menuitem id="menu_hr_contract_article"
+              name="Articles de contrat"
+              parent="hr_dz_base.menu_hr_dz_config_root"
+              action="hr_contract_article_action"
+              sequence="62"/>
+
+    <!-- Types de primes -->
+    <menuitem id="menu_hr_prime_type"
+              name="Types de primes"
+              parent="hr_dz_base.menu_hr_dz_config_root"
+              action="action_hr_prime_type"
+              sequence="63"/>
+
+</odoo>

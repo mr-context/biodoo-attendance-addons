@@ -1,0 +1,493 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+
+        <!-- ================================================================== -->
+        <!-- ARTICLES DE CONTRAT - Clauses types                               -->
+        <!-- ================================================================== -->
+
+        <!-- Article 1: Duree du contrat CDI -->
+        <record id="article_cdi_duree" model="hr.contract.article">
+            <field name="name">Duree du contrat (CDI)</field>
+            <field name="code">CDI.DC</field>
+            <field name="content"><![CDATA[<p>Ce Contrat est conclu pour une <strong>Duree Indeterminee</strong>.</p>
+<p>Il entre en vigueur a compter du : <strong>[[date_debut]]</strong>.</p>
+<p>Il a ete conclu conformement aux dispositions legislatives en vigueur et celles du Reglement Interieur de l'Entreprise et en application des conditions ci-enumerees.</p>]]></field>
+        </record>
+
+        <!-- Article 2: Duree du contrat CDD -->
+        <record id="article_cdd_duree" model="hr.contract.article">
+            <field name="name">Duree du contrat (CDD)</field>
+            <field name="code">CDD.DC</field>
+            <field name="content"><![CDATA[<p>Ce Contrat est conclu pour une <strong>Duree Determinee</strong> de <strong>[[duree_contrat_mois]] mois</strong>.</p>
+<p>Il entre en vigueur a compter du : <strong>[[date_debut]]</strong> jusqu'au : <strong>[[date_fin]]</strong>.</p>
+<p>Il a ete conclu conformement aux dispositions legislatives en vigueur et celles du Reglement Interieur de l'Entreprise et en application des conditions ci-enumerees.</p>]]></field>
+        </record>
+
+        <!-- Article 3: Periode d'essai -->
+        <record id="article_periode_essai" model="hr.contract.article">
+            <field name="name">Periode d'essai</field>
+            <field name="code">COM.PE</field>
+            <field name="content"><![CDATA[<p>[[civilite]] [[employe]] est soumis(e), a compter de sa date de recrutement, a une periode d'essai de <strong>[[duree_essai]] mois</strong>.</p>
+<p>Cette periode d'essai peut etre renouvelee une fois conformement aux dispositions legislatives en vigueur.</p>
+<p>Au cours de cette periode et a tout moment, la relation de travail peut etre rompue par l'une ou l'autre partie sans indemnite et moyennant un preavis de 24 heures.</p>]]></field>
+        </record>
+
+
+        <!-- Article 4: Duree hebdomadaire du travail -->
+        <record id="article_duree_travail" model="hr.contract.article">
+            <field name="name">Duree Hebdomadaire du Travail</field>
+            <field name="code">COM.DHT</field>
+            <field name="content"><![CDATA[<p>[[civilite]] [[employe]] est recrute(e) dans le cadre d'un <strong>[[type_contrat]]</strong> a plein temps et accompli un travail hebdomadaire reparti sur cinq (05) jours de travail minimum.</p>
+<p>Les horaires de travail sont fixes par l'employeur ; ils sont repartis dans la semaine en fonction des necessites de service sans que l'amplitude journaliere ne puisse exceder 12 heures dans une meme journee.</p>
+<p>Lorsque l'organisation du travail et les necessites de service l'imposent, le personnel est planifie pour travailler les jours de repos en respectant les articles de la loi 90-11 relatifs au travail poste et les heures supplementaires.</p>]]></field>
+        </record>
+
+        <!-- Article 5: Poste de travail et qualification -->
+        <record id="article_poste_travail" model="hr.contract.article">
+            <field name="name">Poste de Travail et Qualification</field>
+            <field name="code">COM.PTQ</field>
+            <field name="content"><![CDATA[<p>L'Entreprise s'engage a recruter [[civilite]] [[employe]] au poste de travail de <strong>[[poste]]</strong> pour execution des missions inherentes a son poste de travail.</p>
+<p>Dans les limites fixees par la legislation du travail, l'employeur fixe les normes, cadences, rythmes et tous autres prescriptions normatives de travail liees aux objectifs de la production et aux performances de productivite planifiees par l'entreprise.</p>
+<p>Le salarie declare souscrire a ces normes et en cas de refus reconnait a l'employeur le droit de considerer ce motif pour fonder la resiliation du present contrat.</p>]]></field>
+        </record>
+
+        <!-- Article 6: Lieu de travail -->
+        <record id="article_lieu_travail" model="hr.contract.article">
+            <field name="name">Lieu de Travail</field>
+            <field name="code">COM.LT</field>
+            <field name="content"><![CDATA[<p>[[civilite]] [[employe]] s'engage a executer les travaux et les missions sur le lieu de son recrutement ou ailleurs pour tous travaux designes par l'Entreprise.</p>]]></field>
+        </record>
+
+        <!-- Article 7: Assiduite -->
+        <record id="article_assiduite" model="hr.contract.article">
+            <field name="name">Assiduite</field>
+            <field name="code">COM.ASD</field>
+            <field name="content"><![CDATA[<p>[[civilite]] [[employe]] s'engage au respect total du Reglement Interieur, des procedures et regles internes de l'Entreprise.</p>]]></field>
+        </record>
+
+        <!-- Article 8: Obligations -->
+        <record id="article_obligations" model="hr.contract.article">
+            <field name="name">Obligations</field>
+            <field name="code">COM.OBL</field>
+            <field name="content"><![CDATA[<p>[[civilite]] [[employe]] s'engage a respecter le contenu du present contrat et le contenu du Reglement Interieur de [[societe]] dont un exemplaire lui est remis personnellement.</p>
+<p>Il/Elle s'engage a mettre en oeuvre le contenu de la fiche de fonction du poste occupe et accepte toute actualisation eventuelle de cette fiche.</p>
+<p>Il/Elle s'engage par ailleurs a appliquer toutes notes, directives et instructions de sa hierarchie directe et de la Direction de [[societe]].</p>]]></field>
+        </record>
+
+        <!-- Article 9: Remuneration -->
+        <record id="article_remuneration" model="hr.contract.article">
+            <field name="name">Remuneration</field>
+            <field name="code">COM.REM</field>
+            <field name="content"><![CDATA[<p>[[civilite]] [[employe]] percevra :</p>
+<ul>
+    <li>Un Salaire de base de <strong>[[salaire]] Dinars Algeriens</strong></li>
+    <li>Prime(s) et indemnite(s) liee(s) au poste selon la grille en vigueur</li>
+</ul>]]></field>
+        </record>
+
+        <!-- Article 10: Clause de mobilite -->
+        <record id="article_mobilite" model="hr.contract.article">
+            <field name="name">Clause de Mobilite</field>
+            <field name="code">COM.CM</field>
+            <field name="content"><![CDATA[<p>[[civilite]] [[employe]] s'engage a accepter d'etre affecte successivement et autant que les besoins de service le commanderont, a toute entite de [[societe]] implantee dans la wilaya de travail convenue lors du recrutement.</p>
+<p>Il est expressement convenu par les parties que le refus de rejoindre une affectation vaudra demission du salarie.</p>]]></field>
+        </record>
+
+        <!-- Article 11: Conge annuel -->
+        <record id="article_conge_annuel" model="hr.contract.article">
+            <field name="name">Conge Annuel</field>
+            <field name="code">COM.CA</field>
+            <field name="content"><![CDATA[<p>Le Travailleur aura droit a un conge annuel de <strong>02 jours et demi par mois</strong> de service effectif, le droit de jouissance au conge etant acquis apres une duree de service effectif egale a douze (12) mois.</p>]]></field>
+        </record>
+
+        <!-- Article 12: Conge technique -->
+        <record id="article_conge_technique" model="hr.contract.article">
+            <field name="name">Conge Technique</field>
+            <field name="code">COM.CT</field>
+            <field name="content"><![CDATA[<p>En cas de defaut de plan de charge ou de difficulte economique grave, l'employeur se reserve le droit de recourir successivement et par ordre chronologique :</p>
+<ul>
+    <li>A la mise en conge d'office du salarie a concurrence de ses droits a conge annuel a la date consideree</li>
+    <li>A la mise en conge anticipe a valoir sur les droits a conge annuel de l'exercice suivant</li>
+    <li>A la mise en arret technique du salarie qui correspond a une suspension de la relation de travail</li>
+</ul>
+<p>Les periodes de suspension pour arret technique peuvent donner lieu ensuite a leur recuperation en jours travailles etales sur les mois qui suivent la reprise selon les besoins et objectifs de l'entreprise.</p>]]></field>
+        </record>
+
+        <!-- Article 13: Confidentialite et secret professionnel -->
+        <record id="article_confidentialite" model="hr.contract.article">
+            <field name="name">Confidentialite et Secret Professionnel</field>
+            <field name="code">COM.CSP</field>
+            <field name="content"><![CDATA[<p>[[civilite]] [[employe]] est, pendant toute la duree d'exercice et au cours des six (06) mois suivant la fin de sa relation de travail, tenu par le secret professionnel relatif aux donnees et informations concernant [[societe]].</p>
+<p>La confidentialite la plus stricte devra etre observee quant aux donnees economiques et financieres dont il/elle aura traite ou eu connaissance ainsi qu'aux methodes et aux politiques financieres, commerciales, techniques et de tous ordres de l'Entreprise.</p>]]></field>
+        </record>
+
+        <!-- Article 14: Exclusivite -->
+        <record id="article_exclusivite" model="hr.contract.article">
+            <field name="name">Exclusivite</field>
+            <field name="code">COM.EXC</field>
+            <field name="content"><![CDATA[<p>[[civilite]] [[employe]] s'engage a se consacrer entierement et exclusivement a ses missions au sein de [[societe]] et s'interdit l'exercice d'activites lucratives ou remunerees en dehors de taches d'enseignement ou d'activites de production d'oeuvres a caractere artistique et culturel, litteraires et scientifiques.</p>
+<p>Tout autre engagement en qualite de membre adherent, actif ou dirigeant dans tout mouvement associatif fait obligatoirement l'objet d'une declaration expresse ecrite a l'employeur qui se reserve le droit d'en apprecier la compatibilite avec les interets de l'Entreprise.</p>]]></field>
+        </record>
+
+        <!-- Article 15: Conflit d'interets -->
+        <record id="article_conflit_interets" model="hr.contract.article">
+            <field name="name">Conflit d'interets</field>
+            <field name="code">COM.CI</field>
+            <field name="content"><![CDATA[<p>[[civilite]] [[employe]] s'engage a ne pas avoir d'interets directs ou indirects dans une Entreprise ou Societe concurrente, cliente ou sous-traitante ou fournisseur de [[societe]].</p>]]></field>
+        </record>
+
+        <!-- Article 16: Formations -->
+        <record id="article_formations" model="hr.contract.article">
+            <field name="name">Formations</field>
+            <field name="code">COM.FOR</field>
+            <field name="content"><![CDATA[<p>Dans le cadre de ses activites, l'entreprise dispense des formations metier specialisees relatives a l'utilisation de certaines machines, equipements, procedes de production et toutes autres formations specialisees relatives a son coeur de metier.</p>
+<p>L'employe beneficiant d'une formation specialisee s'engage a renoncer a son droit de demission pendant une periode de <strong>06 mois revolus minimum</strong>, a compter de son retour de formation. Un contrat de fidelite sera etabli en amont.</p>
+<p>Le refus de se conformer a la formation professionnelle specialisee necessaire a l'execution des taches inherentes a sa fonction sera considere comme un motif de rupture unilaterale du present contrat de travail a l'initiative de l'employe.</p>]]></field>
+        </record>
+
+        <!-- Article 17: Assurance sociale -->
+        <record id="article_assurance_sociale" model="hr.contract.article">
+            <field name="name">Assurance Sociale</field>
+            <field name="code">COM.AS</field>
+            <field name="content"><![CDATA[<p>L'Entreprise procede a l'affiliation de [[civilite]] [[employe]] aupres du regime de la Securite Sociale en vigueur (CNAS).</p>]]></field>
+        </record>
+
+        <!-- Article 18: Comportement -->
+        <record id="article_comportement" model="hr.contract.article">
+            <field name="name">Comportement</field>
+            <field name="code">COM.CMP</field>
+            <field name="content"><![CDATA[<p>[[civilite]] [[employe]] s'engage en outre a observer un comportement irreprochable respectueux des lois et des bonnes moeurs y compris en dehors des locaux de l'Entreprise, de maniere a ne porter en aucune maniere atteinte au bon renom de [[societe]].</p>]]></field>
+        </record>
+
+        <!-- Article 19: Revision du contrat -->
+        <record id="article_revision" model="hr.contract.article">
+            <field name="name">Revision du Contrat</field>
+            <field name="code">COM.RC</field>
+            <field name="content"><![CDATA[<p>Le contrat est revise automatiquement lorsque le stipulent la loi, le reglement, les conventions collectives sur les bases d'une grande efficacite par celles enoncees precedemment sous toutes reserves des dispositions de la loi 90/11 en date du 21.04.1990 (modifiee et completee).</p>
+<p>Le contrat peut etre revise en commun accord des deux parties.</p>]]></field>
+        </record>
+
+        <!-- Article 20: Rupture du contrat -->
+        <record id="article_rupture" model="hr.contract.article">
+            <field name="name">Rupture du Contrat de Travail</field>
+            <field name="code">COM.RCT</field>
+            <field name="content"><![CDATA[<p>Il est possible de resilier ce contrat dans le cadre des conditions et des formes prescrites par la legislation du travail, comme il peut l'etre dans l'un des cas cites dans la loi 90/11 du 21.04.1990 (modifiee et completee) et conformement aux procedures internes de l'entreprise.</p>]]></field>
+        </record>
+
+        <!-- Article 21: Rupture a l'initiative du salarie -->
+        <record id="article_demission" model="hr.contract.article">
+            <field name="name">Rupture a l'initiative du salarie</field>
+            <field name="code">COM.DEM</field>
+            <field name="content"><![CDATA[<p>Si la relation de travail est rompue, pour convenance personnelle, par la volonte de [[civilite]] [[employe]], celui-ci est tenu d'observer a l'occasion de sa demission, une periode de preavis de :</p>
+<ul>
+    <li><strong>15 jours</strong> pour les postes d'execution</li>
+    <li><strong>15 jours</strong> pour les postes de maitrise</li>
+    <li><strong>90 jours</strong> pour les postes de cadre moyen et superieur</li>
+</ul>
+<p>Le decompte de cette duree commence a compter de sa date d'enregistrement. L'employeur peut toutefois et sans obligation d'en notifier le motif, ecourter a sa convenance cette periode de preavis.</p>
+<p>En cas de demission, le salarie s'engage a operer une passation de consignes en bonne et due forme.</p>]]></field>
+        </record>
+
+        <!-- Article 22: Rupture pour faute grave -->
+        <record id="article_faute_grave" model="hr.contract.article">
+            <field name="name">Rupture pour Faute Grave</field>
+            <field name="code">COM.FG</field>
+            <field name="content"><![CDATA[<p>[[societe]] se reserve le droit de resilier le present contrat en cas de manquement grave de [[civilite]] [[employe]] a ses obligations contractuelles, et notamment le non respect des obligations particulieres fixees au present contrat, de comportement fautif ou frauduleux constituant faute grave.</p>
+<p>L'appreciation de tels eventuels manquements est assujettie a l'application de la procedure prevue par le reglement interieur, a l'audition du salarie et a l'avis pris du responsable hierarchique.</p>
+<p>La rupture pour faute grave ou manquement grave a ses obligations par le salarie, n'ouvre droit, ni a un preavis, ni a aucune indemnite.</p>]]></field>
+        </record>
+
+        <!-- Article 23: Prejudice eventuel -->
+        <record id="article_prejudice" model="hr.contract.article">
+            <field name="name">Prejudice Eventuel</field>
+            <field name="code">COM.PRE</field>
+            <field name="content"><![CDATA[<p>La resiliation du present contrat pour les motifs prevus aux articles ci-dessus n'exclut pas reparation de tout prejudice eventuellement subi par [[societe]].</p>
+<p>Cette reparation est alors fixee a l'amiable ou en cas de desaccord, par voie de procedure de justice appropriee devant les tribunaux competents.</p>]]></field>
+        </record>
+
+        <!-- Article 24: Quitus de depart -->
+        <record id="article_quitus" model="hr.contract.article">
+            <field name="name">Quitus de Depart</field>
+            <field name="code">COM.QUI</field>
+            <field name="content"><![CDATA[<p>Quel qu'en soit le motif et quel que soit l'initiateur (employeur ou salarie) de la rupture de la relation de travail, le solde de tout compte n'est delivre qu'apres que [[civilite]] [[employe]] ait respecte les conditions suivantes et recu le formulaire de quitus de depart dument signe :</p>
+<ul>
+    <li>Passation de consigne par ecrit avec la personne designee par l'employeur</li>
+    <li>Restitution de tout materiel, equipement ou document en possession du salarie dans le cadre de l'execution de ses fonctions</li>
+</ul>]]></field>
+        </record>
+
+        <!-- Article 25: Dispositions finales -->
+        <record id="article_dispositions_finales" model="hr.contract.article">
+            <field name="name">Dispositions Finales</field>
+            <field name="code">COM.DF</field>
+            <field name="content"><![CDATA[<p>Pour tout differend ne de l'execution du present contrat, les deux parties s'engagent a rechercher en premier lieu un reglement amiable et conviennent de recourir a la transaction (en reference aux articles 459 et suivants du code civil) pour terminer une contestation nee ou prevenir une contestation a naitre.</p>
+<p>Les termes de la transaction font alors l'objet d'un contrat. En cas de litige persistant, le differend est porte devant le tribunal territorialement competent.</p>]]></field>
+        </record>
+
+        <!-- ================================================================== -->
+        <!-- MODELES DE CONTRAT                                                -->
+        <!-- ================================================================== -->
+
+        <!-- Modele CDI -->
+        <record id="modele_cdi" model="hr.contract.modele">
+            <field name="name">Contrat a Duree Indeterminee (CDI)</field>
+            <field name="contract_type_id" ref="hr_dz_contract.contract_type_cdi"/>
+        </record>
+
+        <!-- Modele CDD -->
+        <record id="modele_cdd" model="hr.contract.modele">
+            <field name="name">Contrat a Duree Determinee (CDD)</field>
+            <field name="contract_type_id" ref="hr_dz_contract.contract_type_cdd"/>
+        </record>
+
+        <!-- ================================================================== -->
+        <!-- ARTICLES DU MODELE CDI                                            -->
+        <!-- ================================================================== -->
+        <record id="modele_cdi_line_01" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_cdi_duree"/>
+            <field name="sequence">10</field>
+        </record>
+        <record id="modele_cdi_line_02" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_periode_essai"/>
+            <field name="sequence">20</field>
+        </record>
+        <record id="modele_cdi_line_03" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_duree_travail"/>
+            <field name="sequence">30</field>
+        </record>
+        <record id="modele_cdi_line_04" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_poste_travail"/>
+            <field name="sequence">40</field>
+        </record>
+        <record id="modele_cdi_line_05" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_lieu_travail"/>
+            <field name="sequence">50</field>
+        </record>
+        <record id="modele_cdi_line_06" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_assiduite"/>
+            <field name="sequence">60</field>
+        </record>
+        <record id="modele_cdi_line_07" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_obligations"/>
+            <field name="sequence">70</field>
+        </record>
+        <record id="modele_cdi_line_08" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_remuneration"/>
+            <field name="sequence">80</field>
+        </record>
+        <record id="modele_cdi_line_09" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_mobilite"/>
+            <field name="sequence">90</field>
+        </record>
+        <record id="modele_cdi_line_10" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_conge_annuel"/>
+            <field name="sequence">100</field>
+        </record>
+        <record id="modele_cdi_line_11" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_conge_technique"/>
+            <field name="sequence">110</field>
+        </record>
+        <record id="modele_cdi_line_12" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_confidentialite"/>
+            <field name="sequence">120</field>
+        </record>
+        <record id="modele_cdi_line_13" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_exclusivite"/>
+            <field name="sequence">130</field>
+        </record>
+        <record id="modele_cdi_line_14" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_conflit_interets"/>
+            <field name="sequence">140</field>
+        </record>
+        <record id="modele_cdi_line_15" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_formations"/>
+            <field name="sequence">150</field>
+        </record>
+        <record id="modele_cdi_line_16" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_assurance_sociale"/>
+            <field name="sequence">160</field>
+        </record>
+        <record id="modele_cdi_line_17" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_comportement"/>
+            <field name="sequence">170</field>
+        </record>
+        <record id="modele_cdi_line_18" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_revision"/>
+            <field name="sequence">180</field>
+        </record>
+        <record id="modele_cdi_line_19" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_rupture"/>
+            <field name="sequence">190</field>
+        </record>
+        <record id="modele_cdi_line_20" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_demission"/>
+            <field name="sequence">200</field>
+        </record>
+        <record id="modele_cdi_line_21" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_faute_grave"/>
+            <field name="sequence">210</field>
+        </record>
+        <record id="modele_cdi_line_22" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_prejudice"/>
+            <field name="sequence">220</field>
+        </record>
+        <record id="modele_cdi_line_23" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_quitus"/>
+            <field name="sequence">230</field>
+        </record>
+        <record id="modele_cdi_line_24" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdi"/>
+            <field name="article_id" ref="article_dispositions_finales"/>
+            <field name="sequence">240</field>
+        </record>
+
+        <!-- ================================================================== -->
+        <!-- ARTICLES DU MODELE CDD                                            -->
+        <!-- ================================================================== -->
+        <record id="modele_cdd_line_01" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_cdd_duree"/>
+            <field name="sequence">10</field>
+        </record>
+        <record id="modele_cdd_line_02" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_periode_essai"/>
+            <field name="sequence">20</field>
+        </record>
+        <record id="modele_cdd_line_03" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_duree_travail"/>
+            <field name="sequence">30</field>
+        </record>
+        <record id="modele_cdd_line_04" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_poste_travail"/>
+            <field name="sequence">40</field>
+        </record>
+        <record id="modele_cdd_line_05" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_lieu_travail"/>
+            <field name="sequence">50</field>
+        </record>
+        <record id="modele_cdd_line_06" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_assiduite"/>
+            <field name="sequence">60</field>
+        </record>
+        <record id="modele_cdd_line_07" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_obligations"/>
+            <field name="sequence">70</field>
+        </record>
+        <record id="modele_cdd_line_08" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_remuneration"/>
+            <field name="sequence">80</field>
+        </record>
+        <record id="modele_cdd_line_09" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_mobilite"/>
+            <field name="sequence">90</field>
+        </record>
+        <record id="modele_cdd_line_10" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_conge_annuel"/>
+            <field name="sequence">100</field>
+        </record>
+        <record id="modele_cdd_line_11" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_conge_technique"/>
+            <field name="sequence">110</field>
+        </record>
+        <record id="modele_cdd_line_12" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_confidentialite"/>
+            <field name="sequence">120</field>
+        </record>
+        <record id="modele_cdd_line_13" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_exclusivite"/>
+            <field name="sequence">130</field>
+        </record>
+        <record id="modele_cdd_line_14" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_conflit_interets"/>
+            <field name="sequence">140</field>
+        </record>
+        <record id="modele_cdd_line_15" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_formations"/>
+            <field name="sequence">150</field>
+        </record>
+        <record id="modele_cdd_line_16" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_assurance_sociale"/>
+            <field name="sequence">160</field>
+        </record>
+        <record id="modele_cdd_line_17" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_comportement"/>
+            <field name="sequence">170</field>
+        </record>
+        <record id="modele_cdd_line_18" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_revision"/>
+            <field name="sequence">180</field>
+        </record>
+        <record id="modele_cdd_line_19" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_rupture"/>
+            <field name="sequence">190</field>
+        </record>
+        <record id="modele_cdd_line_20" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_demission"/>
+            <field name="sequence">200</field>
+        </record>
+        <record id="modele_cdd_line_21" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_faute_grave"/>
+            <field name="sequence">210</field>
+        </record>
+        <record id="modele_cdd_line_22" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_prejudice"/>
+            <field name="sequence">220</field>
+        </record>
+        <record id="modele_cdd_line_23" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_quitus"/>
+            <field name="sequence">230</field>
+        </record>
+        <record id="modele_cdd_line_24" model="hr.contract.modele.article.line">
+            <field name="modele_id" ref="modele_cdd"/>
+            <field name="article_id" ref="article_dispositions_finales"/>
+            <field name="sequence">240</field>
+        </record>
+
+    </data>
+</odoo>

@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Report Action -->
+    <record id="action_report_avenant" model="ir.actions.report">
+        <field name="name">Avenant au contrat</field>
+        <field name="model">hr.contract.avenant</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">hr_dz_contract.report_avenant_document</field>
+        <field name="report_file">hr_dz_contract.report_avenant_document</field>
+        <field name="print_report_name">'Avenant_%s_%s' % (object.name or '', object.employee_id.name)</field>
+        <field name="binding_model_id" ref="model_hr_contract_avenant"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- Report Template -->
+    <template id="report_avenant_document">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="avenant">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <style>
+                            .avenant-title {
+                                text-align: center;
+                                font-size: 20px;
+                                font-weight: bold;
+                                margin: 30px 0;
+                                text-transform: uppercase;
+                            }
+                            .avenant-body {
+                                font-size: 12px;
+                                line-height: 1.8;
+                                text-align: justify;
+                            }
+                            .avenant-article {
+                                margin: 15px 0;
+                            }
+                            .avenant-signature {
+                                margin-top: 50px;
+                            }
+                        </style>
+
+                        <!-- En-tête -->
+                        <div class="row mb-4">
+                            <div class="col-6">
+                                <p>
+                                    <strong>Réf:</strong> <span t-field="avenant.name"/>
+                                </p>
+                                <p>
+                                    <strong>Contrat:</strong> <span t-field="avenant.version_id.contract_reference"/>
+                                </p>
+                            </div>
+                            <div class="col-6 text-end">
+                                <p>
+                                    <span t-field="avenant.company_id.city"/>, le
+                                    <span t-field="avenant.date_etablissement" t-options="{'format': 'dd/MM/yyyy'}"/>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Titre -->
+                        <h1 class="avenant-title">
+                            AVENANT AU CONTRAT DE TRAVAIL
+                        </h1>
+
+                        <!-- Corps -->
+                        <div class="avenant-body">
+                            <p><strong>Entre les soussignés :</strong></p>
+
+                            <p class="avenant-article">
+                                <strong t-field="avenant.company_id.name"/>,
+                                représentée par son Directeur Général,<br/>
+                                Ci-après dénommée <strong>« L'Employeur »</strong>,
+                            </p>
+
+                            <p style="text-align: center; margin: 20px 0;"><strong>ET</strong></p>
+
+                            <p class="avenant-article">
+                                <t t-if="avenant.employee_id.civilite_id">
+                                    <span t-field="avenant.employee_id.civilite_id.name"/>
+                                </t>
+                                <strong t-field="avenant.employee_id.name"/>,
+                                employé(e) en qualité de <span t-field="avenant.version_id.job_id.name"/>,<br/>
+                                Ci-après dénommé(e) <strong>« L'Employé(e) »</strong>,
+                            </p>
+
+                            <p style="margin: 25px 0;">
+                                <strong>Vu</strong> le contrat de travail en date du
+                                <span t-field="avenant.version_id.contract_date_start" t-options="{'format': 'dd/MM/yyyy'}"/>,
+                            </p>
+
+                            <p style="text-align: center; margin: 20px 0;">
+                                <strong>IL A ÉTÉ CONVENU CE QUI SUIT :</strong>
+                            </p>
+
+                            <!-- Modification de salaire -->
+                            <t t-if="avenant.avenant_type == 'wage'">
+                                <div class="avenant-article">
+                                    <p><strong>Article 1 - Modification de la rémunération</strong></p>
+                                    <p>
+                                        À compter du <strong t-field="avenant.date_effet" t-options="{'format': 'dd/MM/yyyy'}"/>,
+                                        la rémunération mensuelle de l'Employé(e) est portée de
+                                        <strong t-field="avenant.old_wage"/> DA
+                                        à <strong t-field="avenant.new_wage"/> DA.
+                                    </p>
+                                </div>
+                            </t>
+
+                            <!-- Changement de poste -->
+                            <t t-if="avenant.avenant_type == 'job'">
+                                <div class="avenant-article">
+                                    <p><strong>Article 1 - Changement de poste</strong></p>
+                                    <p>
+                                        À compter du <strong t-field="avenant.date_effet" t-options="{'format': 'dd/MM/yyyy'}"/>,
+                                        l'Employé(e) exercera les fonctions de
+                                        <strong t-field="avenant.new_job_id.name"/>
+                                        <t t-if="avenant.new_department_id">
+                                            au sein du département <span t-field="avenant.new_department_id.name"/>
+                                        </t>,
+                                        en lieu et place de son poste précédent de
+                                        <span t-field="avenant.old_job_id.name"/>.
+                                    </p>
+                                </div>
+                            </t>
+
+                            <!-- Modification d'horaire -->
+                            <t t-if="avenant.avenant_type == 'schedule'">
+                                <div class="avenant-article">
+                                    <p><strong>Article 1 - Modification des horaires</strong></p>
+                                    <p>
+                                        À compter du <strong t-field="avenant.date_effet" t-options="{'format': 'dd/MM/yyyy'}"/>,
+                                        l'Employé(e) sera soumis(e) à l'horaire
+                                        <strong t-field="avenant.new_resource_calendar_id.name"/>
+                                        en lieu et place de l'horaire précédent
+                                        (<span t-field="avenant.old_resource_calendar_id.name"/>).
+                                    </p>
+                                </div>
+                            </t>
+
+                            <!-- Autre -->
+                            <t t-if="avenant.avenant_type in ('other', 'renewal', 'workplace')">
+                                <div class="avenant-article">
+                                    <p><strong>Article 1 - Objet de l'avenant</strong></p>
+                                    <p t-field="avenant.reason"/>
+                                </div>
+                            </t>
+
+                            <!-- Clauses additionnelles -->
+                            <t t-if="avenant.notes">
+                                <div class="avenant-article">
+                                    <p><strong>Article 2 - Dispositions particulières</strong></p>
+                                    <div t-field="avenant.notes"/>
+                                </div>
+                            </t>
+
+                            <!-- Article final -->
+                            <div class="avenant-article">
+                                <p><strong>Article <t t-if="avenant.notes">3</t><t t-else="">2</t> - Maintien des autres clauses</strong></p>
+                                <p>
+                                    Les autres clauses et conditions du contrat de travail initial
+                                    demeurent inchangées et continuent à produire leurs effets.
+                                </p>
+                            </div>
+
+                            <p style="margin-top: 25px;">
+                                Fait en deux exemplaires originaux, à
+                                <span t-field="avenant.company_id.city"/>,
+                                le <span t-field="avenant.date_etablissement" t-options="{'format': 'dd/MM/yyyy'}"/>.
+                            </p>
+
+                            <!-- Signatures -->
+                            <div class="avenant-signature">
+                                <div class="row">
+                                    <div class="col-6 text-center">
+                                        <p><strong>L'Employeur</strong></p>
+                                        <p style="margin-top: 60px;">(Signature et cachet)</p>
+                                    </div>
+                                    <div class="col-6 text-center">
+                                        <p><strong>L'Employé(e)</strong></p>
+                                        <p style="margin-top: 60px;">(Signature précédée de « Lu et approuvé »)</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+</odoo>

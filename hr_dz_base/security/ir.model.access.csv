@@ -1,0 +1,13 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_hr_legal_parameter_user,hr.legal.parameter.user,model_hr_legal_parameter,hr.group_hr_user,1,0,0,0
+access_hr_legal_parameter_manager,hr.legal.parameter.manager,model_hr_legal_parameter,hr.group_hr_manager,1,1,1,1
+access_hr_civilite_user,hr.civilite.user,model_hr_civilite,hr.group_hr_user,1,0,0,0
+access_hr_civilite_manager,hr.civilite.manager,model_hr_civilite,hr.group_hr_manager,1,1,1,1
+access_hr_csp_user,hr.csp.user,model_hr_csp,hr.group_hr_user,1,0,0,0
+access_hr_csp_manager,hr.csp.manager,model_hr_csp,hr.group_hr_manager,1,1,1,1
+access_hr_type_placement_user,hr.type.placement.user,model_hr_type_placement,hr.group_hr_user,1,0,0,0
+access_hr_type_placement_manager,hr.type.placement.manager,model_hr_type_placement,hr.group_hr_manager,1,1,1,1
+access_hr_service_national_user,hr.service.national.user,model_hr_service_national,hr.group_hr_user,1,0,0,0
+access_hr_service_national_manager,hr.service.national.manager,model_hr_service_national,hr.group_hr_manager,1,1,1,1
+access_hr_job_mission_user,hr.job.mission.user,model_hr_job_mission,hr.group_hr_user,1,0,0,0
+access_hr_job_mission_manager,hr.job.mission.manager,model_hr_job_mission,hr.group_hr_manager,1,1,1,1

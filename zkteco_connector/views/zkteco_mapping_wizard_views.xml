@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_zkteco_mapping_wizard_form" model="ir.ui.view">
+        <field name="name">zkteco.user.mapping.wizard.form</field>
+        <field name="model">zkteco.user.mapping.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Mapper l'utilisateur device">
+                <sheet>
+
+                    <!-- Bannière identité device -->
+                    <div class="alert alert-secondary d-flex align-items-center gap-3 mb-4" role="status">
+                        <i class="fa fa-microchip fa-2x text-muted" title="Device"/>
+                        <div>
+                            <div class="fw-bold fs-5">
+                                <field name="name_on_device" readonly="1"
+                                       placeholder="(nom inconnu)"/>
+                            </div>
+                            <div class="text-muted small">
+                                PIN&amp;nbsp;
+                                <field name="pin" readonly="1" class="fw-semibold"/>
+                                &amp;nbsp;·&amp;nbsp;
+                                <field name="device_name" readonly="1"/>
+                                <span invisible="pending_count == 0">
+                                    &amp;nbsp;·&amp;nbsp;
+                                    <span class="badge text-bg-warning">
+                                        <field name="pending_count" readonly="1" nolabel="1"/>
+                                        pointage(s) en attente
+                                    </span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Suggestions par similarité -->
+                    <group string="Suggestions automatiques">
+                        <div class="o_field_widget" invisible="not suggestion_line_ids">
+                            <field name="suggestion_line_ids" nolabel="1">
+                                <list string="Suggestions" decoration-success="score >= 80"
+                                      decoration-warning="score >= 50 and score &lt; 80">
+                                    <field name="score"       string="Similarité %"
+                                           widget="progressbar"
+                                           options="{'editable': false, 'current_value': 'score', 'max_value': 100}"/>
+                                    <field name="emp_name"    string="Nom employé"/>
+                                    <button name="action_select"
+                                            type="object"
+                                            string="Choisir"
+                                            icon="fa-check-circle"
+                                            class="btn-sm btn-primary"/>
+                                </list>
+                            </field>
+                        </div>
+                        <div class="alert alert-warning small" role="status"
+                             invisible="suggestion_line_ids">
+                            <i class="fa fa-exclamation-triangle me-1" title="Avertissement"/>
+                            Aucune suggestion trouvée — le nom du device est trop différent
+                            des employés Odoo. Utilisez la recherche manuelle ci-dessous.
+                        </div>
+                    </group>
+
+                    <div class="o_horizontal_separator mt-3 mb-3"/>
+
+                    <!-- Choix manuel -->
+                    <group string="Lier à un employé existant">
+                        <field name="employee_id"
+                               string="Employé Odoo"
+                               placeholder="Rechercher parmi les employés..."
+                               options="{'no_create': True}"/>
+                        <div class="alert alert-success small mt-2" role="status"
+                             invisible="not employee_id">
+                            <i class="fa fa-check me-1" title="OK"/>
+                            Cliquez <strong>Lier à cet employé</strong> pour confirmer le mapping.
+                            <br/>
+                            Les <field name="pending_count" readonly="1" nolabel="1"
+                                       class="fw-bold"/> pointage(s) en attente seront
+                            automatiquement importés.
+                        </div>
+                    </group>
+
+                    <div class="o_horizontal_separator mt-3 mb-3"/>
+
+                    <!-- Création nouvel employé -->
+                    <group string="Ou créer un nouvel employé">
+                        <field name="new_emp_name"
+                               string="Nom complet"
+                               placeholder="Nom tel qu'il apparaîtra dans Odoo"/>
+                        <div class="text-muted small">
+                            <i class="fa fa-info-circle me-1"/>
+                            Si le PIN
+                            <field name="pin" readonly="1" nolabel="1" class="fw-bold"/>
+                            existe déjà sur un autre device, l'employé existant sera
+                            utilisé sans créer de doublon.
+                        </div>
+                    </group>
+
+                </sheet>
+
+                <footer>
+                    <button name="action_map"
+                            string="Lier à cet employé"
+                            type="object"
+                            class="btn-primary"
+                            invisible="not employee_id"/>
+                    <button name="action_create_employee"
+                            string="Créer et lier"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="employee_id"/>
+                    <button string="Annuler" class="btn-secondary" special="cancel"/>
+                    <button name="action_ignore"
+                            string="Ignorer cet utilisateur"
+                            type="object"
+                            class="btn-link text-muted ms-3"/>
+                    <button name="action_delete_from_device"
+                            string="Supprimer du device"
+                            type="object"
+                            class="btn-link text-danger"
+                            confirm="Supprimer physiquement cet utilisateur du device ZKTeco ?"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

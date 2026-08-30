@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+
+    <!-- Injecte le panneau bridge juste après les cartes de stats du dashboard NATS. -->
+    <t t-inherit="core_nats.NatsDashboard" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('row') and hasclass('g-3') and hasclass('py-3')]" position="after">
+
+            <div class="row g-3 px-4 pb-1 o_zk_bridge_panel">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center o_zk_bridge_toggle"
+                             t-on-click="toggleBridge" role="button" t-att-aria-expanded="state.bridgeOpen">
+                            <span class="fw-semibold">
+                                <i t-attf-class="fa me-2 o_zk_chevron #{state.bridgeOpen ? 'fa-chevron-down' : 'fa-chevron-right'}"/>
+                                <i class="fa fa-server me-2 text-muted"/>Statut du bridge
+                            </span>
+                            <span class="d-flex align-items-center gap-2">
+                                <!-- Mini-résumé visible quand c'est replié -->
+                                <span t-if="!state.bridgeOpen" class="d-flex align-items-center gap-2 small">
+                                    <span t-if="state.bridgeReachable === false" class="text-danger">
+                                        <i class="fa fa-plug me-1"/>hors ligne
+                                    </span>
+                                    <t t-elif="state.bridge">
+                                        <span t-att-class="'o_nats_dot ' + (state.bridge.active ? 'connected' : 'disconnected')"/>
+                                        <span class="text-muted">
+                                            <t t-esc="state.bridge.active ? 'Actif' : 'Inactif'"/>
+                                            · <t t-esc="state.bridge.device_count"/>/<t t-esc="state.bridge.max_devices"/>
+                                        </span>
+                                    </t>
+                                </span>
+                                <small class="text-muted">rafraîchi toutes les 30 s</small>
+                            </span>
+                        </div>
+                        <div class="card-body" t-if="state.bridgeOpen">
+
+                            <!-- Hors ligne -->
+                            <div t-if="state.bridgeReachable === false" class="text-muted">
+                                <i class="fa fa-plug me-2 text-danger"/>
+                                <t t-esc="state.bridgeError || 'Bridge hors ligne.'"/>
+                            </div>
+
+                            <!-- Chargement initial -->
+                            <div t-elif="state.bridgeReachable === null" class="text-muted">
+                                <i class="fa fa-spinner fa-spin me-2"/>Interrogation du bridge…
+                            </div>
+
+                            <!-- En ligne -->
+                            <div t-elif="state.bridge" class="o_zk_bridge">
+
+                                <!-- Pastilles d'état -->
+                                <div class="d-flex flex-wrap gap-4 mb-3">
+                                    <div class="d-flex align-items-center">
+                                        <span t-att-class="'o_nats_dot ' + (state.bridge.active ? 'connected' : 'disconnected')"/>
+                                        <strong class="ms-2">ZKTeco Bridge</strong>
+                                        <span class="ms-1" t-esc="state.bridge.active ? 'Actif' : 'Inactif'"/>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <span t-att-class="'o_nats_dot ' + (state.bridge.server_connected ? 'connected' : 'disconnected')"/>
+                                        <span class="ms-2">Serveur de licences</span>
+                                        <small class="text-muted ms-1" t-esc="'· ' + bridgeLastContact()"/>
+                                    </div>
+                                </div>
+
+                                <!-- Infos licence -->
+                                <div class="row g-3">
+                                    <div class="col-sm-6 col-lg-3">
+                                        <div class="o_nats_stat_label">Client</div>
+                                        <div class="fw-semibold" t-esc="state.bridge.tenant || '–'"/>
+                                    </div>
+                                    <div class="col-sm-6 col-lg-3">
+                                        <div class="o_nats_stat_label">Licence</div>
+                                        <div class="fw-semibold" t-esc="state.bridge.license_id || '–'"/>
+                                    </div>
+                                    <div class="col-sm-6 col-lg-3">
+                                        <div class="o_nats_stat_label">Expiration</div>
+                                        <div t-att-class="(state.bridge.days_left &lt;= 30) ? 'fw-semibold text-warning' : 'fw-semibold'">
+                                            <t t-esc="bridgeExpiry()"/>
+                                            <small class="text-muted"> (<t t-esc="state.bridge.days_left"/> j)</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-lg-3">
+                                        <div class="o_nats_stat_label">Fonctionnalités</div>
+                                        <div>
+                                            <span t-foreach="state.bridge.features || []" t-as="f" t-key="f"
+                                                  class="badge text-bg-light me-1" t-esc="f"/>
+                                            <span t-if="!(state.bridge.features || []).length" class="text-muted">–</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Jauge devices -->
+                                <div class="mt-3">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="o_nats_stat_label">Devices utilisés</span>
+                                        <span class="small text-muted">
+                                            <t t-esc="state.bridge.device_count"/> / <t t-esc="state.bridge.max_devices"/>
+                                            <span t-if="state.bridge.devices_held" class="badge text-bg-warning ms-1">
+                                                <t t-esc="state.bridge.devices_held"/> en attente
+                                            </span>
+                                            <span t-if="state.bridge.devices_pending" class="badge text-bg-secondary ms-1">
+                                                <t t-esc="state.bridge.devices_pending"/> à approuver
+                                            </span>
+                                        </span>
+                                    </div>
+                                    <div class="progress mt-1" style="height: 8px;">
+                                        <div class="progress-bar" role="progressbar"
+                                             t-att-style="'width:' + bridgeDevicePct() + '%'"/>
+                                    </div>
+                                </div>
+
+                                <!-- Fingerprint -->
+                                <div class="mt-3">
+                                    <div class="o_nats_stat_label">Fingerprint machine</div>
+                                    <code class="small text-muted text-break" t-esc="state.bridge.fingerprint"/>
+                                </div>
+
+                                <!-- Liste des pointeuses -->
+                                <div class="mt-3" t-if="state.bridgeDevices.length">
+                                    <div class="o_nats_stat_label mb-1">Pointeuses vues par le bridge</div>
+                                    <table class="table table-sm table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Nom</th>
+                                                <th>N° série</th>
+                                                <th>MAC</th>
+                                                <th class="text-center">État</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr t-foreach="state.bridgeDevices" t-as="dev" t-key="dev.sn">
+                                                <td t-esc="dev.name || '–'"/>
+                                                <td class="text-monospace small" t-esc="dev.sn"/>
+                                                <td class="text-monospace small text-muted" t-esc="dev.mac || '–'"/>
+                                                <td class="text-center">
+                                                    <span t-att-class="'badge ' + bridgeStateBadge(dev.state)" t-esc="dev.state"/>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </xpath>
+    </t>
+</templates>

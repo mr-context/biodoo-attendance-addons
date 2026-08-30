@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_hr_employee_zkteco" model="ir.ui.view">
+        <field name="name">hr.employee.zkteco</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Smart button in button_box -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_zkteco_enroll"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-id-card"
+                        invisible="not zkteco_pin">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">ZKTeco</span>
+                        <span class="o_stat_text text-success" invisible="not zkteco_linked">Enrôlé</span>
+                        <span class="o_stat_text text-muted" invisible="zkteco_linked">Non enrôlé</span>
+                    </div>
+                </button>
+            </xpath>
+
+            <!-- ZKTeco tab after Work Information -->
+            <xpath expr="//page[@name='work_information']" position="after">
+                <page name="zkteco" string="ZKTeco">
+                    <group>
+                        <group string="Identifiant">
+                            <field name="zkteco_pin"
+                                   placeholder="Ex : 1001"
+                                   help="PIN unique sur le device ZKTeco (UserID ADMS). Requis pour l'enrôlement."/>
+                            <field name="zkteco_privilege"
+                                   invisible="not zkteco_pin"
+                                   help="Niveau de droit appliqué sur toutes les pointeuses autorisées."/>
+                            <field name="zkteco_linked" readonly="1" string="Statut"/>
+                            <field name="zkteco_last_seen" readonly="1" string="Dernier pointage ZKTeco"/>
+                        </group>
+                    </group>
+
+                    <!-- Actions ZKTeco — visible uniquement si PIN défini -->
+                    <div invisible="not zkteco_pin" class="d-flex flex-wrap gap-2 mt-3">
+                        <button name="action_zkteco_enroll"
+                                type="object"
+                                class="btn btn-primary btn-sm">
+                            <i class="fa fa-id-card me-1"/> Enrôler
+                        </button>
+                        <button name="action_zkteco_sync"
+                                type="object"
+                                class="btn btn-secondary btn-sm">
+                            <i class="fa fa-refresh me-1"/> Sync données
+                        </button>
+                        <button name="action_zkteco_enroll_face"
+                                type="object"
+                                class="btn btn-primary btn-sm">
+                            <i class="fa fa-camera me-1"/> Enrôler visage
+                        </button>
+                        <button name="action_zkteco_remove"
+                                type="object"
+                                class="btn btn-danger btn-sm"
+                                confirm="Supprimer cet employé de tous les devices autorisés ?">
+                            <i class="fa fa-trash me-1"/> Supprimer
+                        </button>
+                    </div>
+
+                    <!-- Dual-grid : pointeuses disponibles ← → autorisées -->
+                    <div invisible="not zkteco_pin" class="mt-4">
+                        <h4 class="mb-1">Gestion des pointeuses</h4>
+                        <p class="text-muted small mb-3">
+                            Cliquez <strong>→</strong> pour autoriser une pointeuse (enrôlement + sync bio automatiques).
+                            Supprimez une ligne à droite pour révoquer l'accès.
+                        </p>
+
+                        <div class="row g-3">
+                            <!-- Colonne gauche : disponibles -->
+                            <div class="col-12 col-lg-6">
+                                <div class="fw-bold small text-muted text-uppercase mb-1">
+                                    <i class="fa fa-server me-1"/>Pointeuses disponibles
+                                </div>
+                                <field name="zkteco_available_device_ids" nolabel="1"
+                                       readonly="1"
+                                       context="{'employee_id': id}">
+                                    <list string="Disponibles" create="false" delete="false">
+                                        <field name="display_name" string="Appareil"/>
+                                        <field name="serial_number" string="N° Série" optional="show"/>
+                                        <field name="is_online" string="En ligne" widget="boolean"/>
+                                        <button name="action_add_to_authorized" type="object"
+                                                icon="fa-arrow-right"
+                                                string="Autoriser"
+                                                class="btn btn-sm btn-success"/>
+                                    </list>
+                                </field>
+                                <p class="text-muted small fst-italic mt-1 mb-0"
+                                   invisible="zkteco_available_device_ids">
+                                    Toutes les pointeuses sont déjà autorisées.
+                                </p>
+                            </div>
+
+                            <!-- Colonne droite : autorisées -->
+                            <div class="col-12 col-lg-6">
+                                <div class="fw-bold small text-muted text-uppercase mb-1">
+                                    <i class="fa fa-check-circle me-1 text-success"/>Pointeuses autorisées
+                                </div>
+                                <field name="zkteco_authorized_device_ids" nolabel="1"
+                                       readonly="1"
+                                       context="{'employee_id': id}">
+                                    <list string="Autorisées" create="false" delete="false">
+                                        <field name="display_name" string="Appareil"/>
+                                        <field name="serial_number" string="N° Série" optional="show"/>
+                                        <field name="is_online" string="En ligne" widget="boolean"/>
+                                        <field name="state" string="État" widget="badge"
+                                               decoration-success="state=='approved'"
+                                               decoration-muted="state=='offline'"/>
+                                        <button name="action_remove_from_authorized" type="object"
+                                                icon="fa-times"
+                                                string="Retirer"
+                                                class="btn btn-sm btn-danger"
+                                                confirm="Retirer cette pointeuse ? L'employé sera supprimé du device."/>
+                                    </list>
+                                </field>
+                                <p class="text-muted small fst-italic mt-1 mb-0"
+                                   invisible="zkteco_authorized_device_ids">
+                                    Aucune pointeuse autorisée — l'employé ne peut pas pointer.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Biométrie réelle par pointeuse — matrice (device × biométrie).
+                         Vérité terrain : on n'affiche QUE ce qui est réellement
+                         dans chaque pointeuse, les devices vides sont masqués. -->
+                    <div invisible="not zkteco_pin" class="mt-4">
+                        <h4 class="mb-1">Biométrie réelle par pointeuse</h4>
+                        <p class="text-muted small mb-3">
+                            Ce qui est <strong>réellement enrôlé sur chaque pointeuse</strong>.
+                            La biométrie est propre à chaque device : une empreinte posée sur
+                            une pointeuse n'est pas sur les autres. Les pointeuses sans biométrie
+                            sont masquées.
+                        </p>
+                        <field name="biometric_matrix_html" widget="html" nolabel="1" readonly="1"/>
+                    </div>
+
+                    <!-- Prompt when no PIN -->
+                    <div invisible="zkteco_pin" class="alert alert-info mt-3" role="status">
+                        <i class="fa fa-info-circle me-1"/>
+                        Renseignez un <strong>ZKTeco PIN</strong> pour activer l'enrôlement à distance.
+                    </div>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

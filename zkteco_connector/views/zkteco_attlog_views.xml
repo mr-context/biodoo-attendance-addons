@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── LIST ─────────────────────────────────────────────────── -->
+    <record id="view_zkteco_attlog_list" model="ir.ui.view">
+        <field name="name">zkteco.device.attlog.list</field>
+        <field name="model">zkteco.device.attlog</field>
+        <field name="arch" type="xml">
+            <list create="false" default_order="timestamp desc"
+                  decoration-danger="state=='anomaly'"
+                  decoration-muted="state in ('ignored','duplicate')"
+                  decoration-success="state=='imported'"
+                  decoration-warning="state=='pending'">
+                <field name="timestamp"/>
+                <field name="employee_id"/>
+                <field name="pin"/>
+                <field name="device_id"/>
+                <field name="touche" string="Touche"/>
+                <field name="is_corrected" optional="show" string="Corrigé"/>
+                <field name="source" optional="hide"/>
+                <field name="verify_mode" optional="hide" string="Vérif."/>
+                <field name="state" widget="badge"
+                       decoration-success="state=='imported'"
+                       decoration-danger="state=='anomaly'"
+                       decoration-warning="state=='pending'"
+                       decoration-muted="state in ('ignored','duplicate')"/>
+                <field name="attendance_id" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ── FORM ─────────────────────────────────────────────────── -->
+    <record id="view_zkteco_attlog_form" model="ir.ui.view">
+        <field name="name">zkteco.device.attlog.form</field>
+        <field name="model">zkteco.device.attlog</field>
+        <field name="arch" type="xml">
+            <form create="false">
+                <header>
+                    <button name="action_add_missing_punch" type="object"
+                            string="Ajouter le pointage manquant" class="btn-primary"
+                            icon="fa-plus"
+                            invisible="state != 'anomaly'"
+                            help="Saisir l'entrée/la sortie oubliée pour réapparier la journée"/>
+                </header>
+                <div class="alert alert-warning" role="alert"
+                     invisible="state != 'anomaly'">
+                    <i class="fa fa-exclamation-triangle me-2" title="Anomalie"/>
+                    Pointage non appariable (oubli, sortie orpheline, double entrée).
+                    Deux corrections possibles : <b>(1)</b> corrigez la <b>Touche</b>
+                    ci-dessous si le mauvais bouton a été pressé (ex. « Sortie » au
+                    lieu d'« Entrée ») ; <b>(2)</b> cliquez <b>« Ajouter le pointage
+                    manquant »</b> si un pointage (entrée/sortie) a été oublié.
+                    La journée est re-résolue automatiquement.
+                </div>
+                <sheet>
+                    <group>
+                        <group string="Pointage brut">
+                            <field name="timestamp"/>
+                            <field name="pin"/>
+                            <field name="touche"/>
+                            <field name="correction_reason"
+                                   placeholder="ex. mauvaise touche, oubli badge…"
+                                   invisible="not is_corrected and not touche"/>
+                            <field name="verify_mode" string="Mode de vérification"/>
+                            <field name="device_id"/>
+                        </group>
+                        <group string="Résolution">
+                            <field name="employee_id"/>
+                            <field name="state"/>
+                            <field name="attendance_id"/>
+                            <field name="source"/>
+                        </group>
+                    </group>
+                    <group string="Audit de la correction" invisible="not is_corrected">
+                        <field name="is_corrected" invisible="1"/>
+                        <field name="original_status_label"/>
+                        <field name="corrected_by"/>
+                    </group>
+                    <field name="is_corrected" invisible="1"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── FORM saisie MANUELLE (pointage oublié) ───────────────── -->
+    <record id="view_zkteco_attlog_manual_form" model="ir.ui.view">
+        <field name="name">zkteco.device.attlog.manual.form</field>
+        <field name="model">zkteco.device.attlog</field>
+        <field name="arch" type="xml">
+            <form>
+                <div class="alert alert-info" role="alert">
+                    <i class="fa fa-info-circle me-2" title="Info"/>
+                    Ajout d'un pointage <b>manuel</b> (badge oublié). Il est tracé
+                    comme manuel et la journée sera re-résolue automatiquement.
+                </div>
+                <group>
+                    <group>
+                        <field name="employee_id" required="1"/>
+                        <field name="timestamp" required="1"/>
+                        <field name="touche" required="1"/>
+                    </group>
+                    <group>
+                        <field name="device_id" required="1"/>
+                        <field name="correction_reason" string="Motif"/>
+                        <field name="source" invisible="1"/>
+                    </group>
+                </group>
+                <footer>
+                    <button string="Ajouter" special="save" class="btn-primary"
+                            data-hotkey="q"/>
+                    <button string="Annuler" special="cancel" data-hotkey="x"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── SEARCH ───────────────────────────────────────────────── -->
+    <record id="view_zkteco_attlog_search" model="ir.ui.view">
+        <field name="name">zkteco.device.attlog.search</field>
+        <field name="model">zkteco.device.attlog</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="employee_id"/>
+                <field name="pin"/>
+                <field name="device_id"/>
+                <filter name="anomaly"   string="Anomalies"   domain="[('state','=','anomaly')]"/>
+                <filter name="imported"  string="Importés"    domain="[('state','=','imported')]"/>
+                <filter name="pending"   string="En attente"  domain="[('state','=','pending')]"/>
+                <filter name="ignored"   string="Ignorés (anti-rebond)" domain="[('state','=','ignored')]"/>
+                <separator/>
+                <filter name="corrected" string="Corrigés (RH)" domain="[('is_corrected','=',True)]"/>
+                <filter name="manual"    string="Manuels"      domain="[('source','=','manual')]"/>
+                <separator/>
+                <filter name="today" string="Aujourd'hui"
+                        domain="[('timestamp','>=', datetime.datetime.combine(context_today(), datetime.time(0,0,0)))]"/>
+                <group>
+                    <filter name="group_state"    string="État"     context="{'group_by':'state'}"/>
+                    <filter name="group_employee" string="Employé"  context="{'group_by':'employee_id'}"/>
+                    <filter name="group_device"   string="Device"   context="{'group_by':'device_id'}"/>
+                    <filter name="group_day"      string="Jour"     context="{'group_by':'timestamp:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ── ACTIONS ──────────────────────────────────────────────── -->
+    <record id="action_zkteco_attlog" model="ir.actions.act_window">
+        <field name="name">Pointages bruts</field>
+        <field name="res_model">zkteco.device.attlog</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_zkteco_attlog_search"/>
+        <field name="context">{'search_default_group_day': 1}</field>
+    </record>
+
+    <record id="action_zkteco_attlog_anomalies" model="ir.actions.act_window">
+        <field name="name">Anomalies de pointage</field>
+        <field name="res_model">zkteco.device.attlog</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_zkteco_attlog_search"/>
+        <field name="domain">[('state','=','anomaly')]</field>
+    </record>
+
+</odoo>

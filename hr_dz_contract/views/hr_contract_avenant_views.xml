@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Avenant Form View -->
+    <record id="hr_contract_avenant_view_form" model="ir.ui.view">
+        <field name="name">hr.contract.avenant.form</field>
+        <field name="model">hr.contract.avenant</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_confirm" type="object" string="Confirmer"
+                            invisible="state != 'draft'" class="btn-primary"/>
+                    <button name="action_apply" type="object" string="Appliquer au contrat"
+                            invisible="state != 'confirmed'" class="btn-primary"/>
+                    <button name="action_cancel" type="object" string="Annuler"
+                            invisible="state in ('applied', 'cancelled')"/>
+                    <button name="action_draft" type="object" string="Remettre en brouillon"
+                            invisible="state != 'cancelled'"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,confirmed,applied"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1>
+                            <field name="name" readonly="1" placeholder="Nouvelle référence"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Contrat">
+                            <field name="version_id" string="Contrat" readonly="state != 'draft'"
+                                   options="{'no_create': True}"/>
+                            <field name="employee_id" readonly="1"/>
+                        </group>
+                        <group string="Dates">
+                            <field name="date_etablissement" readonly="state != 'draft'"/>
+                            <field name="date_effet" readonly="state != 'draft'"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="avenant_type" readonly="state != 'draft'" widget="radio"/>
+                    </group>
+
+                    <!-- Modification de salaire -->
+                    <group invisible="avenant_type != 'wage'">
+                        <group string="Ancien salaire">
+                            <field name="old_wage" readonly="1"/>
+                        </group>
+                        <group string="Nouveau salaire">
+                            <field name="new_wage" readonly="state != 'draft'"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                    </group>
+
+                    <!-- Changement de poste -->
+                    <group invisible="avenant_type != 'job'">
+                        <group string="Ancien poste">
+                            <field name="old_job_id" readonly="1"/>
+                            <field name="old_department_id" readonly="1"/>
+                        </group>
+                        <group string="Nouveau poste">
+                            <field name="new_job_id" readonly="state != 'draft'"/>
+                            <field name="new_department_id" readonly="state != 'draft'"/>
+                        </group>
+                    </group>
+
+                    <!-- Modification d'horaire -->
+                    <group invisible="avenant_type != 'schedule'">
+                        <group string="Ancien horaire">
+                            <field name="old_resource_calendar_id" readonly="1"/>
+                        </group>
+                        <group string="Nouvel horaire">
+                            <field name="new_resource_calendar_id" readonly="state != 'draft'"/>
+                        </group>
+                    </group>
+
+                    <group string="Motif">
+                        <field name="reason" nolabel="1" readonly="state != 'draft'"/>
+                    </group>
+                    <group string="Clauses additionnelles">
+                        <field name="notes" nolabel="1" readonly="state != 'draft'"/>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- Avenant Tree View -->
+    <record id="hr_contract_avenant_view_list" model="ir.ui.view">
+        <field name="name">hr.contract.avenant.list</field>
+        <field name="model">hr.contract.avenant</field>
+        <field name="arch" type="xml">
+            <list decoration-muted="state == 'cancelled'">
+                <field name="name"/>
+                <field name="version_id" string="Contrat"/>
+                <field name="employee_id"/>
+                <field name="avenant_type"/>
+                <field name="date_effet"/>
+                <field name="state" widget="badge"
+                       decoration-info="state == 'draft'"
+                       decoration-warning="state == 'confirmed'"
+                       decoration-success="state == 'applied'"
+                       decoration-danger="state == 'cancelled'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Avenant Search View -->
+    <record id="hr_contract_avenant_view_search" model="ir.ui.view">
+        <field name="name">hr.contract.avenant.search</field>
+        <field name="model">hr.contract.avenant</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="employee_id"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="hr_contract_avenant_action" model="ir.actions.act_window">
+        <field name="name">Avenants</field>
+        <field name="res_model">hr.contract.avenant</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+</odoo>

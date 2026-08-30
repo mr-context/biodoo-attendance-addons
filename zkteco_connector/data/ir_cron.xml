@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="ir_cron_zkteco_mark_offline" model="ir.cron">
+        <field name="name">ZKTeco: Mark offline devices</field>
+        <field name="model_id" ref="model_zkteco_device"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_mark_offline()</field>
+        <field name="interval_number">5</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+
+    <record id="ir_cron_zkteco_resolve_attendance" model="ir.cron">
+        <field name="name">ZKTeco: Résolution des présences (filet)</field>
+        <field name="model_id" ref="model_zkteco_device_attlog"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_resolve_recent()</field>
+        <field name="interval_number">15</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+
+</odoo>

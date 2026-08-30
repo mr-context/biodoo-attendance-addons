@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_nats_server_admin,nats.server admin,model_nats_server,base.group_system,1,1,1,1
+access_nats_server_user,nats.server user,model_nats_server,base.group_user,1,0,0,0
+access_nats_subscription_admin,nats.subscription admin,model_nats_subscription,base.group_system,1,1,1,1
+access_nats_subscription_user,nats.subscription user,model_nats_subscription,base.group_user,1,0,0,0
+access_nats_stream_admin,nats.stream admin,model_nats_stream,base.group_system,1,1,1,1
+access_nats_stream_user,nats.stream user,model_nats_stream,base.group_user,1,0,0,0

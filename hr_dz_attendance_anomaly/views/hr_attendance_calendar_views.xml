@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="hr_attendance_view_calendar" model="ir.ui.view">
+        <field name="name">hr.attendance.calendar</field>
+        <field name="model">hr.attendance</field>
+        <field name="arch" type="xml">
+            <calendar string="Présences" date_start="check_in" date_stop="check_out"
+                      mode="month" event_open_popup="true" create="0">
+                <field name="employee_id" invisible="1"/>
+                <field name="worked_hours"/>
+            </calendar>
+        </field>
+    </record>
+
+    <record id="hr_employee_view_form_calendar_button" model="ir.ui.view">
+        <field name="name">hr.employee.form.attendance.calendar.button</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_open_attendance_calendar" type="object"
+                        class="oe_stat_button" icon="fa-calendar"
+                        groups="hr_attendance.group_hr_attendance_officer">
+                    <field name="attendance_month_count" widget="statinfo"
+                           string="Présences (mois)"/>
+                </button>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

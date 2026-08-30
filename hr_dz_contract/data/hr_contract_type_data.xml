@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!-- Contrat à Durée Indéterminée -->
+        <record id="contract_type_cdi" model="hr.contract.type">
+            <field name="name">Contrat à Durée Indéterminée</field>
+            <field name="code">CDI</field>
+            <field name="sequence">1</field>
+            <field name="is_cdd">False</field>
+            <field name="is_renewable">False</field>
+            <field name="has_trial_period">True</field>
+            <field name="default_trial_months">3</field>
+            <field name="description">Contrat de travail sans limitation de durée.
+Période d'essai: 3 mois (renouvelable une fois).
+Rupture: démission, licenciement, accord mutuel.</field>
+        </record>
+
+        <!-- Contrat à Durée Déterminée -->
+        <record id="contract_type_cdd" model="hr.contract.type">
+            <field name="name">Contrat à Durée Déterminée</field>
+            <field name="code">CDD</field>
+            <field name="sequence">2</field>
+            <field name="is_cdd">True</field>
+            <field name="is_renewable">True</field>
+            <field name="max_renewals">2</field>
+            <field name="max_duration_months">36</field>
+            <field name="has_trial_period">True</field>
+            <field name="default_trial_months">1</field>
+            <field name="description">Contrat pour une durée limitée.
+Durée max: 36 mois (renouvellements inclus).
+Motifs: remplacement, surcroît temporaire, travail saisonnier.</field>
+        </record>
+
+        <!-- Contrat de Travail Temporaire -->
+        <record id="contract_type_ctt" model="hr.contract.type">
+            <field name="name">Contrat de Travail Temporaire</field>
+            <field name="code">CTT</field>
+            <field name="sequence">3</field>
+            <field name="is_cdd">True</field>
+            <field name="is_renewable">True</field>
+            <field name="max_renewals">1</field>
+            <field name="max_duration_months">24</field>
+            <field name="has_trial_period">True</field>
+            <field name="default_trial_months">1</field>
+            <field name="description">Contrat via agence d'intérim.
+Mission temporaire pour remplacement ou surcroît.</field>
+        </record>
+
+        <!-- Contrat ANEM - DAIP -->
+        <record id="contract_type_cta_daip" model="hr.contract.type">
+            <field name="name">CTA ANEM - DAIP (Diplômés)</field>
+            <field name="code">CTA-DAIP</field>
+            <field name="sequence">10</field>
+            <field name="is_cdd">True</field>
+            <field name="is_renewable">True</field>
+            <field name="max_renewals">2</field>
+            <field name="max_duration_months">36</field>
+            <field name="has_trial_period">True</field>
+            <field name="default_trial_months">3</field>
+            <field name="cnas_reduction">80.0</field>
+            <field name="description">Dispositif d'Aide à l'Insertion Professionnelle.
+Pour primo-demandeurs d'emploi diplômés.
+Réduction CNAS: 80% pendant la durée du contrat.</field>
+        </record>
+
+        <!-- Contrat ANEM - CIP -->
+        <record id="contract_type_cta_cip" model="hr.contract.type">
+            <field name="name">CTA ANEM - CIP (Sans qualification)</field>
+            <field name="code">CTA-CIP</field>
+            <field name="sequence">11</field>
+            <field name="is_cdd">True</field>
+            <field name="is_renewable">True</field>
+            <field name="max_renewals">2</field>
+            <field name="max_duration_months">36</field>
+            <field name="has_trial_period">True</field>
+            <field name="default_trial_months">3</field>
+            <field name="cnas_reduction">80.0</field>
+            <field name="description">Contrat d'Insertion Professionnelle.
+Pour primo-demandeurs d'emploi sans qualification.
+Réduction CNAS: 80% pendant la durée du contrat.</field>
+        </record>
+
+        <!-- Contrat ANEM - CFI -->
+        <record id="contract_type_cta_cfi" model="hr.contract.type">
+            <field name="name">CTA ANEM - CFI (Formation-Insertion)</field>
+            <field name="code">CTA-CFI</field>
+            <field name="sequence">12</field>
+            <field name="is_cdd">True</field>
+            <field name="is_renewable">False</field>
+            <field name="max_duration_months">12</field>
+            <field name="has_trial_period">False</field>
+            <field name="cnas_reduction">100.0</field>
+            <field name="description">Contrat Formation-Insertion.
+Formation en entreprise avec engagement d'embauche.
+Exonération totale CNAS pendant la formation.</field>
+        </record>
+
+        <!-- Stage -->
+        <record id="contract_type_stage" model="hr.contract.type">
+            <field name="name">Convention de Stage</field>
+            <field name="code">STAGE</field>
+            <field name="sequence">20</field>
+            <field name="is_cdd">True</field>
+            <field name="is_renewable">True</field>
+            <field name="max_renewals">1</field>
+            <field name="max_duration_months">12</field>
+            <field name="has_trial_period">False</field>
+            <field name="description">Stage pratique (études ou formation).
+Convention tripartite: stagiaire, entreprise, établissement.
+Pas de lien de subordination.</field>
+        </record>
+
+        <!-- Apprentissage -->
+        <record id="contract_type_apprentissage" model="hr.contract.type">
+            <field name="name">Contrat d'Apprentissage</field>
+            <field name="code">APPR</field>
+            <field name="sequence">21</field>
+            <field name="is_cdd">True</field>
+            <field name="is_renewable">False</field>
+            <field name="max_duration_months">36</field>
+            <field name="has_trial_period">True</field>
+            <field name="default_trial_months">1</field>
+            <field name="cnas_reduction">50.0</field>
+            <field name="description">Formation en alternance.
+Durée: 6 mois à 3 ans selon le métier.
+Réduction CNAS: 50%.</field>
+        </record>
+
+    </data>
+</odoo>

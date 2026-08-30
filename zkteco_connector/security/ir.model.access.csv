@@ -1,0 +1,21 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_zkteco_device_manager,zkteco.device manager,model_zkteco_device,base.group_system,1,1,1,1
+access_zkteco_device_user,zkteco.device user,model_zkteco_device,base.group_user,1,0,0,0
+access_zkteco_approve_wizard,zkteco.approve.wizard,model_zkteco_approve_wizard,base.group_system,1,1,1,1
+access_zkteco_enroll_wizard,zkteco.enroll.wizard,model_zkteco_enroll_wizard,base.group_system,1,1,1,1
+access_zkteco_wipe_wizard,zkteco.wipe.wizard,model_zkteco_wipe_wizard,base.group_system,1,1,1,1
+access_zkteco_attphoto_manager,zkteco.attphoto manager,model_zkteco_attphoto,base.group_system,1,1,1,1
+access_zkteco_attphoto_user,zkteco.attphoto user,model_zkteco_attphoto,base.group_user,1,0,0,0
+access_zkteco_device_user_mgr,zkteco.device.user manager,model_zkteco_device_user,base.group_system,1,1,1,1
+access_zkteco_device_user_usr,zkteco.device.user user,model_zkteco_device_user,base.group_user,1,0,0,0
+access_zkteco_device_attlog_mgr,zkteco.device.attlog manager,model_zkteco_device_attlog,base.group_system,1,1,1,1
+access_zkteco_device_attlog_usr,zkteco.device.attlog user,model_zkteco_device_attlog,base.group_user,1,0,0,0
+access_zkteco_attendance_break_mgr,zkteco.attendance.break manager,model_zkteco_attendance_break,base.group_system,1,1,1,1
+access_zkteco_attendance_break_usr,zkteco.attendance.break user,model_zkteco_attendance_break,base.group_user,1,0,0,0
+access_zkteco_device_biodata_mgr,zkteco.device.biodata manager,model_zkteco_device_biodata,base.group_system,1,1,1,1
+access_zkteco_device_biophoto_mgr,zkteco.device.biophoto manager,model_zkteco_device_biophoto,base.group_system,1,1,1,1
+access_zkteco_mapping_wizard,zkteco.user.mapping.wizard,model_zkteco_user_mapping_wizard,base.group_system,1,1,1,1
+access_zkteco_mapping_wizard_line,zkteco.user.mapping.wizard.line,model_zkteco_user_mapping_wizard_line,base.group_system,1,1,1,1
+access_zkteco_device_cmd_log_mgr,zkteco.device.cmd.log manager,model_zkteco_device_cmd_log,base.group_system,1,1,1,1
+access_zkteco_device_cmd_log_usr,zkteco.device.cmd.log user,model_zkteco_device_cmd_log,base.group_user,1,0,0,0
+access_zkteco_enroll_face_wizard,zkteco.enroll.face.wizard,model_zkteco_enroll_face_wizard,base.group_system,1,1,1,1

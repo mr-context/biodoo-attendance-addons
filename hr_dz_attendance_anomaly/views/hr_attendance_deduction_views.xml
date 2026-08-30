@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_deduction_list" model="ir.ui.view">
+        <field name="name">hr.attendance.deduction.list</field>
+        <field name="model">hr.attendance.deduction</field>
+        <field name="arch" type="xml">
+            <list decoration-muted="status == 'refused'"
+                  decoration-success="status == 'validated'">
+                <field name="date"/>
+                <field name="employee_id"/>
+                <field name="deduction_type"/>
+                <field name="duration" widget="float_time" string="Durée"/>
+                <field name="status" widget="badge"
+                       decoration-warning="status == 'to_validate'"
+                       decoration-success="status == 'validated'"
+                       decoration-danger="status == 'refused'"/>
+                <field name="work_entry_id" optional="hide"/>
+                <field name="is_manager" column_invisible="1"/>
+                <button name="action_validate" type="object" string="Valider"
+                        icon="fa-check text-success" invisible="status != 'to_validate' or not is_manager"/>
+                <button name="action_refuse" type="object" string="Refuser"
+                        icon="fa-times text-danger" invisible="status != 'to_validate' or not is_manager"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_deduction_form" model="ir.ui.view">
+        <field name="name">hr.attendance.deduction.form</field>
+        <field name="model">hr.attendance.deduction</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_validate" type="object" string="Valider"
+                            class="btn-primary" invisible="status != 'to_validate'"/>
+                    <button name="action_refuse" type="object" string="Refuser"
+                            invisible="status != 'to_validate'"/>
+                    <field name="status" widget="statusbar"
+                           statusbar_visible="to_validate,validated"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="employee_id"/>
+                            <field name="date"/>
+                            <field name="deduction_type"/>
+                        </group>
+                        <group>
+                            <field name="duration" widget="float_time"/>
+                            <field name="attendance_id"/>
+                            <field name="work_entry_id" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Validation" invisible="status == 'to_validate'">
+                        <field name="validated_by"/>
+                        <field name="validated_date"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_deduction_search" model="ir.ui.view">
+        <field name="name">hr.attendance.deduction.search</field>
+        <field name="model">hr.attendance.deduction</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="employee_id"/>
+                <filter name="to_validate" string="À valider"
+                        domain="[('status', '=', 'to_validate')]"/>
+                <filter name="validated" string="Validées"
+                        domain="[('status', '=', 'validated')]"/>
+                <filter name="late" string="Retards"
+                        domain="[('deduction_type', '=', 'late')]"/>
+                <filter name="early" string="Départs anticipés"
+                        domain="[('deduction_type', '=', 'early')]"/>
+                <group>
+                    <filter name="g_employee" string="Employé"
+                            context="{'group_by': 'employee_id'}"/>
+                    <filter name="g_status" string="État"
+                            context="{'group_by': 'status'}"/>
+                    <filter name="g_type" string="Type"
+                            context="{'group_by': 'deduction_type'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_deduction" model="ir.actions.act_window">
+        <field name="name">Déductions (retard / départ)</field>
+        <field name="res_model">hr.attendance.deduction</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_to_validate': 1, 'search_default_g_employee': 1}</field>
+    </record>
+
+</odoo>

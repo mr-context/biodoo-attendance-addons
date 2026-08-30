@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="hr_work_location_view_form_face" model="ir.ui.view">
+        <field name="name">hr.work.location.form.face</field>
+        <field name="model">hr.work.location</field>
+        <field name="inherit_id" ref="hr.hr_work_location_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form/sheet" position="inside">
+                <group string="Géofence — Pointage facial" col="2">
+                    <field name="face_attendance_ok"/>
+                    <field name="geofence_radius" invisible="not face_attendance_ok"/>
+
+                    <field name="latitude"  invisible="not face_attendance_ok"
+                           widget="float" options="{'digits': [10,6]}"/>
+                    <field name="longitude" invisible="not face_attendance_ok"
+                           widget="float" options="{'digits': [10,6]}"/>
+                </group>
+
+                <!-- Boutons aide GPS -->
+                <div invisible="not face_attendance_ok" class="d-flex gap-2 mb-3 flex-wrap">
+                    <!-- Détecter depuis le navigateur -->
+                    <button type="object" name="action_detect_location"
+                            class="btn btn-sm btn-outline-primary"
+                            icon="fa-crosshairs">
+                        Détecter ma position
+                    </button>
+
+                    <!-- Ouvrir dans Google Maps (si coordonnées déjà saisies) -->
+                    <button type="object" name="action_open_maps"
+                            class="btn btn-sm btn-outline-secondary"
+                            icon="fa-map-marker"
+                            invisible="not latitude and not longitude">
+                        Voir sur Google Maps
+                    </button>
+                </div>
+
+                <!-- Résumé du périmètre actif -->
+                <div class="alert alert-success" role="alert"
+                     invisible="not face_attendance_ok or (not latitude and not longitude)">
+                    <i class="fa fa-check-circle me-1" title="Périmètre actif"/>
+                    Périmètre actif : les employés affectés à ce site doivent se trouver
+                    dans un rayon de <strong><field name="geofence_radius" class="d-inline" readonly="1"/> m</strong>
+                    autour de (<field name="latitude" class="d-inline" readonly="1"/>,
+                    <field name="longitude" class="d-inline" readonly="1"/>)
+                    pour pointer depuis le portail.
+                </div>
+
+                <!-- Aide si pas encore configuré -->
+                <div class="alert alert-info" role="alert"
+                     invisible="not face_attendance_ok or (latitude or longitude)">
+                    <i class="fa fa-info-circle me-1" title="Configuration GPS"/>
+                    <strong>Configuration :</strong> cliquez sur <em>Détecter ma position</em>
+                    depuis le site physique, ou saisissez les coordonnées GPS manuellement
+                    (disponibles via Google Maps → clic droit → "Plus d'infos sur cet endroit").
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

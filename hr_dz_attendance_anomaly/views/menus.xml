@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Action : pointages en anomalie -->
+    <record id="action_attendance_anomalies" model="ir.actions.act_window">
+        <field name="name">Pointages en anomalie</field>
+        <field name="res_model">hr.attendance</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('is_anomaly', '=', True)]</field>
+        <field name="context">{'search_default_anomaly': 1}</field>
+    </record>
+
+    <!-- Menu parent sous Présences -->
+    <menuitem id="menu_anomaly_root"
+              name="Anomalies &amp; Absences"
+              parent="hr_attendance.menu_hr_attendance_root"
+              sequence="50"/>
+
+    <menuitem id="menu_absence_report"
+              name="Tableau des absences"
+              parent="menu_anomaly_root"
+              action="action_absence_report"
+              sequence="10"/>
+
+    <menuitem id="menu_anomaly_report"
+              name="Rapport présence (employé)"
+              parent="menu_anomaly_root"
+              action="action_anomaly_report"
+              sequence="20"/>
+
+    <menuitem id="menu_attendance_anomalies"
+              name="Pointages en anomalie"
+              parent="menu_anomaly_root"
+              action="action_attendance_anomalies"
+              sequence="30"/>
+
+    <menuitem id="menu_deduction"
+              name="Déductions"
+              parent="menu_anomaly_root"
+              action="action_deduction"
+              sequence="40"/>
+
+    <menuitem id="menu_anomaly_type"
+              name="Types d'anomalies"
+              parent="menu_anomaly_root"
+              action="action_anomaly_type"
+              groups="hr_attendance.group_hr_attendance_manager"
+              sequence="50"/>
+
+</odoo>

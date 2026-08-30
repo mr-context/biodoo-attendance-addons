@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vue liste des anomalies -->
+    <record id="hr_work_entry_anomaly_view_tree" model="ir.ui.view">
+        <field name="name">hr.work.entry.anomaly.list</field>
+        <field name="model">hr.work.entry.anomaly</field>
+        <field name="arch" type="xml">
+            <list decoration-warning="state == 'pending'" decoration-muted="state in ('tolerated', 'validated')">
+                <field name="date"/>
+                <field name="employee_id" widget="many2one_avatar_employee"/>
+                <field name="anomaly_type" widget="badge"/>
+                <field name="theoretical_hours" widget="float_time"/>
+                <field name="actual_hours" widget="float_time"/>
+                <field name="difference_hours" widget="float_time"/>
+                <field name="state" widget="badge"
+                    decoration-info="state == 'pending'"
+                    decoration-success="state in ('justified', 'validated')"
+                    decoration-warning="state == 'deducted'"
+                    decoration-muted="state == 'tolerated'"/>
+                <field name="resolution_type" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vue formulaire des anomalies -->
+    <record id="hr_work_entry_anomaly_view_form" model="ir.ui.view">
+        <field name="name">hr.work.entry.anomaly.form</field>
+        <field name="model">hr.work.entry.anomaly</field>
+        <field name="arch" type="xml">
+            <form string="Anomalie">
+                <header>
+                    <!-- Actions selon le type d'anomalie -->
+                    <button name="action_justify_leave_paid" type="object"
+                        string="Congé payé" class="btn-primary"
+                        invisible="state != 'pending' or anomaly_type not in ('absent', 'incomplete')"/>
+                    <button name="action_justify_leave_unpaid" type="object"
+                        string="Sans solde"
+                        invisible="state != 'pending' or anomaly_type not in ('absent', 'incomplete')"/>
+                    <button name="action_justify_sick" type="object"
+                        string="Maladie"
+                        invisible="state != 'pending' or anomaly_type not in ('absent', 'incomplete')"/>
+                    <button name="action_deduct" type="object"
+                        string="Déduire" class="btn-warning"
+                        invisible="state != 'pending' or anomaly_type not in ('absent', 'incomplete', 'late', 'early_leave')"/>
+                    <button name="action_tolerate" type="object"
+                        string="Tolérer"
+                        invisible="state != 'pending' or anomaly_type not in ('late', 'early_leave', 'incomplete')"/>
+                    <button name="action_validate_overtime" type="object"
+                        string="Valider HS" class="btn-success"
+                        invisible="state != 'pending' or anomaly_type != 'overtime'"/>
+                    <button name="action_refuse_overtime" type="object"
+                        string="Refuser HS"
+                        invisible="state != 'pending' or anomaly_type != 'overtime'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="pending,justified,validated"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Informations">
+                            <field name="employee_id" widget="many2one_avatar_employee"/>
+                            <field name="date"/>
+                            <field name="anomaly_type" widget="badge"/>
+                        </group>
+                        <group string="Comparaison">
+                            <field name="theoretical_hours" widget="float_time"/>
+                            <field name="actual_hours" widget="float_time"/>
+                            <field name="difference_hours" widget="float_time"/>
+                        </group>
+                    </group>
+                    <group invisible="anomaly_type not in ('late', 'early_leave')">
+                        <group string="Détails horaires">
+                            <field name="theoretical_start"/>
+                            <field name="theoretical_end"/>
+                            <field name="actual_start"/>
+                            <field name="actual_end"/>
+                            <field name="late_minutes" invisible="anomaly_type != 'late'"/>
+                            <field name="early_leave_minutes" invisible="anomaly_type != 'early_leave'"/>
+                        </group>
+                    </group>
+                    <group string="Résolution" invisible="state == 'pending'">
+                        <group>
+                            <field name="resolution_type"/>
+                            <field name="work_entry_id"/>
+                            <field name="leave_id" invisible="not leave_id"/>
+                        </group>
+                        <group>
+                            <field name="resolved_by"/>
+                            <field name="resolved_date"/>
+                        </group>
+                    </group>
+                    <group string="Notes">
+                        <field name="notes" nolabel="1" colspan="2"
+                            placeholder="Notes RH..."/>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vue recherche -->
+    <record id="hr_work_entry_anomaly_view_search" model="ir.ui.view">
+        <field name="name">hr.work.entry.anomaly.search</field>
+        <field name="model">hr.work.entry.anomaly</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="employee_id"/>
+                <field name="anomaly_type"/>
+                <separator/>
+                <filter name="pending" string="À traiter" domain="[('state', '=', 'pending')]"/>
+                <filter name="resolved" string="Résolues" domain="[('state', '!=', 'pending')]"/>
+                <separator/>
+                <filter name="absence" string="Absences" domain="[('anomaly_type', '=', 'absent')]"/>
+                <filter name="overtime" string="Heures sup." domain="[('anomaly_type', '=', 'overtime')]"/>
+                <filter name="late" string="Retards" domain="[('anomaly_type', '=', 'late')]"/>
+                <separator/>
+                <filter name="current_month" string="Ce mois"
+                    domain="[('date', '&gt;=', (context_today() - relativedelta(day=1)).strftime('%Y-%m-%d')),
+                             ('date', '&lt;=', context_today().strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter name="group_employee" string="Employé" context="{'group_by': 'employee_id'}"/>
+                <filter name="group_type" string="Type" context="{'group_by': 'anomaly_type'}"/>
+                <filter name="group_date" string="Date" context="{'group_by': 'date:month'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action fenêtre -->
+    <record id="hr_work_entry_anomaly_action" model="ir.actions.act_window">
+        <field name="name">Anomalies</field>
+        <field name="res_model">hr.work.entry.anomaly</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_pending': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Aucune anomalie à traiter
+            </p>
+            <p>
+                Les anomalies sont détectées automatiquement lors du calcul des prestations
+                quand il y a un écart entre le temps théorique et réel.
+            </p>
+        </field>
+    </record>
+</odoo>

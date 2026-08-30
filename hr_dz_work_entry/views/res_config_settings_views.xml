@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_hr_late_sanction" model="ir.ui.view">
+        <field name="name">res.config.settings.hr.late.sanction</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="hr.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@name='work_organization_setting_container']" position="after">
+                <block title="Gestion des retards" name="late_sanction_setting_container">
+                    <setting id="late_sanction_setting"
+                             help="Tout retard au-delà de la tolérance entraîne une déduction sur la fiche de paie selon le mode choisi.">
+                        <field name="late_sanction_enabled"/>
+                        <div class="content-group mt-2" invisible="not late_sanction_enabled">
+                            <div class="row">
+                                <label for="late_sanction_mode" class="col-lg-4 o_light_label"/>
+                                <field name="late_sanction_mode" class="col-lg-8"/>
+                            </div>
+                        </div>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>

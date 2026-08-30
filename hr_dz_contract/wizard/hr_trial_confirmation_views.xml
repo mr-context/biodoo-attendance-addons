@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="hr_trial_confirmation_wizard_form" model="ir.ui.view">
+        <field name="name">hr.trial.confirmation.wizard.form</field>
+        <field name="model">hr.trial.confirmation.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <group string="Contrat">
+                        <field name="version_id" readonly="1"/>
+                        <field name="employee_id" readonly="1"/>
+                    </group>
+                    <group string="Période d'essai actuelle">
+                        <field name="trial_date_start" readonly="1"/>
+                        <field name="trial_date_end" readonly="1"/>
+                        <field name="trial_state" readonly="1" widget="badge"/>
+                    </group>
+                </group>
+
+                <separator string="Action à effectuer"/>
+                <group>
+                    <field name="action_type" widget="radio"/>
+                </group>
+
+                <!-- Options selon l'action -->
+                <group invisible="action_type != 'confirm'">
+                    <group>
+                        <field name="confirmation_date"/>
+                    </group>
+                </group>
+
+                <group invisible="action_type != 'extend'">
+                    <group string="Prolongation">
+                        <field name="extension_months"/>
+                        <field name="new_trial_end" readonly="1"/>
+                    </group>
+                </group>
+
+                <group string="Motif / Observations">
+                    <field name="reason" nolabel="1" placeholder="Observations..."/>
+                </group>
+
+                <footer>
+                    <button name="action_execute" type="object" string="Valider"
+                            class="btn-primary"/>
+                    <button string="Annuler" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_anomaly_report_form" model="ir.ui.view">
+        <field name="name">attendance.anomaly.report.form</field>
+        <field name="model">attendance.anomaly.report</field>
+        <field name="arch" type="xml">
+            <form>
+                <field name="state" invisible="1"/>
+                <!-- Sélection -->
+                <group invisible="state != 'draft'">
+                    <group>
+                        <field name="employee_id"/>
+                    </group>
+                    <group>
+                        <field name="date_from"/>
+                        <field name="date_to"/>
+                    </group>
+                </group>
+                <footer invisible="state != 'draft'">
+                    <button name="action_analyze" type="object" string="Analyser"
+                            class="btn-primary"/>
+                    <button string="Annuler" class="btn-secondary" special="cancel"/>
+                </footer>
+
+                <!-- Résultats -->
+                <div invisible="state != 'done'">
+                    <group col="6" class="o_group_stats">
+                        <field name="employee_id" readonly="1"/>
+                        <field name="date_from" readonly="1"/>
+                        <field name="date_to" readonly="1"/>
+                        <field name="total_work_days"/>
+                        <field name="total_present"/>
+                        <field name="total_absent"/>
+                        <field name="total_anomalies"/>
+                        <field name="total_late"/>
+                        <field name="total_late_minutes"/>
+                        <field name="total_early_leave"/>
+                        <field name="total_holidays"/>
+                        <field name="delta_hours" widget="float_time"/>
+                    </group>
+                    <field name="line_ids" readonly="1">
+                        <list decoration-danger="status == 'absent'"
+                              decoration-warning="status == 'anomaly'"
+                              decoration-muted="status == 'holiday'"
+                              decoration-success="status == 'present'">
+                            <field name="date"/>
+                            <field name="dayofweek_label"/>
+                            <field name="status" widget="badge"/>
+                            <field name="check_in" widget="datetime"/>
+                            <field name="check_out" widget="datetime"/>
+                            <field name="worked_hours" widget="float_time"/>
+                            <field name="scheduled_hours" widget="float_time"/>
+                            <field name="late_minutes"/>
+                            <field name="early_leave_minutes"/>
+                            <field name="anomaly_ids" widget="many2many_tags"
+                                   options="{'color_field': 'color'}"/>
+                            <field name="holiday_name" optional="hide"/>
+                        </list>
+                    </field>
+                    <footer>
+                        <button name="action_back" type="object" string="Nouvelle analyse"/>
+                        <button name="action_open_attendances" type="object"
+                                string="Voir les pointages"/>
+                        <button name="%(action_report_attendance_sheet)d" type="action"
+                                string="Imprimer (PDF)" class="btn-secondary" icon="fa-print"/>
+                        <button string="Fermer" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_anomaly_report" model="ir.actions.act_window">
+        <field name="name">Rapport présence (employé)</field>
+        <field name="res_model">attendance.anomaly.report</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Bouton sur la fiche employé -->
+    <record id="action_anomaly_report_employee" model="ir.actions.act_window">
+        <field name="name">Rapport présence</field>
+        <field name="res_model">attendance.anomaly.report</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="hr.model_hr_employee"/>
+        <field name="binding_view_types">form</field>
+    </record>
+
+</odoo>

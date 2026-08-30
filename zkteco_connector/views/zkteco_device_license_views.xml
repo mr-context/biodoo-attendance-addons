@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Licence/slot info on the device form (kept separate from device.py). -->
+    <record id="view_zkteco_device_form_license" model="ir.ui.view">
+        <field name="name">zkteco.device.form.license</field>
+        <field name="model">zkteco.device</field>
+        <field name="inherit_id" ref="zkteco_connector.view_zkteco_device_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Banner: device approved by the operator but parked over the licence cap. -->
+            <sheet position="before">
+                <div class="alert alert-warning" role="alert" invisible="state != 'held'">
+                    <strong>Limite de licence atteinte. </strong>
+                    <field name="license_reason" readonly="1" nolabel="1" class="oe_inline"/>
+                    <span> — libérez un slot (supprimez un device) ou augmentez le plan ;
+                    ce device sera activé automatiquement.</span>
+                </div>
+            </sheet>
+
+            <!-- Licence counters next to the MAC (the slot identity). -->
+            <field name="mac_address" position="after">
+                <field name="license_used"/>
+                <field name="license_max"/>
+            </field>
+
+        </field>
+    </record>
+
+    <!-- Show "held" devices distinctly in the list. -->
+    <record id="view_zkteco_device_list_license" model="ir.ui.view">
+        <field name="name">zkteco.device.list.license</field>
+        <field name="model">zkteco.device</field>
+        <field name="inherit_id" ref="zkteco_connector.view_zkteco_device_list"/>
+        <field name="arch" type="xml">
+            <list position="attributes">
+                <attribute name="decoration-info">state == 'held'</attribute>
+            </list>
+        </field>
+    </record>
+
+</odoo>

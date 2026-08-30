@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_face_enrollment_wizard_manager,face.enrollment.wizard.manager,model_face_enrollment_wizard,hr.group_hr_manager,1,1,1,1
+access_face_enrollment_wizard_user,face.enrollment.wizard.user,model_face_enrollment_wizard,base.group_user,1,0,0,0
+access_hr_employee_checkpoint_manager,hr.employee.checkpoint.manager,model_hr_employee_checkpoint,hr.group_hr_manager,1,1,1,1
+access_hr_employee_checkpoint_user,hr.employee.checkpoint.user,model_hr_employee_checkpoint,base.group_user,1,0,0,0
+access_hr_checkpoint_log_manager,hr.checkpoint.log.manager,model_hr_checkpoint_log,hr.group_hr_manager,1,1,1,1
+access_hr_checkpoint_log_user,hr.checkpoint.log.user,model_hr_checkpoint_log,base.group_user,1,1,1,0

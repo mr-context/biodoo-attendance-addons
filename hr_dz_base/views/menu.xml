@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Menu Configuration RH Algérie -->
+    <menuitem id="menu_hr_dz_config_root"
+              name="Algérie"
+              parent="hr.menu_human_resources_configuration"
+              sequence="100"/>
+
+    <menuitem id="menu_hr_legal_parameter"
+              name="Paramètres légaux"
+              parent="menu_hr_dz_config_root"
+              action="hr_legal_parameter_action"
+              sequence="10"/>
+
+    <menuitem id="menu_hr_civilite"
+              name="Civilités"
+              parent="menu_hr_dz_config_root"
+              action="hr_civilite_action"
+              sequence="20"/>
+
+    <menuitem id="menu_hr_csp"
+              name="Catégories Socio-Prof."
+              parent="menu_hr_dz_config_root"
+              action="hr_csp_action"
+              sequence="30"/>
+
+    <menuitem id="menu_hr_type_placement"
+              name="Types de placement"
+              parent="menu_hr_dz_config_root"
+              action="hr_type_placement_action"
+              sequence="40"/>
+
+    <menuitem id="menu_hr_service_national"
+              name="Service national"
+              parent="menu_hr_dz_config_root"
+              action="hr_service_national_action"
+              sequence="50"/>
+
+</odoo>

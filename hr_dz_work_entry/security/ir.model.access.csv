@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_hr_work_entry_anomaly_user,hr.work.entry.anomaly.user,model_hr_work_entry_anomaly,hr.group_hr_user,1,1,1,0
+access_hr_work_entry_anomaly_manager,hr.work.entry.anomaly.manager,model_hr_work_entry_anomaly,hr.group_hr_manager,1,1,1,1
+access_hr_work_entry_compute_wizard,hr.work.entry.compute.wizard,model_hr_work_entry_compute_wizard,hr.group_hr_user,1,1,1,1

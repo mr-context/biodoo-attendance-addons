@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ================================================================== -->
+    <!-- EMPLOYEE FORM VIEW - Reorganization for Algerian HR                -->
+    <!-- ================================================================== -->
+    <record id="hr_employee_view_form_dz" model="ir.ui.view">
+        <field name="name">hr.employee.form.dz</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+
+            <!-- ============================================================ -->
+            <!-- HEADER: Document buttons                                      -->
+            <!-- ============================================================ -->
+            <xpath expr="//header" position="inside">
+                <button name="action_print_attestation_travail" type="object"
+                        string="Attestation de travail" class="btn-secondary"
+                        groups="hr.group_hr_user"/>
+                <button name="action_print_certificat_travail" type="object"
+                        string="Certificat de travail" class="btn-secondary"
+                        groups="hr.group_hr_user"/>
+            </xpath>
+
+            <!-- ============================================================ -->
+            <!-- TOP: Add civilite before name                                 -->
+            <!-- ============================================================ -->
+            <xpath expr="//field[@name='name']" position="before">
+                <field name="civilite_id" placeholder="Civilite" class="oe_inline" style="width: auto;"/>
+            </xpath>
+
+            <!-- Nom / Prénom détectés automatiquement -->
+            <xpath expr="//div[hasclass('oe_title')]" position="after">
+                <group string="Nom · Prénom — auto-détecté" name="dz_nom_prenom" class="dz_nom_prenom_block"
+                      invisible="not name">
+                    <field name="nom_famille" placeholder="NOM DE FAMILLE"/>
+                    <field name="prenom" placeholder="Prénom" class="dz_prenom_field"/>
+                </group>
+            </xpath>
+
+            <!-- ============================================================ -->
+            <!-- ONGLET TRAVAIL: Classification professionnelle                -->
+            <!-- Avant le groupe departure dans work_information               -->
+            <!-- ============================================================ -->
+            <xpath expr="//page[@name='work_information']//group[@name='departure']" position="before">
+                <group string="Classification professionnelle" name="dz_classification">
+                    <field name="matricule" readonly="1"/>
+                    <field name="csp_id"/>
+                    <field name="type_placement_id"/>
+                </group>
+            </xpath>
+
+            <!-- ============================================================ -->
+            <!-- ONGLET PERSONNEL: Reorganisation                              -->
+            <!-- ============================================================ -->
+
+            <!-- Nom en arabe apres Personal Information -->
+            <xpath expr="//group[@name='hr_birth_group']" position="after">
+                <group string="Identite officielle (Arabe)" name="arabic_identity">
+                    <field name="name_ar" nolabel="1" colspan="2"
+                           placeholder="الاسم الكامل بالعربية (كما هو مكتوب في بطاقة التعريف)"
+                           style="direction: rtl; text-align: right; font-size: 1.3em;"/>
+                </group>
+            </xpath>
+
+            <!-- Etendre Citizenship avec PI -->
+            <xpath expr="//group[@name='citizenship']" position="inside">
+                <field name="pi_delivre_par" string="Delivree par (Daira)"/>
+                <field name="pi_date_expiration" string="Date expiration"/>
+            </xpath>
+
+            <!-- Etat civil algerien apres Citizenship -->
+            <xpath expr="//group[@name='citizenship']" position="after">
+                <group string="Filiation" name="dz_filiation">
+                    <field name="prenom_pere"/>
+                    <field name="nom_prenom_mere"/>
+                </group>
+                <group string="Acte de naissance" name="dz_birth_certificate">
+                    <field name="acte_naissance_num"/>
+                    <field name="date_naissance_presumee"/>
+                </group>
+                <group string="Lieu de naissance (Algerie)" name="dz_birthplace">
+                    <field name="wilaya_naissance_id"/>
+                    <field name="commune_naissance_id"/>
+                </group>
+                <group string="Service national" name="dz_military">
+                    <field name="service_national_id"/>
+                </group>
+            </xpath>
+
+            <!-- CCP apres Location -->
+            <xpath expr="//group[@name='hr_location_group']" position="after">
+                <group string="Compte postal" name="dz_ccp">
+                    <field name="compte_ccp"/>
+                </group>
+            </xpath>
+
+            <!-- Masquer le champ natif Odoo "children" — remplacé par nb_enfants_charge -->
+            <xpath expr="//field[@name='children']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+
+            <!-- Nos champs algériens après la position du champ masqué -->
+            <xpath expr="//field[@name='children']" position="after">
+                <field name="nb_enfants_charge" string="Enfants a charge (Alloc. Fam.)"
+                       invisible="marital == 'single'"/>
+                <field name="nb_enfants_scolarises" string="Enfants scolarises (Prime sept.)"
+                       invisible="marital == 'single'"/>
+                <field name="conjoint_travaille" invisible="marital != 'married'"/>
+            </xpath>
+
+            <!-- Handicap — dans l'onglet Personnel, après Citizenship -->
+            <xpath expr="//group[@name='citizenship']" position="after">
+                <group string="Handicap" name="dz_handicap">
+                    <field name="is_handicap"/>
+                    <field name="handicap_taux" invisible="not is_handicap" string="Taux (%)"/>
+                </group>
+            </xpath>
+
+            <!-- ============================================================ -->
+            <!-- ONGLET PAIE: Sécurité sociale uniquement                     -->
+            <!-- ============================================================ -->
+            <xpath expr="//page[@name='payroll_information']//group[@name='contract']" position="after">
+                <group string="Securite sociale (CNAS)" name="dz_cnas">
+                    <field name="date_affiliation_cnas"/>
+                    <field name="emp_declare" string="Declare a la CNAS"/>
+                </group>
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- ================================================================== -->
+    <!-- EMPLOYEE TREE VIEW                                                  -->
+    <!-- ================================================================== -->
+    <record id="hr_employee_view_tree_dz" model="ir.ui.view">
+        <field name="name">hr.employee.tree.dz</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_tree"/>
+        <field name="arch" type="xml">
+            <field name="name" position="before">
+                <field name="matricule" optional="show"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- ================================================================== -->
+    <!-- EMPLOYEE SEARCH VIEW                                                -->
+    <!-- ================================================================== -->
+    <record id="hr_employee_view_search_dz" model="ir.ui.view">
+        <field name="name">hr.employee.search.dz</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_filter"/>
+        <field name="arch" type="xml">
+            <field name="name" position="after">
+                <field name="matricule" string="Matricule"/>
+            </field>
+            <filter name="my_team" position="after">
+                <separator/>
+                <filter name="filter_declared_cnas" string="Declares CNAS"
+                        domain="[('emp_declare', '=', True)]"/>
+                <filter name="filter_handicap" string="Travailleurs handicapes"
+                        domain="[('is_handicap', '=', True)]"/>
+            </filter>
+        </field>
+    </record>
+
+    <!-- ================================================================== -->
+    <!-- PARAMETRES: Civilite                                               -->
+    <!-- ================================================================== -->
+    <record id="hr_civilite_view_tree" model="ir.ui.view">
+        <field name="name">hr.civilite.tree</field>
+        <field name="model">hr.civilite</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="code"/>
+                <field name="name"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="hr_civilite_action" model="ir.actions.act_window">
+        <field name="name">Civilites</field>
+        <field name="res_model">hr.civilite</field>
+        <field name="view_mode">list</field>
+    </record>
+
+    <!-- ================================================================== -->
+    <!-- PARAMETRES: CSP                                                    -->
+    <!-- ================================================================== -->
+    <record id="hr_csp_view_tree" model="ir.ui.view">
+        <field name="name">hr.csp.tree</field>
+        <field name="model">hr.csp</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="description" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="hr_csp_action" model="ir.actions.act_window">
+        <field name="name">Categories Socio-Prof.</field>
+        <field name="res_model">hr.csp</field>
+        <field name="view_mode">list</field>
+    </record>
+
+    <!-- ================================================================== -->
+    <!-- PARAMETRES: Type Placement                                         -->
+    <!-- ================================================================== -->
+    <record id="hr_type_placement_view_tree" model="ir.ui.view">
+        <field name="name">hr.type.placement.tree</field>
+        <field name="model">hr.type.placement</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="cnas_reduction"/>
+                <field name="description" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="hr_type_placement_action" model="ir.actions.act_window">
+        <field name="name">Types de placement</field>
+        <field name="res_model">hr.type.placement</field>
+        <field name="view_mode">list</field>
+    </record>
+
+    <!-- ================================================================== -->
+    <!-- PARAMETRES: Service National                                       -->
+    <!-- ================================================================== -->
+    <record id="hr_service_national_view_tree" model="ir.ui.view">
+        <field name="name">hr.service.national.tree</field>
+        <field name="model">hr.service.national</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="code"/>
+                <field name="name"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="hr_service_national_action" model="ir.actions.act_window">
+        <field name="name">Service national</field>
+        <field name="res_model">hr.service.national</field>
+        <field name="view_mode">list</field>
+    </record>
+
+</odoo>

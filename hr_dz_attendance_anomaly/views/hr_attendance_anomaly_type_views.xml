@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_anomaly_type_list" model="ir.ui.view">
+        <field name="name">hr.attendance.anomaly.type.list</field>
+        <field name="model">hr.attendance.anomaly.type</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="severity"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_anomaly_type_form" model="ir.ui.view">
+        <field name="name">hr.attendance.anomaly.type.form</field>
+        <field name="model">hr.attendance.anomaly.type</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_reset_conditions" type="object"
+                            string="Réinitialiser le code standard"
+                            confirm="Remplacer la condition Python par le code standard de ce type ?"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Archivé" bg_color="text-bg-danger"
+                            invisible="active"/>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="code"/>
+                            <field name="severity"/>
+                        </group>
+                        <group>
+                            <field name="sequence"/>
+                            <field name="color" widget="color_picker"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                    </group>
+                    <field name="description" placeholder="Description fonctionnelle..."/>
+                    <separator string="Condition Python"/>
+                    <field name="condition_code" widget="ace" options="{'mode': 'python'}"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_anomaly_type" model="ir.actions.act_window">
+        <field name="name">Types d'anomalies</field>
+        <field name="res_model">hr.attendance.anomaly.type</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'active_test': False}</field>
+    </record>
+
+</odoo>

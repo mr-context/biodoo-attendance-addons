@@ -1,0 +1,467 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Report Action - Print from Employee -->
+    <record id="action_report_contract" model="ir.actions.report">
+        <field name="name">Contrat de travail</field>
+        <field name="model">hr.employee</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">hr_dz_contract.report_contract_document</field>
+        <field name="report_file">hr_dz_contract.report_contract_document</field>
+        <field name="print_report_name">'Contrat_%s' % object.name</field>
+        <field name="binding_model_id" ref="hr.model_hr_employee"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- Report Action - Print from Contract (hr.version) -->
+    <record id="action_report_contract_version" model="ir.actions.report">
+        <field name="name">Contrat de travail</field>
+        <field name="model">hr.version</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">hr_dz_contract.report_contract_version_document</field>
+        <field name="report_file">hr_dz_contract.report_contract_version_document</field>
+        <field name="print_report_name">'Contrat_%s_%s' % (object.employee_id.name, object.contract_reference or 'draft')</field>
+        <field name="binding_model_id" ref="hr.model_hr_version"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- Report Template from hr.version -->
+    <template id="report_contract_version_document">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="version">
+                <t t-set="employee" t-value="version.employee_id"/>
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <style>
+                            .contract-title {
+                                text-align: center;
+                                font-size: 20px;
+                                font-weight: bold;
+                                margin: 30px 0;
+                                text-transform: uppercase;
+                            }
+                            .contract-body {
+                                font-size: 12px;
+                                line-height: 1.8;
+                                text-align: justify;
+                            }
+                            .contract-article {
+                                margin: 15px 0;
+                                page-break-inside: avoid;
+                            }
+                            .contract-article-title {
+                                font-weight: bold;
+                                text-decoration: underline;
+                                margin-bottom: 5px;
+                                page-break-after: avoid;
+                            }
+                            .contract-signature {
+                                margin-top: 50px;
+                                page-break-inside: avoid;
+                                page-break-before: avoid;
+                            }
+                            .contract-intro {
+                                margin: 20px 0;
+                            }
+                            .contract-final {
+                                page-break-inside: avoid;
+                            }
+                        </style>
+
+                        <!-- En-tête -->
+                        <div class="row mb-4">
+                            <div class="col-6">
+                                <p>
+                                    <strong>Réf:</strong>
+                                    <span t-if="version.contract_reference" t-field="version.contract_reference"/>
+                                    <span t-else="">-</span>
+                                </p>
+                            </div>
+                            <div class="col-6 text-end">
+                                <p>
+                                    <span t-field="employee.company_id.city"/>, le
+                                    <span t-field="version.date_etablissement" t-options="{'format': 'dd/MM/yyyy'}"/>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Titre -->
+                        <h1 class="contract-title">
+                            CONTRAT DE TRAVAIL
+                            <t t-if="version.contract_type_id">
+                                <br/>
+                                <span style="font-size: 16px;">
+                                    (<span t-field="version.contract_type_id.name"/>)
+                                </span>
+                            </t>
+                        </h1>
+
+                        <!-- Corps du contrat -->
+                        <div class="contract-body">
+                            <!-- Introduction -->
+                            <div class="contract-intro">
+                                <p><strong>Entre les soussignés :</strong></p>
+
+                                <p style="margin: 15px 0 15px 20px;">
+                                    <strong t-field="employee.company_id.name"/>,
+                                    <t t-if="employee.company_id.street">
+                                        sise à <span t-field="employee.company_id.street"/>,
+                                    </t>
+                                    <t t-if="employee.company_id.city">
+                                        <span t-field="employee.company_id.city"/>,
+                                    </t>
+                                    <t t-if="employee.company_id.country_id">
+                                        <span t-field="employee.company_id.country_id.name"/>,
+                                    </t>
+                                    représentée par son Directeur Général,<br/>
+                                    Ci-après dénommée <strong>« L'Employeur »</strong>,
+                                </p>
+
+                                <p style="text-align: center; margin: 15px 0;"><strong>ET</strong></p>
+
+                                <p style="margin: 15px 0 15px 20px;">
+                                    <t t-if="employee.civilite_id">
+                                        <span t-field="employee.civilite_id.name"/>
+                                    </t>
+                                    <strong t-field="employee.name"/>,
+                                    <t t-if="employee.birthday">
+                                        né(e) le <span t-field="employee.birthday" t-options="{'format': 'dd/MM/yyyy'}"/>
+                                    </t>
+                                    <t t-if="employee.place_of_birth">
+                                        à <span t-field="employee.place_of_birth"/>
+                                    </t>
+                                    <t t-if="employee.identification_id">
+                                        , titulaire de la CNI N° <span t-field="employee.identification_id"/>
+                                    </t>
+                                    ,<br/>
+                                    Ci-après dénommé(e) <strong>« L'Employé(e) »</strong>,
+                                </p>
+
+                                <p style="text-align: center; margin: 25px 0;">
+                                    <strong>IL A ÉTÉ CONVENU ET ARRÊTÉ CE QUI SUIT :</strong>
+                                </p>
+                            </div>
+
+                            <!-- Si articles définis, les utiliser -->
+                            <t t-if="version.article_line_ids">
+                                <t t-set="variables" t-value="version.get_contract_variables()"/>
+                                <t t-set="article_num" t-value="1"/>
+                                <t t-foreach="version.article_line_ids.sorted(key=lambda l: l.sequence)" t-as="line">
+                                    <div class="contract-article">
+                                        <p class="contract-article-title">
+                                            Article <t t-esc="article_num"/> - <t t-esc="line.name"/>
+                                        </p>
+                                        <t t-set="content" t-value="line.get_content(variables)"/>
+                                        <t t-out="content"/>
+                                    </div>
+                                    <t t-set="article_num" t-value="article_num + 1"/>
+                                </t>
+                            </t>
+
+                            <!-- Sinon, afficher contenu par défaut -->
+                            <t t-else="">
+                                <!-- Article 1: Engagement -->
+                                <div class="contract-article">
+                                    <p class="contract-article-title">Article 1 - Engagement</p>
+                                    <p>
+                                        L'Employeur engage <span t-field="employee.name"/>
+                                        en qualité de <strong t-field="version.job_id.name"/>
+                                        <t t-if="version.department_id">
+                                            au sein du département <span t-field="version.department_id.name"/>
+                                        </t>.
+                                    </p>
+                                </div>
+
+                                <!-- Article 2: Durée -->
+                                <div class="contract-article">
+                                    <p class="contract-article-title">Article 2 - Durée du contrat</p>
+                                    <t t-if="version.is_cdd">
+                                        <p>
+                                            Le présent contrat est conclu pour une durée déterminée de
+                                            <strong t-field="version.duration_months"/> mois,
+                                            du <strong t-field="version.contract_date_start" t-options="{'format': 'dd/MM/yyyy'}"/>
+                                            au <strong t-field="version.contract_date_end" t-options="{'format': 'dd/MM/yyyy'}"/>.
+                                        </p>
+                                    </t>
+                                    <t t-else="">
+                                        <p>
+                                            Le présent contrat est conclu pour une durée indéterminée
+                                            à compter du <strong t-field="version.contract_date_start" t-options="{'format': 'dd/MM/yyyy'}"/>.
+                                        </p>
+                                    </t>
+                                </div>
+
+                                <!-- Article 3: Période d'essai -->
+                                <t t-if="version.trial_date_end">
+                                    <div class="contract-article">
+                                        <p class="contract-article-title">Article 3 - Période d'essai</p>
+                                        <p>
+                                            Le présent contrat est assorti d'une période d'essai de
+                                            <strong t-field="version.trial_duration_months"/> mois,
+                                            soit du <span t-field="version.contract_date_start" t-options="{'format': 'dd/MM/yyyy'}"/>
+                                            au <span t-field="version.trial_date_end" t-options="{'format': 'dd/MM/yyyy'}"/>.
+                                            <br/>
+                                            Durant cette période, chacune des parties peut rompre le contrat sans préavis ni indemnité.
+                                        </p>
+                                    </div>
+                                </t>
+
+                                <!-- Article: Rémunération -->
+                                <div class="contract-article">
+                                    <p class="contract-article-title">
+                                        Article <t t-if="version.trial_date_end">4</t><t t-else="">3</t> - Rémunération
+                                    </p>
+                                    <p>
+                                        En contrepartie de ses services, l'Employé(e) percevra une rémunération
+                                        mensuelle brute de <strong t-field="version.wage" t-options="{'widget': 'monetary', 'display_currency': version.currency_id}"/>.
+                                    </p>
+                                </div>
+
+                                <!-- Article: Horaires -->
+                                <div class="contract-article">
+                                    <p class="contract-article-title">
+                                        Article <t t-if="version.trial_date_end">5</t><t t-else="">4</t> - Horaires de travail
+                                    </p>
+                                    <p>
+                                        L'Employé(e) effectuera son travail selon les horaires en vigueur dans l'entreprise,
+                                        <t t-if="version.resource_calendar_id">
+                                            soit <strong t-field="version.resource_calendar_id.name"/>.
+                                        </t>
+                                    </p>
+                                </div>
+
+                                <!-- Article: Préavis -->
+                                <t t-if="version.notice_period">
+                                    <div class="contract-article">
+                                        <p class="contract-article-title">
+                                            Article <t t-if="version.trial_date_end">6</t><t t-else="">5</t> - Préavis
+                                        </p>
+                                        <p>
+                                            En cas de rupture du contrat, la partie qui prend l'initiative de la rupture
+                                            devra respecter un préavis de <strong t-field="version.notice_period"/>
+                                            <t t-if="version.notice_period_uom == 'days'">jour(s)</t>
+                                            <t t-if="version.notice_period_uom == 'weeks'">semaine(s)</t>
+                                            <t t-if="version.notice_period_uom == 'months'">mois</t>.
+                                        </p>
+                                    </div>
+                                </t>
+                            </t>
+
+                            <!-- Mention finale + Signatures (groupées pour éviter saut de page) -->
+                            <div class="contract-final">
+                                <p style="margin-top: 30px;">
+                                    Fait en deux exemplaires originaux à <span t-field="employee.company_id.city"/>,
+                                    le <span t-field="version.date_etablissement" t-options="{'format': 'dd MMMM yyyy'}"/>.
+                                </p>
+
+                                <!-- Signatures -->
+                                <div class="contract-signature">
+                                    <div class="row">
+                                        <div class="col-6 text-center">
+                                            <p><strong>Pour l'Employeur</strong></p>
+                                            <p><span t-field="employee.company_id.name"/></p>
+                                            <p style="margin-top: 60px;">______________________</p>
+                                            <p><small>(Signature et cachet)</small></p>
+                                        </div>
+                                        <div class="col-6 text-center">
+                                            <p><strong>L'Employé(e)</strong></p>
+                                            <p><span t-field="employee.name"/></p>
+                                            <p style="margin-top: 60px;">______________________</p>
+                                            <p><small><em>« Lu et approuvé »</em></small></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <!-- Report Template -->
+    <template id="report_contract_document">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="employee">
+                <t t-set="version" t-value="employee.current_version_id"/>
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <style>
+                            .contract-title {
+                                text-align: center;
+                                font-size: 20px;
+                                font-weight: bold;
+                                margin: 30px 0;
+                                text-transform: uppercase;
+                            }
+                            .contract-body {
+                                font-size: 12px;
+                                line-height: 1.8;
+                                text-align: justify;
+                            }
+                            .contract-article {
+                                margin: 15px 0;
+                            }
+                            .contract-article-title {
+                                font-weight: bold;
+                                text-decoration: underline;
+                            }
+                            .contract-signature {
+                                margin-top: 50px;
+                            }
+                        </style>
+
+                        <!-- En-tête -->
+                        <div class="row mb-4">
+                            <div class="col-6">
+                                <p>
+                                    <strong>Réf:</strong> <span t-field="version.contract_reference"/>
+                                </p>
+                            </div>
+                            <div class="col-6 text-end">
+                                <p>
+                                    <span t-field="employee.company_id.city"/>, le
+                                    <span t-field="version.date_etablissement" t-options="{'format': 'dd/MM/yyyy'}"/>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Titre -->
+                        <h1 class="contract-title">
+                            CONTRAT DE TRAVAIL
+                            <t t-if="version.contract_type_id">
+                                (<span t-field="version.contract_type_id.code"/>)
+                            </t>
+                        </h1>
+
+                        <!-- Corps du contrat -->
+                        <div class="contract-body">
+                            <!-- Si articles définis, les utiliser -->
+                            <t t-if="version.article_line_ids">
+                                <t t-set="variables" t-value="version.get_contract_variables()"/>
+                                <t t-set="article_num" t-value="1"/>
+                                <t t-foreach="version.article_line_ids.sorted(key=lambda l: l.sequence)" t-as="line">
+                                    <div class="contract-article">
+                                        <p class="contract-article-title">
+                                            Article <t t-esc="article_num"/> - <t t-esc="line.name"/>
+                                        </p>
+                                        <t t-set="content" t-value="line.get_content(variables)"/>
+                                        <t t-out="content"/>
+                                    </div>
+                                    <t t-set="article_num" t-value="article_num + 1"/>
+                                </t>
+                            </t>
+
+                            <!-- Sinon, afficher contenu par défaut -->
+                            <t t-else="">
+                                <p><strong>Entre les soussignés :</strong></p>
+
+                                <p class="contract-article">
+                                    <strong t-field="employee.company_id.name"/>,
+                                    <t t-if="employee.company_id.street">
+                                        sise à <span t-field="employee.company_id.street"/>,
+                                    </t>
+                                    <t t-if="employee.company_id.city">
+                                        <span t-field="employee.company_id.city"/>,
+                                    </t>
+                                    représentée par son Directeur Général,<br/>
+                                    Ci-après dénommée <strong>« L'Employeur »</strong>,
+                                </p>
+
+                                <p style="text-align: center; margin: 20px 0;"><strong>ET</strong></p>
+
+                                <p class="contract-article">
+                                    <strong t-field="employee.name"/>,
+                                    <t t-if="employee.birthday">
+                                        né(e) le <span t-field="employee.birthday" t-options="{'format': 'dd/MM/yyyy'}"/>,
+                                    </t>
+                                    <t t-if="employee.place_of_birth">
+                                        à <span t-field="employee.place_of_birth"/>,
+                                    </t>
+                                    <br/>
+                                    Ci-après dénommé(e) <strong>« L'Employé(e) »</strong>,
+                                </p>
+
+                                <p style="text-align: center; margin: 20px 0;">
+                                    <strong>IL A ÉTÉ CONVENU CE QUI SUIT :</strong>
+                                </p>
+
+                                <!-- Article 1: Engagement -->
+                                <div class="contract-article">
+                                    <p class="contract-article-title">Article 1 - Engagement</p>
+                                    <p>
+                                        L'Employeur engage <span t-field="employee.name"/>
+                                        en qualité de <strong t-field="version.job_id.name"/>
+                                        <t t-if="version.department_id">
+                                            au sein du département <span t-field="version.department_id.name"/>
+                                        </t>.
+                                    </p>
+                                </div>
+
+                                <!-- Article 2: Durée -->
+                                <div class="contract-article">
+                                    <p class="contract-article-title">Article 2 - Durée du contrat</p>
+                                    <t t-if="version.is_cdd">
+                                        <p>
+                                            Le présent contrat est conclu pour une durée déterminée de
+                                            <strong t-field="version.duration_months"/> mois,
+                                            du <strong t-field="version.contract_date_start" t-options="{'format': 'dd/MM/yyyy'}"/>
+                                            au <strong t-field="version.contract_date_end" t-options="{'format': 'dd/MM/yyyy'}"/>.
+                                        </p>
+                                    </t>
+                                    <t t-else="">
+                                        <p>
+                                            Le présent contrat est conclu pour une durée indéterminée
+                                            à compter du <strong t-field="version.contract_date_start" t-options="{'format': 'dd/MM/yyyy'}"/>.
+                                        </p>
+                                    </t>
+                                </div>
+
+                                <!-- Article 3: Période d'essai -->
+                                <t t-if="version.trial_date_end">
+                                    <div class="contract-article">
+                                        <p class="contract-article-title">Article 3 - Période d'essai</p>
+                                        <p>
+                                            Le présent contrat est assorti d'une période d'essai de
+                                            <strong t-field="version.trial_duration_months"/> mois,
+                                            soit du <span t-field="version.contract_date_start" t-options="{'format': 'dd/MM/yyyy'}"/>
+                                            au <span t-field="version.trial_date_end" t-options="{'format': 'dd/MM/yyyy'}"/>.
+                                        </p>
+                                    </div>
+                                </t>
+
+                                <!-- Article 4: Rémunération -->
+                                <div class="contract-article">
+                                    <p class="contract-article-title">
+                                        Article <t t-if="version.trial_date_end">4</t><t t-else="">3</t> - Rémunération
+                                    </p>
+                                    <p>
+                                        En contrepartie de ses services, l'Employé(e) percevra une rémunération
+                                        mensuelle de <strong t-field="version.wage"/> DA.
+                                    </p>
+                                </div>
+                            </t>
+
+                            <!-- Signatures -->
+                            <div class="contract-signature">
+                                <div class="row">
+                                    <div class="col-6 text-center">
+                                        <p><strong>L'Employeur</strong></p>
+                                        <p style="margin-top: 60px;">(Signature et cachet)</p>
+                                    </div>
+                                    <div class="col-6 text-center">
+                                        <p><strong>L'Employé(e)</strong></p>
+                                        <p style="margin-top: 60px;">(Signature précédée de « Lu et approuvé »)</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+</odoo>

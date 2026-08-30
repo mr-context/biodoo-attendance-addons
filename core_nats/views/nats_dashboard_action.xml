@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="action_nats_dashboard" model="ir.actions.client">
+        <field name="name">NATS Dashboard</field>
+        <field name="tag">nats_dashboard</field>
+    </record>
+
+    <!-- Loaded after menus.xml so menu_nats_root already exists. -->
+    <menuitem id="menu_nats_dashboard"
+              name="Dashboard"
+              parent="menu_nats_root"
+              action="action_nats_dashboard"
+              sequence="5"/>
+
+</odoo>

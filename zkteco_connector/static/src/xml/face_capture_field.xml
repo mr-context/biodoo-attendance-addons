@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="zkteco_connector.FaceCaptureField">
+        <div class="o_face_capture_field">
+
+            <!-- ── Live preview ── -->
+            <t t-if="!state.captured">
+                <div class="o_face_capture_preview bg-dark rounded overflow-hidden"
+                     style="max-width:480px; aspect-ratio:4/3; position:relative;">
+
+                    <video t-ref="video" autoplay="true" playsinline="true" muted="true"
+                           class="w-100 h-100"
+                           style="object-fit:cover; display:block;"/>
+
+                    <!-- Canvas overlay pour le rectangle de détection -->
+                    <canvas t-ref="overlay"
+                            style="position:absolute; top:0; left:0;
+                                   width:100%; height:100%;
+                                   pointer-events:none;"/>
+
+                    <!-- Icône caméra quand inactif -->
+                    <t t-if="!state.streaming">
+                        <div class="position-absolute top-0 start-0 w-100 h-100
+                                    d-flex align-items-center justify-content-center">
+                            <i class="fa fa-camera fa-3x text-white opacity-50"/>
+                        </div>
+                    </t>
+
+                    <!-- Badge statut détection -->
+                    <t t-if="state.streaming">
+                        <div class="position-absolute bottom-0 start-0 m-2">
+                            <span t-if="state.loadingDetector"
+                                  class="badge bg-dark" style="font-size:11px; opacity:0.85;">
+                                <i class="fa fa-spinner fa-spin me-1"/>Chargement détecteur…
+                            </span>
+                            <span t-elif="state.detectorAvailable and state.faceDetected"
+                                  class="badge bg-success" style="font-size:11px;">
+                                <i class="fa fa-check me-1"/>Visage détecté
+                            </span>
+                            <span t-elif="state.detectorAvailable"
+                                  class="badge bg-secondary" style="font-size:11px; opacity:0.8;">
+                                <i class="fa fa-search me-1"/>Recherche visage…
+                            </span>
+                        </div>
+                    </t>
+                </div>
+
+                <!-- Canvas caché pour la capture -->
+                <canvas t-ref="canvas" class="d-none"/>
+
+                <div class="mt-2 d-flex gap-2 align-items-center">
+                    <t t-if="!state.streaming">
+                        <button type="button" class="btn btn-primary btn-sm"
+                                t-on-click="startCamera">
+                            <i class="fa fa-camera me-1"/>Activer la caméra
+                        </button>
+                    </t>
+                    <t t-else="">
+                        <button type="button" class="btn btn-success btn-sm"
+                                t-on-click="capture">
+                            <i class="fa fa-camera me-1"/>Prendre la photo
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm"
+                                t-on-click="stopCamera">
+                            Annuler
+                        </button>
+                    </t>
+                </div>
+
+                <t t-if="state.error">
+                    <div class="alert alert-danger small mt-2" role="alert" t-esc="state.error"/>
+                </t>
+            </t>
+
+            <!-- ── Aperçu après capture ── -->
+            <t t-else="">
+                <img t-att-src="'data:image/jpeg;base64,' + props.record.data[props.name]"
+                     class="rounded"
+                     style="max-width:480px; max-height:360px; display:block;"/>
+                <div class="mt-2">
+                    <button type="button" class="btn btn-secondary btn-sm"
+                            t-on-click="retake">
+                        <i class="fa fa-refresh me-1"/>Reprendre
+                    </button>
+                </div>
+            </t>
+
+        </div>
+    </t>
+</templates>

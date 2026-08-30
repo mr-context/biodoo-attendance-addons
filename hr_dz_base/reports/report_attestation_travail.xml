@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Report Action -->
+    <record id="action_report_attestation_travail" model="ir.actions.report">
+        <field name="name">Attestation de travail</field>
+        <field name="model">hr.employee</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">hr_dz_base.report_attestation_travail_document</field>
+        <field name="report_file">hr_dz_base.report_attestation_travail_document</field>
+        <field name="print_report_name">'Attestation_Travail_%s' % object.name</field>
+        <field name="binding_model_id" ref="hr.model_hr_employee"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- Report Template -->
+    <template id="report_attestation_travail_document">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="employee">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <style>
+                            .attestation-title {
+                                text-align: center;
+                                font-size: 24px;
+                                font-weight: bold;
+                                margin: 40px 0;
+                                text-decoration: underline;
+                            }
+                            .attestation-body {
+                                font-size: 14px;
+                                line-height: 2;
+                                text-align: justify;
+                            }
+                            .attestation-signature {
+                                margin-top: 60px;
+                                text-align: right;
+                            }
+                        </style>
+
+                        <!-- En-tête -->
+                        <div class="row">
+                            <div class="col-6">
+                                <p>
+                                    <strong>N° Employeur CNAS:</strong>
+                                    <span t-field="employee.company_id.num_employeur_cnas"/>
+                                </p>
+                            </div>
+                            <div class="col-6 text-end">
+                                <p>
+                                    <span t-field="employee.company_id.city"/>, le
+                                    <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y')"/>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Titre -->
+                        <h1 class="attestation-title">ATTESTATION DE TRAVAIL</h1>
+
+                        <!-- Corps -->
+                        <div class="attestation-body">
+                            <p>
+                                Nous soussignés, <strong t-field="employee.company_id.name"/>,
+                                sise à <span t-field="employee.company_id.street"/>
+                                <t t-if="employee.company_id.city">
+                                    , <span t-field="employee.company_id.city"/>
+                                </t>
+                                <t t-if="employee.company_id.state_id">
+                                    , <span t-field="employee.company_id.state_id.name"/>
+                                </t>,
+                                attestons que :
+                            </p>
+
+                            <p style="margin: 20px 0;">
+                                <t t-if="employee.civilite_id">
+                                    <span t-field="employee.civilite_id.code"/>
+                                </t>
+                                <strong t-field="employee.name"/>
+                            </p>
+
+                            <p>
+                                Né(e) le <strong t-field="employee.birthday"/>
+                                <t t-if="employee.place_of_birth">
+                                    à <strong t-field="employee.place_of_birth"/>
+                                </t>
+                            </p>
+
+                            <t t-if="employee.private_street">
+                                <p>
+                                    Demeurant à : <strong t-field="employee.private_street"/>
+                                    <t t-if="employee.private_city">
+                                        , <span t-field="employee.private_city"/>
+                                    </t>
+                                </p>
+                            </t>
+
+                            <t t-if="employee.ssnid">
+                                <p>
+                                    N° Sécurité sociale : <strong t-field="employee.ssnid"/>
+                                </p>
+                            </t>
+
+                            <p style="margin-top: 20px;">
+                                Est employé(e) au sein de notre entreprise
+                                <t t-if="employee.contract_date_start">
+                                    depuis le <strong t-field="employee.contract_date_start"/>
+                                </t>
+                                à ce jour, en qualité de
+                                <strong t-field="employee.job_title"/>.
+                            </p>
+
+                            <p style="margin-top: 30px;">
+                                La présente attestation lui est délivrée pour servir et valoir
+                                ce que de droit.
+                            </p>
+                        </div>
+
+                        <!-- Signature -->
+                        <div class="attestation-signature">
+                            <p><strong><u>Le Directeur</u></strong></p>
+                            <br/><br/><br/>
+                        </div>
+
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+</odoo>

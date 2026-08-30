@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_zkteco_approve_wizard_form" model="ir.ui.view">
+        <field name="name">zkteco.approve.wizard.form</field>
+        <field name="model">zkteco.approve.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Approuver le device ZKTeco">
+
+                <group string="Device">
+                    <field name="device_id"     readonly="1"/>
+                    <field name="device_serial" readonly="1" string="N° Série"/>
+                    <field name="device_name"   readonly="1" string="Modèle"
+                           invisible="not device_name"/>
+                    <field name="device_ip"     readonly="1" string="Adresse IP"
+                           invisible="not device_ip"/>
+                </group>
+
+                <footer>
+                    <button name="action_approve"
+                            type="object"
+                            class="btn-primary"
+                            string="Approuver"/>
+                    <button class="btn-secondary" special="cancel" string="Annuler"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

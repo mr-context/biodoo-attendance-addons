@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Re-assert approved/held devices to the bridge: migrates existing
+         approvals on first deploy and self-heals after a NATS/bridge outage.
+         Idempotent — the bridge caps the count regardless. -->
+    <record id="ir_cron_zkteco_license_reconcile" model="ir.cron">
+        <field name="name">ZKTeco: réconciliation des slots de licence</field>
+        <field name="model_id" ref="model_zkteco_device"/>
+        <field name="state">code</field>
+        <field name="code">model._license_reconcile_all()</field>
+        <field name="interval_number">15</field>
+        <field name="interval_type">minutes</field>
+        <field name="active" eval="True"/>
+    </record>
+</odoo>

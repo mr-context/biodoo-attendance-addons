@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── SEARCH ───────────────────────────────────────────────── -->
+    <record id="view_zkteco_device_user_search" model="ir.ui.view">
+        <field name="name">zkteco.device.user.search</field>
+        <field name="model">zkteco.device.user</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name_on_device" string="Nom"/>
+                <field name="pin"            string="PIN"/>
+                <field name="employee_id"    string="Employé"/>
+                <field name="device_id"      string="Device"/>
+                <separator/>
+                <filter name="new"     string="À mapper"   domain="[('state','=','new')]"/>
+                <filter name="mapped"  string="Mappés"     domain="[('state','=','mapped')]"/>
+                <filter name="ignored" string="Ignorés"    domain="[('state','=','ignored')]"/>
+                <filter name="deleted" string="Supprimés"  domain="[('state','=','deleted')]"/>
+                <group>
+                    <filter name="group_device" string="Device"   context="{'group_by':'device_id'}"/>
+                    <filter name="group_state"  string="État"     context="{'group_by':'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ── LIST ─────────────────────────────────────────────────── -->
+    <record id="view_zkteco_device_user_list" model="ir.ui.view">
+        <field name="name">zkteco.device.user.list</field>
+        <field name="model">zkteco.device.user</field>
+        <field name="arch" type="xml">
+            <list decoration-warning="state=='new'"
+                  decoration-success="state=='mapped'"
+                  decoration-muted="state in ('ignored','deleted')"
+                  multi_edit="1">
+                <field name="device_id"           string="Device"            optional="show"/>
+                <field name="pin"                 string="PIN"               width="60px"/>
+                <field name="name_on_device"      string="Nom sur le device"/>
+                <field name="employee_id"         string="Employé Odoo"/>
+                <field name="state"               widget="badge"
+                       decoration-warning="state=='new'"
+                       decoration-success="state=='mapped'"
+                       decoration-muted="state in ('ignored','deleted')"
+                       string="État"/>
+                <field name="pending_attlog_count" string="⏳ Pointages"      optional="show"/>
+                <field name="biodata_count"        string="Templates"         optional="show"
+                       column_invisible="1"/>
+                <field name="biophoto_count"       string="Photos"            optional="show"
+                       column_invisible="1"/>
+                <button name="action_open_mapping_wizard"
+                        type="object"
+                        string="Mapper"
+                        icon="fa-link"
+                        invisible="state != 'new'"
+                        class="btn-primary btn-sm"/>
+                <button name="action_ignore"
+                        type="object"
+                        string="Ignorer"
+                        icon="fa-ban"
+                        invisible="state != 'new'"
+                        class="btn-sm text-muted"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ── FORM ─────────────────────────────────────────────────── -->
+    <record id="view_zkteco_device_user_form" model="ir.ui.view">
+        <field name="name">zkteco.device.user.form</field>
+        <field name="model">zkteco.device.user</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_open_mapping_wizard"
+                            string="Mapper vers un employé"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'new'"/>
+                    <button name="action_ignore"
+                            string="Ignorer"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="state != 'new'"
+                            confirm="Ignorer cet utilisateur ? Ses pointages resteront en quarantaine."/>
+                    <button name="action_reset_to_new"
+                            string="Remettre en sas"
+                            type="object"
+                            invisible="state not in ('mapped','ignored')"/>
+                    <button name="action_refresh_biodata"
+                            string="Rafraîchir depuis le device"
+                            type="object"
+                            icon="fa-refresh"/>
+                    <button name="action_delete_from_device"
+                            string="Supprimer du device"
+                            type="object"
+                            class="btn-danger"
+                            invisible="state == 'deleted'"
+                            confirm="Supprimer physiquement cet utilisateur du device ?"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="new,mapped"/>
+                </header>
+
+                <sheet>
+                    <!-- Smart buttons -->
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" type="object"
+                                name="action_open_mapping_wizard"
+                                icon="fa-clock-o"
+                                invisible="pending_attlog_count == 0">
+                            <field name="pending_attlog_count" widget="statinfo"
+                                   string="Pointages en attente"/>
+                        </button>
+                        <button class="oe_stat_button" type="object"
+                                name="action_view_biodata"
+                                icon="fa-hand-o-up"
+                                invisible="biodata_count == 0">
+                            <field name="biodata_count" widget="statinfo" string="Templates bio"/>
+                        </button>
+                        <button class="oe_stat_button" type="object"
+                                name="action_view_biophoto"
+                                icon="fa-camera"
+                                invisible="biophoto_count == 0">
+                            <field name="biophoto_count" widget="statinfo" string="Photos"/>
+                        </button>
+                    </div>
+
+                    <!-- Identité -->
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name_on_device" readonly="1"
+                                   placeholder="(nom inconnu)"/>
+                        </h1>
+                        <h2 class="text-muted">
+                            PIN :&amp;nbsp;<field name="pin" readonly="1"/>
+                        </h2>
+                    </div>
+
+                    <group>
+                        <group string="Identité device">
+                            <field name="device_id"  readonly="1" string="Device"/>
+                            <field name="privilege"  readonly="1"
+                                   string="Privilège"
+                                   help="0 = utilisateur standard · 14 = administrateur"/>
+                            <field name="card"       readonly="1" string="Carte RFID"
+                                   invisible="not card"/>
+                        </group>
+                        <group string="Liaison Odoo">
+                            <field name="employee_id"
+                                   string="Employé lié"
+                                   placeholder="Non mappé — cliquez Mapper"/>
+                        </group>
+                    </group>
+
+                    <field name="has_palm" invisible="1"/>
+
+                    <!-- Biométrie -->
+                    <notebook>
+                        <page string="Biométrie">
+                            <!-- Empreintes + visage côte-à-côte, même hauteur -->
+                            <div class="d-flex align-items-stretch gap-3 mb-3">
+                                <div class="flex-grow-1 min-w-0">
+                                    <div class="o_form_label mb-1">Empreintes</div>
+                                    <field name="finger_grid_html" widget="html" readonly="1" nolabel="1"/>
+                                </div>
+                                <div class="flex-shrink-0 border-start ps-3">
+                                    <div class="o_form_label mb-1">Visage</div>
+                                    <field name="face_preview_html" widget="html" readonly="1" nolabel="1"/>
+                                </div>
+                                <div class="flex-shrink-0 border-start ps-3">
+                                    <div class="o_form_label mb-1">Paume</div>
+                                    <field name="palm_preview_html" widget="html" readonly="1" nolabel="1"/>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info small" role="status"
+                                 invisible="biodata_count != 0">
+                                <i class="fa fa-info-circle me-1"/>
+                                Aucun template reçu — tous les doigts apparaissent comme non enrôlés.
+                                Redémarrez le bridge pour forcer le device à renvoyer ses templates.
+                            </div>
+
+                            <!-- Détail -->
+                            <field name="biodata_ids" readonly="1" string="Détail des templates"
+                                   invisible="biodata_count == 0">
+                                <list>
+                                    <field name="bio_type"    string="Type"
+                                           widget="badge"
+                                           decoration-info="bio_type == '1'"
+                                           decoration-warning="bio_type == '8'"
+                                           decoration-success="bio_type in ('9','2')"/>
+                                    <field name="finger_label" string="Doigt / Biométrie"/>
+                                    <field name="valid"        string="Valide"
+                                           widget="boolean_toggle"/>
+                                    <field name="format_code"  string="Format" optional="show"/>
+                                    <button name="action_delete_from_device"
+                                            type="object"
+                                            icon="fa-trash"
+                                            string="Supprimer du device"
+                                            class="btn-sm btn-danger"
+                                            confirm="Supprimer ce template du device ?"/>
+                                </list>
+                            </field>
+
+                            <!-- Suppression bulk -->
+                            <div class="d-flex gap-2 mt-2" invisible="biodata_count == 0">
+                                <button name="action_delete_all_fingerprints"
+                                        type="object"
+                                        class="btn btn-outline-danger btn-sm"
+                                        confirm="Supprimer toutes les empreintes de cet utilisateur sur le device ?">
+                                    <i class="fa fa-hand-o-up me-1"/> Effacer les empreintes
+                                </button>
+                                <button name="action_delete_face"
+                                        type="object"
+                                        class="btn btn-outline-danger btn-sm"
+                                        confirm="Supprimer le visage de cet utilisateur sur le device ?">
+                                    <i class="fa fa-user-o me-1"/> Effacer le visage
+                                </button>
+                                <button name="action_delete_palm"
+                                        type="object"
+                                        class="btn btn-outline-danger btn-sm"
+                                        invisible="not has_palm"
+                                        confirm="Supprimer la paume de cet utilisateur sur le device ?">
+                                    <i class="fa fa-hand-paper-o me-1"/> Effacer la paume
+                                </button>
+                            </div>
+                        </page>
+
+                        <page string="Photos d'enrôlement">
+                            <div class="alert alert-info small" role="status"
+                                 invisible="biophoto_count != 0">
+                                <i class="fa fa-info-circle me-1"/>
+                                Aucune photo d'enrôlement reçue pour cet utilisateur.
+                                Les photos (BIOPHOTO) arrivent lors de la première synchronisation.
+                            </div>
+
+                            <!-- Galerie photos -->
+                            <div class="d-flex flex-wrap gap-4 p-2"
+                                 invisible="biophoto_count == 0">
+                                <field name="biophoto_ids" readonly="1" nolabel="1">
+                                    <list>
+                                        <field name="photo"       string="Photo"
+                                               widget="image"
+                                               options="{'size': [128, 128], 'preview_image': 'photo'}"/>
+                                        <field name="filename"    string="Fichier"/>
+                                        <field name="captured_at" string="Reçue le"/>
+                                    </list>
+                                </field>
+                            </div>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── ACTIONS ───────────────────────────────────────────────── -->
+    <record id="action_zkteco_device_user" model="ir.actions.act_window">
+        <field name="name">Users device (sas)</field>
+        <field name="res_model">zkteco.device.user</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_zkteco_device_user_search"/>
+        <field name="context">{'search_default_new': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Aucun utilisateur device pour l'instant.
+            </p>
+            <p>
+                Les utilisateurs apparaissent ici dès que le device envoie son OPERLOG
+                après approbation. Mappez-les vers des employés Odoo pour activer
+                le suivi de présence.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_zkteco_device_user_pending" model="ir.actions.act_window">
+        <field name="name">Users à mapper</field>
+        <field name="res_model">zkteco.device.user</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('state', '=', 'new')]</field>
+        <field name="search_view_id" ref="view_zkteco_device_user_search"/>
+    </record>
+
+</odoo>

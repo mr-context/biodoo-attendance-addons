@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_nats_server_form" model="ir.ui.view">
+        <field name="name">nats.server.form</field>
+        <field name="model">nats.server</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_start"   string="Start"   type="object"
+                            class="btn-primary"
+                            invisible="state == 'running'"/>
+                    <button name="action_stop"    string="Stop"    type="object"
+                            invisible="state != 'running'"/>
+                    <button name="action_restart" string="Restart" type="object"
+                            invisible="state != 'running'"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="stopped,running"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" type="object"
+                                name="action_refresh_stats" icon="fa-plug">
+                            <div class="o_stat_info">
+                                <span class="o_stat_value">
+                                    <field name="is_connected" widget="boolean"/>
+                                </span>
+                                <span class="o_stat_text">Connected</span>
+                            </div>
+                        </button>
+                        <button class="oe_stat_button" type="object"
+                                name="action_refresh_stats" icon="fa-list-ul">
+                            <field name="subscription_count"
+                                   widget="statinfo" string="Subscriptions"/>
+                        </button>
+                        <button class="oe_stat_button" type="object"
+                                name="action_inspect_streams" icon="fa-database">
+                            <field name="stream_count"
+                                   widget="statinfo" string="Streams"/>
+                        </button>
+                    </div>
+
+                    <group>
+                        <group string="Connection">
+                            <field name="name"/>
+                            <field name="url"/>
+                        </group>
+                        <group string="Options">
+                            <field name="auto_start"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Subscriptions" name="subscriptions">
+                            <field name="subscription_ids" readonly="1">
+                                <list decoration-success="state == 'active'"
+                                      decoration-muted="state == 'inactive'">
+                                    <field name="subject"/>
+                                    <field name="handler_model"/>
+                                    <field name="is_jetstream" string="JetStream"/>
+                                    <field name="state"/>
+                                    <field name="message_count"/>
+                                    <field name="last_seen"/>
+                                    <field name="last_message_at" optional="hide"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="JetStream" name="streams">
+                            <div class="o_form_label text-muted mb-2">
+                                Click the Streams button above to refresh from the server.
+                            </div>
+                            <field name="stream_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="subjects"/>
+                                    <field name="messages"/>
+                                    <field name="bytes_stored" string="Size"/>
+                                    <field name="consumers"/>
+                                    <field name="last_refresh"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_nats_server_list" model="ir.ui.view">
+        <field name="name">nats.server.list</field>
+        <field name="model">nats.server</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="url"/>
+                <field name="state"
+                       decoration-success="state == 'running'"
+                       decoration-danger="state == 'error'"
+                       decoration-muted="state == 'stopped'"/>
+                <field name="subscription_count" string="Topics"/>
+                <field name="stream_count" string="Streams"/>
+                <field name="auto_start"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_nats_server" model="ir.actions.act_window">
+        <field name="name">NATS Servers</field>
+        <field name="res_model">nats.server</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+</odoo>

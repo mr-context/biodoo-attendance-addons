@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="hr_face_attendance.DetectLocation">
+        <div class="o_action d-flex align-items-center justify-content-center" style="min-height:300px;">
+            <div class="text-center p-4" style="max-width:420px;">
+
+                <!-- Détection en cours -->
+                <t t-if="state.status == 'detecting'">
+                    <div class="mb-3">
+                        <i class="fa fa-spinner fa-spin fa-3x text-primary"/>
+                    </div>
+                    <h5>Localisation en cours...</h5>
+                    <p class="text-muted small">Assurez-vous d'être physiquement sur le site à enregistrer.</p>
+                </t>
+
+                <!-- Succès -->
+                <t t-elif="state.status == 'success'">
+                    <div class="mb-3">
+                        <i class="fa fa-map-marker fa-3x text-success"/>
+                    </div>
+                    <h5 class="text-success">Position détectée</h5>
+                    <table class="table table-sm table-bordered mt-3 text-start">
+                        <tr>
+                            <th>Latitude</th>
+                            <td class="font-monospace"><t t-esc="state.lat.toFixed(7)"/></td>
+                        </tr>
+                        <tr>
+                            <th>Longitude</th>
+                            <td class="font-monospace"><t t-esc="state.lon.toFixed(7)"/></td>
+                        </tr>
+                        <tr>
+                            <th>Précision</th>
+                            <td><t t-esc="state.accuracy"/> m</td>
+                        </tr>
+                    </table>
+                    <div class="d-flex gap-2 justify-content-center mt-3">
+                        <button class="btn btn-primary" t-on-click="_save">
+                            <i class="fa fa-save me-1"/> Enregistrer sur ce site
+                        </button>
+                        <button class="btn btn-outline-secondary" t-on-click="_retry">
+                            <i class="fa fa-refresh me-1"/> Relocaliser
+                        </button>
+                    </div>
+                </t>
+
+                <!-- Erreur -->
+                <t t-elif="state.status == 'error'">
+                    <div class="mb-3">
+                        <i class="fa fa-exclamation-triangle fa-3x text-danger"/>
+                    </div>
+                    <h5 class="text-danger">Localisation impossible</h5>
+                    <p class="text-muted"><t t-esc="state.message"/></p>
+                    <button class="btn btn-outline-primary" t-on-click="_retry">
+                        <i class="fa fa-refresh me-1"/> Réessayer
+                    </button>
+                </t>
+
+                <!-- Idle -->
+                <t t-else="">
+                    <i class="fa fa-crosshairs fa-3x text-muted mb-3"/>
+                </t>
+
+            </div>
+        </div>
+    </t>
+
+</templates>

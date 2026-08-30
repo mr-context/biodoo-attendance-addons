@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <record id="prime_type_responsabilite" model="hr.prime.type">
+            <field name="name">Prime de responsabilité</field>
+            <field name="code">PRIME_RESP</field>
+            <field name="default_amount">0</field>
+            <field name="description">
+                Prime accordée aux employés exerçant des fonctions d'encadrement
+                ou de responsabilité. Proratisée selon les jours de présence.
+            </field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="prime_type_technicite" model="hr.prime.type">
+            <field name="name">Prime de technicité</field>
+            <field name="code">PRIME_TECH</field>
+            <field name="default_amount">0</field>
+            <field name="description">
+                Prime accordée aux employés possédant une expertise technique
+                particulière. Proratisée selon les jours de présence.
+            </field>
+            <field name="sequence">20</field>
+        </record>
+
+    </data>
+</odoo>

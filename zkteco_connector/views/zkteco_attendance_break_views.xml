@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── LIST ─────────────────────────────────────────────────── -->
+    <record id="view_zkteco_break_list" model="ir.ui.view">
+        <field name="name">zkteco.attendance.break.list</field>
+        <field name="model">zkteco.attendance.break</field>
+        <field name="arch" type="xml">
+            <list create="false" default_order="break_start desc"
+                  decoration-warning="compliance=='ongoing'"
+                  decoration-danger="compliance=='over'"
+                  decoration-info="compliance=='under'">
+                <field name="employee_id"/>
+                <field name="date"/>
+                <field name="break_start" string="Début"/>
+                <field name="break_end" string="Fin"/>
+                <field name="duration_real" widget="float_time" string="Durée réelle"/>
+                <field name="duration_allowed" widget="float_time" string="Allouée"/>
+                <field name="deviation" widget="float_time" string="Écart"/>
+                <field name="device_id" optional="hide"/>
+                <field name="compliance" widget="badge"
+                       decoration-success="compliance=='ok'"
+                       decoration-danger="compliance=='over'"
+                       decoration-info="compliance=='under'"
+                       decoration-warning="compliance=='ongoing'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ── FORM ─────────────────────────────────────────────────── -->
+    <record id="view_zkteco_break_form" model="ir.ui.view">
+        <field name="name">zkteco.attendance.break.form</field>
+        <field name="model">zkteco.attendance.break</field>
+        <field name="arch" type="xml">
+            <form create="false">
+                <sheet>
+                    <group>
+                        <group string="Pause">
+                            <field name="employee_id"/>
+                            <field name="date"/>
+                            <field name="break_start"/>
+                            <field name="break_end"/>
+                            <field name="device_id"/>
+                        </group>
+                        <group string="Contrôle">
+                            <field name="duration_real" widget="float_time"/>
+                            <field name="duration_allowed" widget="float_time"/>
+                            <field name="tolerance" widget="float_time"/>
+                            <field name="deviation" widget="float_time"/>
+                            <field name="compliance"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── SEARCH ───────────────────────────────────────────────── -->
+    <record id="view_zkteco_break_search" model="ir.ui.view">
+        <field name="name">zkteco.attendance.break.search</field>
+        <field name="model">zkteco.attendance.break</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="employee_id"/>
+                <filter name="ongoing" string="En cours" domain="[('compliance','=','ongoing')]"/>
+                <filter name="over" string="Dépassements" domain="[('compliance','=','over')]"/>
+                <filter name="under" string="Écourtées" domain="[('compliance','=','under')]"/>
+                <filter name="ok" string="Conformes" domain="[('compliance','=','ok')]"/>
+                <separator/>
+                <filter name="today" string="Aujourd'hui"
+                        domain="[('date','=', context_today())]"/>
+                <group>
+                    <filter name="g_emp" string="Employé" context="{'group_by':'employee_id'}"/>
+                    <filter name="g_date" string="Jour" context="{'group_by':'date'}"/>
+                    <filter name="g_compliance" string="Conformité" context="{'group_by':'compliance'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ── ACTION ───────────────────────────────────────────────── -->
+    <record id="action_zkteco_break" model="ir.actions.act_window">
+        <field name="name">Pauses</field>
+        <field name="res_model">zkteco.attendance.break</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_zkteco_break_search"/>
+        <field name="context">{'search_default_g_date': 1}</field>
+    </record>
+
+</odoo>

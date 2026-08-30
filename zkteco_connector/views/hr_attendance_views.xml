@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── ATTENDANCE LIST — add ZKTeco columns ──────────────────── -->
+    <record id="view_hr_attendance_zkteco_list" model="ir.ui.view">
+        <field name="name">hr.attendance.zkteco.list</field>
+        <field name="model">hr.attendance</field>
+        <field name="inherit_id" ref="hr_attendance.view_attendance_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="inside">
+                <field name="zkteco_device_id"  optional="hide" string="Pointeuse"/>
+                <field name="zkteco_device_sn"  optional="hide" string="Device S/N"/>
+                <field name="zkteco_verify_label" optional="hide" string="Mode vérif."/>
+                <field name="zkteco_imported"    optional="hide" string="ZKTeco"/>
+                <field name="attphoto_count"     optional="hide" string="Photos"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ── ATTENDANCE FORM — ZKTeco section + photos ─────────────── -->
+    <record id="view_hr_attendance_zkteco_form" model="ir.ui.view">
+        <field name="name">hr.attendance.zkteco.form</field>
+        <field name="model">hr.attendance</field>
+        <field name="inherit_id" ref="hr_attendance.hr_attendance_view_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Bouton de ré-armement dans le header -->
+            <xpath expr="//header" position="inside">
+                <button name="action_zkteco_rearm" type="object"
+                        string="Recalculer depuis la pointeuse" icon="fa-refresh"
+                        confirm="Votre correction manuelle sera annulée et la présence sera recalculée à partir des pointages réels de la pointeuse. Continuer ?"
+                        invisible="not zkteco_manual_edit"/>
+            </xpath>
+
+            <!-- Ruban "corrigé manuellement" -->
+            <xpath expr="//sheet" position="inside">
+                <widget name="web_ribbon" title="Corrigé manuellement"
+                        bg_color="text-bg-warning"
+                        invisible="not zkteco_manual_edit"/>
+            </xpath>
+
+            <!-- Origine du pointage, juste sous le "Mode" de l'arrivée.
+                 On affiche le NOM (Char) qui se déroule en entier, pas le lien
+                 many2one qui tronque dans la colonne étroite. -->
+            <xpath expr="//field[@name='in_mode']" position="after">
+                <field name="zkteco_device_name" readonly="1" string="Pointeuse"
+                       invisible="in_mode != 'zkteco'"/>
+                <field name="zkteco_verify_label" readonly="1" string="Vérification"
+                       invisible="in_mode != 'zkteco'"/>
+                <field name="zkteco_in_operation" readonly="1" string="Opération"
+                       invisible="in_mode != 'zkteco'"/>
+            </xpath>
+
+            <!-- Origine du pointage de SORTIE (valeurs propres au out_log).
+                 Affiché seulement si la SORTIE vient bien de la pointeuse :
+                 une sortie saisie à la main (out_mode='manual') ne montre pas
+                 de champs device vides. -->
+            <xpath expr="//field[@name='out_mode']" position="after">
+                <field name="zkteco_out_device_name" readonly="1" string="Pointeuse"
+                       invisible="out_mode != 'zkteco'"/>
+                <field name="zkteco_out_verify_label" readonly="1" string="Vérification"
+                       invisible="out_mode != 'zkteco'"/>
+                <field name="zkteco_out_operation" readonly="1" string="Opération"
+                       invisible="out_mode != 'zkteco'"/>
+            </xpath>
+
+            <!-- Mode pointeuse = pas d'IP/navigateur/GPS : on masque ces champs
+                 natifs (sinon ils s'affichent vides avec GPS 0,0000000). -->
+            <xpath expr="//field[@name='in_ip_address']" position="attributes">
+                <attribute name="invisible">in_mode in ('manual', 'zkteco') or not device_tracking_enabled</attribute>
+            </xpath>
+            <xpath expr="//field[@name='in_browser']" position="attributes">
+                <attribute name="invisible">in_mode in ('manual', 'zkteco') or not device_tracking_enabled</attribute>
+            </xpath>
+            <xpath expr="//group[field[@name='in_location']]" position="attributes">
+                <attribute name="invisible">in_mode in ('manual', 'zkteco') or not device_tracking_enabled</attribute>
+            </xpath>
+            <xpath expr="//field[@name='out_ip_address']" position="attributes">
+                <attribute name="invisible">in_mode in ('manual', 'zkteco') or not device_tracking_enabled</attribute>
+            </xpath>
+            <xpath expr="//field[@name='out_browser']" position="attributes">
+                <attribute name="invisible">in_mode in ('manual', 'zkteco') or not device_tracking_enabled</attribute>
+            </xpath>
+            <xpath expr="//group[field[@name='out_location']]" position="attributes">
+                <attribute name="invisible">out_mode in ('manual', 'zkteco') or not device_tracking_enabled</attribute>
+            </xpath>
+
+            <xpath expr="//sheet" position="inside">
+
+                <!-- Traçabilité technique ZKTeco (discret, repliable) -->
+                <group invisible="not zkteco_imported">
+                    <group string="Traçabilité ZKTeco" col="2">
+                        <field name="zkteco_device_id"      readonly="1" string="Pointeuse"/>
+                        <field name="zkteco_device_sn"      readonly="1" string="N° de série"/>
+                        <field name="zkteco_transaction_id" readonly="1" string="Transaction"/>
+                    </group>
+                </group>
+
+                <!-- Pauses : manuelles éditables (déduites des heures) -->
+                <group string="Pauses">
+                    <div class="text-muted" colspan="2">
+                        <i class="fa fa-info-circle me-1" title="Info"/>
+                        Ajoutez ici une pause <b>oubliée</b> (non pointée) :
+                        elle sera déduite des heures travaillées.
+                    </div>
+                    <field name="break_ids" nolabel="1" colspan="2"
+                           context="{'default_employee_id': employee_id}">
+                        <list editable="bottom" default_order="break_start">
+                            <field name="break_start" string="Début"/>
+                            <field name="break_end" string="Fin"/>
+                            <field name="duration_real" widget="float_time"
+                                   string="Durée" readonly="1"/>
+                            <field name="source" readonly="1" optional="show"/>
+                            <field name="compliance" widget="badge" readonly="1"
+                                   optional="hide"
+                                   decoration-success="compliance=='ok'"
+                                   decoration-danger="compliance=='over'"
+                                   decoration-info="compliance=='under'"
+                                   decoration-warning="compliance=='ongoing'"/>
+                        </list>
+                    </field>
+                </group>
+
+                <!-- Verification photos -->
+                <group string="Photos de vérification"
+                       invisible="not attphoto_ids">
+                    <field name="attphoto_ids" nolabel="1">
+                        <list create="false" delete="false">
+                            <field name="captured_at"  string="Heure capture"/>
+                            <field name="employee_pin" string="PIN"/>
+                            <field name="device_sn"    string="Device"/>
+                            <field name="file_name"    string="Fichier"/>
+                            <field name="file_size"    string="Taille (o)"/>
+                            <field name="photo"        widget="image"
+                                   options="{'size': [64, 64]}"
+                                   string="Aperçu"/>
+                        </list>
+                    </field>
+                </group>
+
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ── ATTPHOTO standalone list view ─────────────────────────── -->
+    <record id="view_zkteco_attphoto_list" model="ir.ui.view">
+        <field name="name">zkteco.attphoto.list</field>
+        <field name="model">zkteco.attphoto</field>
+        <field name="arch" type="xml">
+            <list create="false">
+                <field name="captured_at"   string="Heure capture"/>
+                <field name="employee_pin"  string="PIN"/>
+                <field name="device_sn"     string="Device"/>
+                <field name="file_name"     string="Fichier"/>
+                <field name="file_size"     string="Taille (o)"/>
+                <field name="attendance_id" string="Pointage lié"/>
+                <field name="photo"         widget="image"
+                       options="{'size': [64, 64]}"
+                       string="Photo"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_zkteco_attphoto_form" model="ir.ui.view">
+        <field name="name">zkteco.attphoto.form</field>
+        <field name="model">zkteco.attphoto</field>
+        <field name="arch" type="xml">
+            <form create="false">
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="file_name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group string="Métadonnées">
+                            <field name="captured_at"   readonly="1"/>
+                            <field name="employee_pin"  readonly="1" string="PIN employé"/>
+                            <field name="device_sn"     readonly="1" string="Device S/N"/>
+                            <field name="file_size"     readonly="1" string="Taille (octets)"/>
+                            <field name="attendance_id" readonly="1" string="Pointage lié"/>
+                        </group>
+                        <group string="Photo">
+                            <field name="photo" widget="image" readonly="1" nolabel="1"
+                                   options="{'size': [320, 320]}"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── Action + menu ─────────────────────────────────────────── -->
+    <record id="action_zkteco_attphoto" model="ir.actions.act_window">
+        <field name="name">Photos de vérification</field>
+        <field name="res_model">zkteco.attphoto</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_group_by_device': 1}</field>
+    </record>
+
+</odoo>

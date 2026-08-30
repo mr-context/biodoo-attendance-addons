@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="hr_employee_view_form_face" model="ir.ui.view">
+        <field name="name">hr.employee.form.face.attendance</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="arch" type="xml">
+            <!-- Onglet Pointage GPS après BioTime -->
+            <xpath expr="//notebook" position="inside">
+                <page string="Pointage GPS" name="face_geofence"
+                      groups="hr.group_hr_manager">
+                    <group>
+                        <group string="Accès portail">
+                            <field name="face_portal_enabled" widget="boolean_toggle"/>
+                        </group>
+                        <group string="Mode pointage" invisible="not face_portal_enabled">
+                            <field name="checkpoint_mode" widget="boolean_toggle"/>
+                            <field name="checkpoint_period"
+                                   invisible="not checkpoint_mode"/>
+                        </group>
+                    </group>
+
+                    <!-- ── MODE GÉOFENCE SIMPLE ── -->
+                    <group invisible="not face_portal_enabled or checkpoint_mode">
+                        <group string="Périmètre autorisé">
+                            <field name="geofence_enabled" widget="boolean_toggle"/>
+                            <field name="geofence_radius"
+                                   invisible="not geofence_enabled"/>
+                            <field name="geofence_lat"
+                                   invisible="not geofence_enabled"/>
+                            <field name="geofence_lng"
+                                   invisible="not geofence_enabled"/>
+                        </group>
+                        <group string="Actions" invisible="not geofence_enabled">
+                            <button type="object"
+                                    name="action_detect_geofence_location"
+                                    string="Détecter ma position GPS"
+                                    class="btn-outline-primary"
+                                    icon="fa-crosshairs"/>
+                        </group>
+                    </group>
+
+                    <!-- Carte géofence simple -->
+                    <div invisible="not face_portal_enabled or checkpoint_mode or not geofence_enabled" class="mt-3">
+                        <widget name="geofence_map"/>
+                    </div>
+
+                    <div class="alert alert-info mt-3" role="alert"
+                         invisible="not face_portal_enabled or checkpoint_mode or not geofence_enabled or (geofence_lat != 0 or geofence_lng != 0)">
+                        <i class="fa fa-info-circle me-1"/>
+                        Cliquez sur <strong>Détecter ma position GPS</strong> depuis le site,
+                        ou cliquez directement sur la carte pour positionner le périmètre.
+                    </div>
+
+                    <div class="alert alert-success mt-2" role="alert"
+                         invisible="not face_portal_enabled or checkpoint_mode or not geofence_enabled or (geofence_lat == 0 and geofence_lng == 0)">
+                        <i class="fa fa-check-circle me-1"/>
+                        Périmètre actif :
+                        <strong><field name="geofence_radius" readonly="1" class="d-inline"/> m</strong>
+                        autour de
+                        (<field name="geofence_lat" readonly="1" class="d-inline"/>,
+                        <field name="geofence_lng" readonly="1" class="d-inline"/>)
+                    </div>
+
+                    <!-- ── MODE ITINÉRAIRE / CHECKPOINTS ── -->
+                    <div invisible="not face_portal_enabled or not checkpoint_mode">
+
+                        <!-- Compteur du jour -->
+                        <div class="alert alert-info mt-2" role="alert">
+                            <i class="fa fa-map-marker me-1"/>
+                            Période courante :
+                            <strong><field name="checkpoint_done_period" readonly="1" class="d-inline"/></strong>
+                            /
+                            <strong><field name="checkpoint_total" readonly="1" class="d-inline"/></strong>
+                            checkpoint(s) objectif atteint.
+                        </div>
+
+                        <field name="checkpoint_ids"
+                               form_view_ref="hr_face_attendance.hr_employee_checkpoint_view_form">
+                            <list decoration-success="visits_done_period >= visits_required"
+                                  decoration-warning="visits_done_period &gt; 0 and visits_done_period &lt; visits_required"
+                                  decoration-danger="visits_done_period == 0">
+                                <field name="sequence" widget="handle"/>
+                                <field name="name"/>
+                                <field name="visits_required" string="Requis"/>
+                                <field name="visits_done_period" string="Effectués" readonly="1"/>
+                                <field name="geofence_radius" string="Rayon (m)" optional="show"/>
+                                <field name="geofence_lat" string="Latitude" optional="hide"/>
+                                <field name="geofence_lng" string="Longitude" optional="hide"/>
+                                <field name="active" widget="boolean_toggle"/>
+                            </list>
+                        </field>
+                    </div>
+                </page>
+            </xpath>
+
+        <!-- Bouton statut enrollment dans la barre de boutons -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_open_face_enrollment" type="object"
+                        class="oe_stat_button" icon="fa-camera"
+                        groups="hr.group_hr_manager">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text"
+                              invisible="face_enrolled">Non enregistré</span>
+                        <span class="o_stat_text text-success"
+                              invisible="not face_enrolled">Visage ✓</span>
+                    </div>
+                </button>
+                <button type="action"
+                        name="%(hr_face_attendance.action_checkpoint_log_employee)d"
+                        class="oe_stat_button" icon="fa-map-marker"
+                        invisible="not checkpoint_mode"
+                        groups="hr.group_hr_manager">
+                    <div class="o_field_widget o_stat_info">
+                        <span class="o_stat_value">
+                            <field name="checkpoint_done_period"/>/<field name="checkpoint_total"/>
+                        </span>
+                        <span class="o_stat_text">Itinéraire</span>
+                    </div>
+                </button>
+            </xpath>
+        </field>
+    </record>
+</odoo>

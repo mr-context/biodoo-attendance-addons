@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <record id="sn_non_concerne" model="hr.service.national">
+            <field name="name">Non concerné</field>
+            <field name="code">NC</field>
+            <field name="sequence">0</field>
+        </record>
+
+        <record id="sn_degage" model="hr.service.national">
+            <field name="name">Dégagé des obligations</field>
+            <field name="code">DEG</field>
+            <field name="sequence">1</field>
+        </record>
+
+        <record id="sn_exempte" model="hr.service.national">
+            <field name="name">Exempté</field>
+            <field name="code">EXE</field>
+            <field name="sequence">2</field>
+        </record>
+
+        <record id="sn_sursitaire" model="hr.service.national">
+            <field name="name">Sursitaire</field>
+            <field name="code">SUR</field>
+            <field name="sequence">3</field>
+        </record>
+
+        <record id="sn_incorpore" model="hr.service.national">
+            <field name="name">Incorporé</field>
+            <field name="code">INC</field>
+            <field name="sequence">4</field>
+        </record>
+
+    </data>
+</odoo>

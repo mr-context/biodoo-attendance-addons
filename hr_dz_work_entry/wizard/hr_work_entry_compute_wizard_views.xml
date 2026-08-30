@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Action wizard (accessible via bouton, pas menu principal) -->
+    <record id="hr_work_entry_compute_wizard_action" model="ir.actions.act_window">
+        <field name="name">Calculer les prestations</field>
+        <field name="res_model">hr.work.entry.compute.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <record id="hr_work_entry_compute_wizard_view_form" model="ir.ui.view">
+        <field name="name">hr.work.entry.compute.wizard.form</field>
+        <field name="model">hr.work.entry.compute.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Calculer les prestations">
+                <group>
+                    <group>
+                        <field name="date_from"/>
+                        <field name="date_to"/>
+                    </group>
+                    <group>
+                        <field name="force_regenerate"/>
+                    </group>
+                </group>
+                <group string="Employés">
+                    <field name="employee_ids" nolabel="1" widget="many2many_tags"
+                        options="{'no_create': True}"
+                        placeholder="Tous les employés avec source 'Présences'"/>
+                </group>
+                <footer>
+                    <button name="action_compute" type="object"
+                        string="Calculer" class="btn-primary"/>
+                    <button string="Annuler" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

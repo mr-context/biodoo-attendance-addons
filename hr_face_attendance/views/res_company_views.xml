@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Paramètres pointage facial dans la configuration société -->
+    <record id="res_company_view_form_face" model="ir.ui.view">
+        <field name="name">res.company.form.face.attendance</field>
+        <field name="model">res.company</field>
+        <field name="inherit_id" ref="base.view_company_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='general_info']" position="after">
+                <page string="Présences faciales" name="face_attendance">
+                    <group string="Reconnaissance faciale">
+                        <group>
+                            <field name="face_attendance_threshold"/>
+                            <field name="face_liveness_threshold"/>
+                        </group>
+                        <group>
+                            <field name="face_geofence_enabled"/>
+                        </group>
+                    </group>
+                    <div class="alert alert-info" role="alert">
+                        Le modèle InsightFace <strong>buffalo_s</strong> (~80 Mo) est téléchargé
+                        automatiquement lors du premier enrollment.
+                        Le fichier <code>antispoof.onnx</code> doit être placé dans
+                        <code>hr_face_attendance/static/lib/</code> pour activer l'anti-spoofing.
+                    </div>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

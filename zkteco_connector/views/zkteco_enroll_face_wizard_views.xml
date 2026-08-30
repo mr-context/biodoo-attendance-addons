@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_zkteco_enroll_face_wizard_form" model="ir.ui.view">
+        <field name="name">zkteco.enroll.face.wizard.form</field>
+        <field name="model">zkteco.enroll.face.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Enrôlement visage">
+                <sheet>
+                    <div class="row">
+                        <!-- Colonne gauche : caméra -->
+                        <div class="col-12 col-md-7">
+                            <h5 class="mb-3">
+                                <i class="fa fa-camera me-2 text-primary"/>
+                                Capture du visage
+                            </h5>
+                            <field name="photo_b64" widget="face_capture" nolabel="1"/>
+                        </div>
+
+                        <!-- Colonne droite : paramètres -->
+                        <div class="col-12 col-md-5">
+                            <group>
+                                <field name="employee_id" readonly="1"/>
+                            </group>
+                            <h6 class="mt-3 mb-2 text-muted text-uppercase small">
+                                Devices cibles
+                            </h6>
+                            <field name="device_ids" widget="many2many_tags"
+                                   options="{'color_field': 'state'}"
+                                   nolabel="1"/>
+                            <div class="alert alert-info small mt-3" role="status">
+                                <i class="fa fa-info-circle me-1"/>
+                                Le device reçoit la photo JPEG, génère le template
+                                en local et renvoie le BIODATA au serveur
+                                (<code>PostBackTmpFlag=1</code>).
+                            </div>
+                        </div>
+                    </div>
+                </sheet>
+                <footer>
+                    <button name="action_send"
+                            string="Enrôler"
+                            type="object"
+                            class="btn-primary"
+                            invisible="not photo_b64"/>
+                    <button string="Enrôler"
+                            class="btn-primary"
+                            disabled="1"
+                            invisible="photo_b64"
+                            title="Prenez d'abord une photo"/>
+                    <button string="Annuler" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,9 @@
+/* Nom / Prénom — légère touche serif sur les valeurs uniquement */
+.dz_nom_prenom_block .o_field_widget input.o_input {
+    font-family: 'Palatino Linotype', Palatino, Georgia, serif;
+    letter-spacing: 0.3px;
+}
+
+.dz_prenom_field input.o_input {
+    font-style: italic;
+}

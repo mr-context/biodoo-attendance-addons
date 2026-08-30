@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="hr_contract_renewal_wizard_form" model="ir.ui.view">
+        <field name="name">hr.contract.renewal.wizard.form</field>
+        <field name="model">hr.contract.renewal.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <group string="Contrat actuel">
+                        <field name="version_id" readonly="1"/>
+                        <field name="employee_id" readonly="1"/>
+                        <field name="current_date_end" readonly="1"/>
+                        <field name="current_renewal_count" readonly="1"/>
+                    </group>
+                </group>
+
+                <separator string="Nouveau contrat"/>
+                <group>
+                    <group string="Dates">
+                        <field name="new_date_start"/>
+                        <field name="new_duration_months"/>
+                        <field name="new_date_end" readonly="1"/>
+                    </group>
+                    <group string="Salaire">
+                        <field name="keep_same_wage"/>
+                        <field name="new_wage" invisible="keep_same_wage"/>
+                        <field name="currency_id" invisible="1"/>
+                    </group>
+                </group>
+
+                <group>
+                    <group string="Options">
+                        <field name="with_trial_period"/>
+                        <field name="close_current_contract"/>
+                    </group>
+                </group>
+
+                <group string="Motif du renouvellement">
+                    <field name="reason" nolabel="1" placeholder="Motif..."/>
+                </group>
+
+                <footer>
+                    <button name="action_renew" type="object" string="Créer le renouvellement"
+                            class="btn-primary"/>
+                    <button string="Annuler" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

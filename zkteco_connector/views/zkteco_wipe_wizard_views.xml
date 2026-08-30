@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_zkteco_wipe_wizard_form" model="ir.ui.view">
+        <field name="name">zkteco.wipe.wizard.form</field>
+        <field name="model">zkteco.wipe.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Vider le device">
+
+                <div class="alert alert-danger mb-3" role="alert">
+                    <strong>Action irréversible.</strong>
+                    Tous les utilisateurs enrôlés sur ce device seront supprimés définitivement.
+                    Les empreintes, visages et cartes enregistrés seront effacés.
+                </div>
+
+                <group string="Device cible">
+                    <field name="device_id"     readonly="1" invisible="1"/>
+                    <field name="device_name"   readonly="1" string="Modèle"
+                           invisible="not device_name"/>
+                    <field name="device_serial" readonly="1" string="N° Série"/>
+                    <field name="device_ip"     readonly="1" string="Adresse IP"
+                           invisible="not device_ip"/>
+                </group>
+
+                <group string="Confirmation">
+                    <field name="confirmation"
+                           string="N° Série"
+                           placeholder="Saisir le N° Série exact pour activer le bouton"
+                           required="1"/>
+                    <field name="is_confirmed" invisible="1"/>
+                </group>
+
+                <footer>
+                    <button name="action_wipe"
+                            type="object"
+                            class="btn-danger"
+                            string="Vider le device"
+                            invisible="not is_confirmed"/>
+                    <button class="btn-secondary" special="cancel" string="Annuler"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

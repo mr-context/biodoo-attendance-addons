@@ -1,0 +1,17 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_hr_contract_article_user,hr.contract.article.user,model_hr_contract_article,hr.group_hr_user,1,0,0,0
+access_hr_contract_article_manager,hr.contract.article.manager,model_hr_contract_article,hr.group_hr_manager,1,1,1,1
+access_hr_contract_modele_user,hr.contract.modele.user,model_hr_contract_modele,hr.group_hr_user,1,0,0,0
+access_hr_contract_modele_manager,hr.contract.modele.manager,model_hr_contract_modele,hr.group_hr_manager,1,1,1,1
+access_hr_contract_modele_article_line_user,hr.contract.modele.article.line.user,model_hr_contract_modele_article_line,hr.group_hr_user,1,0,0,0
+access_hr_contract_modele_article_line_manager,hr.contract.modele.article.line.manager,model_hr_contract_modele_article_line,hr.group_hr_manager,1,1,1,1
+access_hr_contract_article_line_user,hr.contract.article.line.user,model_hr_contract_article_line,hr.group_hr_user,1,1,1,0
+access_hr_contract_article_line_manager,hr.contract.article.line.manager,model_hr_contract_article_line,hr.group_hr_manager,1,1,1,1
+access_hr_contract_avenant_user,hr.contract.avenant.user,model_hr_contract_avenant,hr.group_hr_user,1,1,1,0
+access_hr_contract_avenant_manager,hr.contract.avenant.manager,model_hr_contract_avenant,hr.group_hr_manager,1,1,1,1
+access_hr_trial_confirmation_wizard,hr.trial.confirmation.wizard,model_hr_trial_confirmation_wizard,hr.group_hr_user,1,1,1,1
+access_hr_contract_renewal_wizard,hr.contract.renewal.wizard,model_hr_contract_renewal_wizard,hr.group_hr_user,1,1,1,1
+access_hr_prime_type_user,hr.prime.type.user,model_hr_prime_type,hr.group_hr_user,1,0,0,0
+access_hr_prime_type_manager,hr.prime.type.manager,model_hr_prime_type,hr.group_hr_manager,1,1,1,1
+access_hr_version_prime_line_user,hr.version.prime.line.user,model_hr_version_prime_line,hr.group_hr_user,1,1,1,0
+access_hr_version_prime_line_manager,hr.version.prime.line.manager,model_hr_version_prime_line,hr.group_hr_manager,1,1,1,1

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <record id="seq_hr_contract_dz" model="ir.sequence">
+            <field name="name">Contrat de travail</field>
+            <field name="code">hr.contract.dz</field>
+            <field name="prefix">CTR/%(year)s/</field>
+            <field name="padding">4</field>
+            <field name="number_next">1</field>
+            <field name="number_increment">1</field>
+        </record>
+
+        <record id="seq_hr_contract_avenant" model="ir.sequence">
+            <field name="name">Avenant au contrat</field>
+            <field name="code">hr.contract.avenant</field>
+            <field name="prefix">AVN/%(year)s/</field>
+            <field name="padding">4</field>
+            <field name="number_next">1</field>
+            <field name="number_increment">1</field>
+        </record>
+
+    </data>
+</odoo>

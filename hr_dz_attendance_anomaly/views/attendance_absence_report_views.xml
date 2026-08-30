@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Synthèse : form (détail des jours absents) -->
+    <record id="view_absence_summary_form" model="ir.ui.view">
+        <field name="name">attendance.absence.summary.form</field>
+        <field name="model">attendance.absence.summary</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="employee_id"/>
+                            <field name="department_id"/>
+                            <field name="absence_rate"/>
+                        </group>
+                        <group>
+                            <field name="work_days"/>
+                            <field name="present_days"/>
+                            <field name="absent_days"/>
+                            <field name="leave_days"/>
+                            <field name="late_count"/>
+                            <field name="late_minutes"/>
+                        </group>
+                    </group>
+                    <field name="day_ids" readonly="1">
+                        <list decoration-danger="status == 'absent'"
+                              decoration-muted="status == 'leave'">
+                            <field name="date"/>
+                            <field name="dayofweek_label"/>
+                            <field name="status" widget="badge"/>
+                            <field name="leave_name"/>
+                        </list>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Wizard -->
+    <record id="view_absence_report_form" model="ir.ui.view">
+        <field name="name">attendance.absence.report.form</field>
+        <field name="model">attendance.absence.report</field>
+        <field name="arch" type="xml">
+            <form>
+                <field name="state" invisible="1"/>
+                <!-- Sélection -->
+                <group invisible="state != 'draft'">
+                    <group>
+                        <field name="date_from"/>
+                        <field name="date_to"/>
+                    </group>
+                    <group>
+                        <field name="department_id"/>
+                        <field name="employee_ids" widget="many2many_tags"
+                               placeholder="Tous les employés actifs..."/>
+                    </group>
+                </group>
+                <footer invisible="state != 'draft'">
+                    <button name="action_analyze" type="object" string="Générer le tableau"
+                            class="btn-primary"/>
+                    <button string="Annuler" class="btn-secondary" special="cancel"/>
+                </footer>
+
+                <!-- Résultats -->
+                <div invisible="state != 'done'">
+                    <group col="4">
+                        <field name="date_from" readonly="1"/>
+                        <field name="date_to" readonly="1"/>
+                        <field name="total_employees"/>
+                        <field name="employees_with_absence"/>
+                        <field name="total_absent_days"/>
+                        <field name="total_leave_days"/>
+                    </group>
+                    <field name="summary_ids" readonly="1">
+                        <list decoration-danger="absent_days > 0" default_order="absent_days desc">
+                            <field name="employee_id"/>
+                            <field name="department_id" optional="show"/>
+                            <field name="work_days"/>
+                            <field name="present_days"/>
+                            <field name="absent_days"/>
+                            <field name="leave_days"/>
+                            <field name="late_count"/>
+                            <field name="late_minutes" optional="hide"/>
+                            <field name="early_count" optional="hide"/>
+                            <field name="absence_rate" optional="show"/>
+                        </list>
+                    </field>
+                    <footer>
+                        <button name="action_back" type="object" string="Nouvelle analyse"/>
+                        <button string="Fermer" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_absence_report" model="ir.actions.act_window">
+        <field name="name">Tableau des absences</field>
+        <field name="res_model">attendance.absence.report</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>

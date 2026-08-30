@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Extension de la vue liste des work entries -->
+    <record id="hr_work_entry_view_tree_inherit" model="ir.ui.view">
+        <field name="name">hr.work.entry.list.inherit.dz</field>
+        <field name="model">hr.work.entry</field>
+        <field name="inherit_id" ref="hr_work_entry.hr_work_entry_view_tree"/>
+        <field name="arch" type="xml">
+            <field name="state" position="after">
+                <field name="has_anomaly" column_invisible="1"/>
+                <button name="action_view_anomalies"
+                    type="object"
+                    icon="fa-exclamation-triangle"
+                    class="text-warning"
+                    invisible="not has_anomaly"
+                    title="Anomalies"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Extension de la vue formulaire des work entries -->
+    <record id="hr_work_entry_view_form_inherit" model="ir.ui.view">
+        <field name="name">hr.work.entry.form.inherit.dz</field>
+        <field name="model">hr.work.entry</field>
+        <field name="inherit_id" ref="hr_work_entry.hr_work_entry_view_form"/>
+        <field name="arch" type="xml">
+            <sheet position="inside">
+                <notebook position="inside">
+                    <page string="Présences" invisible="not attendance_ids">
+                        <field name="attendance_ids" readonly="1">
+                            <list>
+                                <field name="check_in"/>
+                                <field name="check_out"/>
+                                <field name="worked_hours" widget="float_time"/>
+                            </list>
+                        </field>
+                    </page>
+                    <page string="Anomalies" invisible="not anomaly_ids">
+                        <field name="anomaly_ids" readonly="1">
+                            <list>
+                                <field name="anomaly_type"/>
+                                <field name="theoretical_hours" widget="float_time"/>
+                                <field name="actual_hours" widget="float_time"/>
+                                <field name="state" widget="badge"/>
+                            </list>
+                        </field>
+                    </page>
+                </notebook>
+            </sheet>
+        </field>
+    </record>
+
+    <!-- Extension vue formulaire work entry type -->
+    <record id="hr_work_entry_type_view_form_inherit" model="ir.ui.view">
+        <field name="name">hr.work.entry.type.form.inherit.dz</field>
+        <field name="model">hr.work.entry.type</field>
+        <field name="inherit_id" ref="hr_work_entry.hr_work_entry_type_view_form"/>
+        <field name="arch" type="xml">
+            <field name="is_extra_hours" position="after">
+                <field name="is_deductible"/>
+                <field name="overtime_rate" invisible="not is_extra_hours"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Action pour ouvrir les work entries depuis Paie -->
+    <record id="hr_work_entry_action_payroll" model="ir.actions.act_window">
+        <field name="name">Prestations</field>
+        <field name="res_model">hr.work.entry</field>
+        <field name="view_mode">list,form,pivot</field>
+        <field name="context">{'search_default_current_month': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Aucune prestation trouvée
+            </p>
+            <p>
+                Les prestations sont générées automatiquement depuis les présences
+                ou le calendrier de travail.
+            </p>
+            <p>
+                <a type="action" name="%(hr_work_entry_compute_wizard_action)d">
+                    Cliquez ici pour calculer les prestations
+                </a>
+            </p>
+        </field>
+    </record>
+
+    <!-- Bouton dans la vue liste pour calculer -->
+    <record id="hr_work_entry_view_tree_button" model="ir.ui.view">
+        <field name="name">hr.work.entry.list.button</field>
+        <field name="model">hr.work.entry</field>
+        <field name="inherit_id" ref="hr_work_entry.hr_work_entry_view_tree"/>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <xpath expr="//list/field[1]" position="before">
+                <header>
+                    <button name="%(hr_work_entry_compute_wizard_action)d"
+                        type="action"
+                        string="Calculer les prestations"
+                        class="btn-primary"
+                        display="always"/>
+                </header>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Vue search avec filtres utiles -->
+    <record id="hr_work_entry_view_search_inherit" model="ir.ui.view">
+        <field name="name">hr.work.entry.search.inherit.dz</field>
+        <field name="model">hr.work.entry</field>
+        <field name="inherit_id" ref="hr_work_entry.hr_work_entry_view_search"/>
+        <field name="arch" type="xml">
+            <filter name="current_month" position="after">
+                <filter name="has_anomaly" string="Avec anomalies"
+                    domain="[('has_anomaly', '=', True)]"/>
+                <filter name="to_validate" string="À valider"
+                    domain="[('state', '=', 'draft')]"/>
+            </filter>
+        </field>
+    </record>
+</odoo>

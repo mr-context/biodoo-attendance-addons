@@ -1,0 +1,26 @@
+# PRIVE - ne jamais publier
+bridge/
+# Modules hors périmètre « présence seule » (non publiés dans ce repo)
+ai/
+ai_fields/
+# Runtime bridge uniquement — ANCRÉ à la racine (le '/' initial) pour ne PAS
+# ignorer le data/ légitime de chaque module Odoo (séquences, crons, tables…).
+/data/
+/data.back/
+/data.backup/
+run.txt
+
+# Secrets
+.env
+.env.*
+*.dat
+*.pem
+
+# Artefacts
+__pycache__/
+*.py[cod]
+*.log
+ANALYSE.md
+.DS_Store
+.idea/
+.vscode/

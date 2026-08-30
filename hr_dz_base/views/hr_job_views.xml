@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Extend Job Form View -->
+    <record id="hr_job_view_form_dz" model="ir.ui.view">
+        <field name="name">hr.job.form.dz</field>
+        <field name="model">hr.job</field>
+        <field name="inherit_id" ref="hr.view_hr_job_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Ajouter code après le nom -->
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="code" placeholder="Code poste"/>
+            </xpath>
+
+            <!-- Ajouter page Classification dans le notebook -->
+            <xpath expr="//notebook" position="inside">
+                <page string="Classification" name="page_classification">
+                    <group>
+                        <group string="Catégorie">
+                            <field name="csp_id"/>
+                            <field name="is_hazard"/>
+                        </group>
+                        <group string="Préavis de départ">
+                            <label for="preavis_duree"/>
+                            <div class="o_row">
+                                <field name="preavis_duree" class="oe_inline"/>
+                                <field name="preavis_uom" class="oe_inline"/>
+                            </div>
+                        </group>
+                    </group>
+                    <group string="Missions du poste">
+                        <field name="mission_ids" nolabel="1">
+                            <list editable="bottom">
+                                <field name="sequence" widget="handle"/>
+                                <field name="name"/>
+                            </list>
+                        </field>
+                    </group>
+                </page>
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- Extend Job Tree View -->
+    <record id="hr_job_view_tree_dz" model="ir.ui.view">
+        <field name="name">hr.job.tree.dz</field>
+        <field name="model">hr.job</field>
+        <field name="inherit_id" ref="hr.view_hr_job_tree"/>
+        <field name="arch" type="xml">
+            <field name="name" position="before">
+                <field name="code" optional="show"/>
+            </field>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Colonne face_confidence + liveness dans la liste -->
+    <record id="hr_attendance_view_list_face" model="ir.ui.view">
+        <field name="name">hr.attendance.list.face</field>
+        <field name="model">hr.attendance</field>
+        <field name="inherit_id" ref="hr_attendance.hr_attendance_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='worked_hours']" position="after">
+                <field name="face_confidence" optional="hide"
+                       string="Similarité faciale"/>
+                <field name="face_liveness_score" optional="hide"
+                       string="Score vivacité"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Mode 'face' dans le formulaire -->
+    <record id="hr_attendance_view_form_face" model="ir.ui.view">
+        <field name="name">hr.attendance.form.face</field>
+        <field name="model">hr.attendance</field>
+        <field name="inherit_id" ref="hr_attendance.hr_attendance_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='in_mode']" position="after">
+                <field name="face_confidence"
+                       invisible="in_mode != 'face'"
+                       readonly="1"/>
+                <field name="face_liveness_score"
+                       invisible="in_mode != 'face'"
+                       readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

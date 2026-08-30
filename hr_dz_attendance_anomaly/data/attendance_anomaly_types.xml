@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+
+        <record id="anomaly_no_checkout" model="hr.attendance.anomaly.type">
+            <field name="name">Sortie manquante</field>
+            <field name="code">no_checkout</field>
+            <field name="sequence">1</field>
+            <field name="color">1</field>
+            <field name="severity">danger</field>
+            <field name="description">L'employé n'a pas pointé sa sortie</field>
+            <field name="condition_code">result = not check_out</field>
+        </record>
+
+        <record id="anomaly_no_checkin" model="hr.attendance.anomaly.type">
+            <field name="name">Entrée manquante</field>
+            <field name="code">no_checkin</field>
+            <field name="sequence">2</field>
+            <field name="color">1</field>
+            <field name="severity">danger</field>
+            <field name="description">Seul un pointage de sortie a été détecté, l'entrée est manquante</field>
+            <field name="condition_code">result = checkout_only</field>
+        </record>
+
+        <record id="anomaly_negative" model="hr.attendance.anomaly.type">
+            <field name="name">Sortie avant entrée</field>
+            <field name="code">negative</field>
+            <field name="sequence">2</field>
+            <field name="color">1</field>
+            <field name="severity">danger</field>
+            <field name="description">L'heure de sortie est antérieure à l'heure d'entrée</field>
+            <field name="condition_code">result = bool(check_out) and worked_minutes &lt; 0</field>
+        </record>
+
+        <record id="anomaly_short_duration" model="hr.attendance.anomaly.type">
+            <field name="name">Durée très courte</field>
+            <field name="code">short_duration</field>
+            <field name="sequence">3</field>
+            <field name="color">3</field>
+            <field name="severity">warning</field>
+            <field name="description">Durée inférieure à 1 minute</field>
+            <field name="condition_code">result = bool(check_out) and 0 &lt; worked_minutes &lt; 1</field>
+        </record>
+
+        <record id="anomaly_long_duration" model="hr.attendance.anomaly.type">
+            <field name="name">Durée excessive</field>
+            <field name="code">long_duration</field>
+            <field name="sequence">4</field>
+            <field name="color">2</field>
+            <field name="severity">warning</field>
+            <field name="description">Durée supérieure à 14 heures (et inférieure à 24h)</field>
+            <field name="condition_code">result = bool(check_out) and 840 &lt; worked_minutes &lt;= 1440</field>
+        </record>
+
+        <record id="anomaly_multi_day" model="hr.attendance.anomaly.type">
+            <field name="name">Plusieurs jours</field>
+            <field name="code">multi_day</field>
+            <field name="sequence">5</field>
+            <field name="color">1</field>
+            <field name="severity">danger</field>
+            <field name="description">Présence qui dépasse 24 heures</field>
+            <field name="condition_code">result = bool(check_out) and worked_minutes &gt; 1440</field>
+        </record>
+
+        <record id="anomaly_overnight" model="hr.attendance.anomaly.type">
+            <field name="name">Travail de nuit</field>
+            <field name="code">overnight</field>
+            <field name="sequence">6</field>
+            <field name="color">4</field>
+            <field name="severity">info</field>
+            <field name="description">Le pointage traverse minuit (hors calendrier crossday)</field>
+            <field name="condition_code">is_crossday = bool(employee and employee.resource_calendar_id and 'is_crossday' in employee.resource_calendar_id._fields and employee.resource_calendar_id.is_crossday)
+result = bool(check_out) and not is_crossday and check_in.date() != check_out.date() and worked_minutes &lt;= 840</field>
+        </record>
+
+        <record id="anomaly_late" model="hr.attendance.anomaly.type">
+            <field name="name">Retard</field>
+            <field name="code">late</field>
+            <field name="sequence">10</field>
+            <field name="color">2</field>
+            <field name="severity">warning</field>
+            <field name="description">Arrivée après l'heure prévue au planning (tolérance configurable sur la société)</field>
+            <field name="condition_code">result = False
+if scheduled_start and check_in &gt; scheduled_start:
+    delta = (check_in - scheduled_start).total_seconds() / 60
+    result = delta &gt;= late_tolerance
+    late_min = int(delta) if result else 0</field>
+        </record>
+
+        <record id="anomaly_early_leave" model="hr.attendance.anomaly.type">
+            <field name="name">Départ anticipé</field>
+            <field name="code">early_leave</field>
+            <field name="sequence">11</field>
+            <field name="color">2</field>
+            <field name="severity">warning</field>
+            <field name="description">Sortie avant l'heure prévue au planning (tolérance configurable sur la société)</field>
+            <field name="condition_code">result = False
+if scheduled_end and check_out and check_out &lt; scheduled_end:
+    delta = (scheduled_end - check_out).total_seconds() / 60
+    result = delta &gt;= early_tolerance
+    early_min = int(delta) if result else 0</field>
+        </record>
+
+        <record id="anomaly_early_checkin" model="hr.attendance.anomaly.type">
+            <field name="name">Arrivée suspecte</field>
+            <field name="code">early_checkin</field>
+            <field name="sequence">12</field>
+            <field name="color">5</field>
+            <field name="severity">warning</field>
+            <field name="description">Arrivée plus de 30 min avant l'heure prévue (suspicion buddy punching)</field>
+            <field name="condition_code">result = False
+if scheduled_start and check_in &lt; scheduled_start:
+    delta = (scheduled_start - check_in).total_seconds() / 60
+    result = delta &gt;= 30</field>
+        </record>
+
+    </data>
+</odoo>

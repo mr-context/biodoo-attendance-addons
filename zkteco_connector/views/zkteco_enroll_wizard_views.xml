@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_zkteco_enroll_wizard_form" model="ir.ui.view">
+        <field name="name">zkteco.enroll.wizard.form</field>
+        <field name="model">zkteco.enroll.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Enrôlement à distance — ZKTeco">
+
+                <!-- Employee banner -->
+                <div class="alert alert-info d-flex align-items-center gap-2 mb-0 p-2" role="status">
+                    <i class="fa fa-user-circle fa-lg"/>
+                    <span>
+                        <strong><field name="employee_name" readonly="1" nolabel="1"/></strong>
+                        <span class="text-muted ms-2">PIN : <field name="employee_pin" readonly="1" nolabel="1"/></span>
+                    </span>
+                </div>
+
+                <group>
+                    <!-- Enrollment type -->
+                    <group string="Type d'enrôlement">
+                        <field name="enroll_type" widget="radio"/>
+                        <field name="finger_index"
+                               invisible="enroll_type != 'fp'"
+                               required="enroll_type == 'fp'"/>
+                        <field name="card_number"
+                               invisible="enroll_type != 'card'"
+                               required="enroll_type == 'card'"
+                               placeholder="Ex : 1234567890"/>
+                        <field name="overwrite"
+                               invisible="enroll_type != 'fp'"
+                               string="Écraser le modèle existant"/>
+                    </group>
+
+                    <!-- Device selection -->
+                    <group string="Devices cibles">
+                        <field name="all_devices"/>
+                        <field name="device_ids"
+                               widget="many2many_tags"
+                               invisible="all_devices"
+                               options="{'no_create': True}"/>
+                    </group>
+                </group>
+
+                <!-- Warning for remove -->
+                <div class="alert alert-warning mt-2" role="status"
+                     invisible="enroll_type != 'remove'">
+                    <i class="fa fa-exclamation-triangle me-1"/>
+                    Cette action supprime l'utilisateur et ses modèles biométriques du device.
+                    Les pointages existants dans Odoo sont conservés.
+                </div>
+
+                <!-- Info for biometric enrollment -->
+                <div class="alert alert-info mt-2" role="status"
+                     invisible="enroll_type != 'fp'">
+                    <i class="fa fa-info-circle me-1"/>
+                    Le device affichera une invite sur son écran.
+                    L'employé doit être physiquement devant l'appareil.
+                </div>
+
+                <footer>
+                    <button name="action_confirm"
+                            type="object"
+                            class="btn-primary"
+                            string="Envoyer la commande"
+                            invisible="enroll_type == 'remove'"/>
+                    <button name="action_confirm"
+                            type="object"
+                            class="btn-danger"
+                            string="Supprimer du device"
+                            invisible="enroll_type != 'remove'"
+                            confirm="Supprimer cet employé de tous les devices sélectionnés ?"/>
+                    <button class="btn-secondary" special="cancel" string="Annuler"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

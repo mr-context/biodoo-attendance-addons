@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Extend the l10n_dz_company view to add HR-specific configuration -->
+    <record id="res_company_view_form_dz" model="ir.ui.view">
+        <field name="name">res.company.form.dz</field>
+        <field name="model">res.company</field>
+        <field name="inherit_id" ref="l10n_dz_company.res_company_view_form_l10n_dz"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//page[@name='page_legal_ids']" position="inside">
+                <group string="Identifiants CNAS">
+                    <field name="num_employeur_cnas" placeholder="ex: 1600123456"/>
+                    <field name="centre_payeur_cnas" placeholder="ex: 16001"/>
+                </group>
+                <group string="Configuration Matricule Employés">
+                    <group>
+                        <field name="matricule_employeur"
+                               help="Préfixe utilisé pour la génération des matricules employés"/>
+                        <field name="matricule_pattern"/>
+                        <field name="matricule_separator" invisible="matricule_pattern == 'seq_only'"/>
+                    </group>
+                    <group>
+                        <field name="employee_sequence_id"
+                               context="{'default_code': 'hr.employee.matricule', 'default_name': 'Matricule Employé'}"/>
+                    </group>
+                </group>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>

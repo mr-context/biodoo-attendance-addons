@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="hr_dz_attendance_dashboard.AttendanceListRenderer" t-inherit="hr_attendance.AttendanceListRenderer" t-inherit-mode="primary">
+        <xpath expr="//table[@t-ref='table']" position="before">
+            <t t-call="hr_dz_attendance_dashboard.DashboardBanner"/>
+        </xpath>
+    </t>
+
+    <t t-name="hr_dz_attendance_dashboard.AttendanceKanbanRenderer" t-inherit="web.KanbanRenderer" t-inherit-mode="primary">
+        <xpath expr="//div[hasclass('o_kanban_renderer')]" position="before">
+            <t t-call="hr_dz_attendance_dashboard.DashboardBanner"/>
+        </xpath>
+    </t>
+
+    <t t-name="hr_dz_attendance_dashboard.DashboardBanner">
+        <div class="o_biodoo_dashboard" t-if="dashboard.authorized">
+
+            <!-- Barre de titre : toujours visible, plie/déplie le reste -->
+            <div class="o_biodoo_title_bar" t-on-click="onToggleDashboard">
+                <i t-attf-class="fa {{uiState.collapsed ? 'fa-chevron-right' : 'fa-chevron-down'}}"/>
+                <span class="o_biodoo_title_text">Tableau de bord Présences</span>
+                <span class="o_biodoo_title_summary" t-if="uiState.collapsed">
+                    — Présents <t t-esc="dashboard.present_count"/>/<t t-esc="dashboard.contract_count"/>,
+                    Absents <t t-esc="dashboard.absent_count"/>
+                </span>
+            </div>
+
+            <t t-if="!uiState.collapsed">
+
+                <!-- En-tête : taux de présence · statut pointeuses · navigation date -->
+                <div class="o_biodoo_dashboard_header">
+                    <div class="o_biodoo_rate">
+                        <div class="o_biodoo_rate_bar_track">
+                            <div class="o_biodoo_rate_bar_fill" t-attf-style="width: {{presenceRate}}%"/>
+                        </div>
+                        <span class="o_biodoo_rate_value"><t t-esc="presenceRate"/>%</span>
+                        <div>
+                            <div class="o_biodoo_rate_title">Taux de présence</div>
+                            <div class="o_biodoo_rate_sub">
+                                <t t-esc="dashboard.present_count"/> sur <t t-esc="dashboard.contract_count"/> employé(s) sous contrat
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="o_biodoo_device_panel" t-if="dashboard.device_status.length">
+                        <!-- Zone épinglée : toujours visible, accepte le dépôt depuis la liste -->
+                        <div t-attf-class="o_biodoo_device_cards o_biodoo_dropzone {{isZoneActive('device-pin') ? 'o_biodoo_dropzone--active' : ''}}"
+                             t-on-dragover="(ev) => this.onDragOverZone(ev, 'device-pin')"
+                             t-on-dragleave="() => this.onDragLeaveZone('device-pin')"
+                             t-on-drop="(ev) => this.onDropOnPinZone(ev, 'device')">
+                            <t t-foreach="pinnedDevices" t-as="dev" t-key="dev.id">
+                                <div class="o_biodoo_device_card o_biodoo_device_card--pinned"
+                                     draggable="true"
+                                     t-on-dragstart="(ev) => this.onDragStart(ev, 'device', dev.id)"
+                                     t-on-dragend="onDragEnd"
+                                     t-on-click="() => this.onDeviceClick(dev)"
+                                     title="Épinglé — glisser vers la liste pour désépingler">
+                                    <span t-attf-class="o_biodoo_dot {{dev.is_online ? 'o_biodoo_dot_green' : 'o_biodoo_dot_red o_biodoo_dot_blink'}}"/>
+                                    <div class="o_biodoo_device_card_body">
+                                        <span class="o_biodoo_device_card_name"><t t-esc="dev.name"/></span>
+                                        <span class="o_biodoo_device_card_meta">
+                                            <t t-esc="dev.serial_number"/> · <t t-esc="dev.user_count"/> util. · <t t-esc="deviceLastSeenLabel(dev)"/>
+                                        </span>
+                                    </div>
+                                    <i class="fa fa-thumb-tack o_biodoo_pin_icon"/>
+                                </div>
+                            </t>
+                            <!-- Peu de pointeuses restantes : détail direct, ça remplit le bloc -->
+                            <t t-if="unpinnedDevicesExpanded">
+                                <t t-foreach="unpinnedDevices" t-as="dev" t-key="dev.id">
+                                    <div class="o_biodoo_device_card"
+                                         draggable="true"
+                                         t-on-dragstart="(ev) => this.onDragStart(ev, 'device', dev.id)"
+                                         t-on-dragend="onDragEnd"
+                                         t-on-click="() => this.onDeviceClick(dev)"
+                                         title="Glisser pour épingler">
+                                        <span t-attf-class="o_biodoo_dot {{dev.is_online ? 'o_biodoo_dot_green' : 'o_biodoo_dot_red o_biodoo_dot_blink'}}"/>
+                                        <div class="o_biodoo_device_card_body">
+                                            <span class="o_biodoo_device_card_name"><t t-esc="dev.name"/></span>
+                                            <span class="o_biodoo_device_card_meta">
+                                                <t t-esc="dev.serial_number"/> · <t t-esc="dev.user_count"/> util. · <t t-esc="deviceLastSeenLabel(dev)"/>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </t>
+                            </t>
+                        </div>
+                        <!-- Trop de pointeuses restantes pour tenir lisiblement : pastille + liste au clic -->
+                        <div class="o_biodoo_device_widget" t-if="!unpinnedDevicesExpanded and unpinnedDevices.length">
+                            <div t-attf-class="o_biodoo_calendar_chip o_biodoo_dropzone {{isZoneActive('device-list') ? 'o_biodoo_dropzone--active' : ''}}"
+                                 t-on-click="onToggleDevices"
+                                 t-on-dragover.stop="(ev) => this.onDragOverZone(ev, 'device-list')"
+                                 t-on-dragleave.stop="() => this.onDragLeaveZone('device-list')"
+                                 t-on-drop.stop="(ev) => this.onDropOnListZone(ev, 'device')">
+                                <span t-attf-class="o_biodoo_dot {{dashboard.device_online_count === dashboard.device_status.length ? 'o_biodoo_dot_green' : 'o_biodoo_dot_red o_biodoo_dot_blink'}}"/>
+                                <span class="o_biodoo_calendar_name">Pointeuses</span>
+                                <span class="o_biodoo_calendar_count"><t t-esc="dashboard.device_online_count"/>/<t t-esc="dashboard.device_status.length"/></span>
+                                <i t-attf-class="fa {{deviceUi.open ? 'fa-caret-up' : 'fa-caret-down'}}"/>
+                            </div>
+                            <div t-attf-class="o_biodoo_device_list o_biodoo_dropzone {{isZoneActive('device-list') ? 'o_biodoo_dropzone--active' : ''}}"
+                                 t-if="deviceUi.open"
+                                 t-on-dragover.stop="(ev) => this.onDragOverZone(ev, 'device-list')"
+                                 t-on-dragleave.stop="() => this.onDragLeaveZone('device-list')"
+                                 t-on-drop.stop="(ev) => this.onDropOnListZone(ev, 'device')">
+                                <t t-foreach="unpinnedDevices" t-as="dev" t-key="dev.id">
+                                    <div class="o_biodoo_device_row"
+                                         draggable="true"
+                                         t-on-dragstart="(ev) => this.onDragStart(ev, 'device', dev.id)"
+                                         t-on-dragend="onDragEnd"
+                                         t-on-click="() => this.onDeviceClick(dev)"
+                                         title="Glisser pour épingler">
+                                        <span t-attf-class="o_biodoo_dot {{dev.is_online ? 'o_biodoo_dot_green' : 'o_biodoo_dot_red o_biodoo_dot_blink'}}"/>
+                                        <span class="o_biodoo_device_name"><t t-esc="dev.name"/></span>
+                                        <span class="o_biodoo_device_meta">
+                                            <t t-esc="dev.user_count"/> util. · <t t-esc="deviceLastSeenLabel(dev)"/>
+                                        </span>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="o_biodoo_stat_date">
+                        <button class="btn btn-sm btn-secondary" title="Jour précédent" t-on-click="() => this.onDashboardShiftDay(-1)">
+                            <i class="fa fa-chevron-left"/>
+                        </button>
+                        <div class="o_biodoo_date_col">
+                            <input type="date" class="o_input" t-att-value="dashboard.date" t-on-change="onDashboardDateChange"/>
+                            <span class="o_biodoo_date_day"><t t-esc="dashboardDayLabel"/></span>
+                        </div>
+                        <button class="btn btn-sm btn-secondary" title="Jour suivant" t-on-click="() => this.onDashboardShiftDay(1)">
+                            <i class="fa fa-chevron-right"/>
+                        </button>
+                        <button class="btn btn-sm btn-secondary" t-on-click="onDashboardToday">Aujourd'hui</button>
+                    </div>
+                </div>
+
+                <!-- Répartition par calendrier (visible seulement s'il y en a plusieurs) -->
+                <div t-attf-class="o_biodoo_calendar_row o_biodoo_dropzone {{isZoneActive('calendar-pin') ? 'o_biodoo_dropzone--active' : ''}}"
+                     t-if="dashboard.calendar_breakdown.length > 1"
+                     t-on-dragover="(ev) => this.onDragOverZone(ev, 'calendar-pin')"
+                     t-on-dragleave="() => this.onDragLeaveZone('calendar-pin')"
+                     t-on-drop="(ev) => this.onDropOnPinZone(ev, 'calendar')">
+                    <!-- Calendriers épinglés : toujours visibles -->
+                    <t t-foreach="pinnedCalendars" t-as="entry" t-key="entry.calendar_id">
+                        <div class="o_biodoo_calendar_chip o_biodoo_calendar_chip--pinned"
+                             draggable="true"
+                             t-on-dragstart="(ev) => this.onDragStart(ev, 'calendar', entry.calendar_id)"
+                             t-on-dragend="onDragEnd"
+                             t-on-click="() => this.onCalendarClick(entry)"
+                             title="Épinglé — glisser vers la liste pour désépingler">
+                            <i class="fa fa-calendar-o"/>
+                            <span class="o_biodoo_calendar_name"><t t-esc="entry.calendar_name"/></span>
+                            <span class="o_biodoo_calendar_count">
+                                <t t-esc="entry.present_count"/>/<t t-esc="entry.contract_count"/>
+                            </span>
+                            <i class="fa fa-thumb-tack o_biodoo_pin_icon"/>
+                        </div>
+                    </t>
+                    <!-- Jusqu'à 10 calendriers restants : puce directe -->
+                    <t t-if="unpinnedCalendarsExpanded">
+                        <t t-foreach="unpinnedCalendars" t-as="entry" t-key="entry.calendar_id">
+                            <div class="o_biodoo_calendar_chip"
+                                 draggable="true"
+                                 t-on-dragstart="(ev) => this.onDragStart(ev, 'calendar', entry.calendar_id)"
+                                 t-on-dragend="onDragEnd"
+                                 t-on-click="() => this.onCalendarClick(entry)"
+                                 title="Glisser pour épingler">
+                                <i class="fa fa-calendar-o"/>
+                                <span class="o_biodoo_calendar_name"><t t-esc="entry.calendar_name"/></span>
+                                <span class="o_biodoo_calendar_count">
+                                    <t t-esc="entry.present_count"/>/<t t-esc="entry.contract_count"/>
+                                </span>
+                            </div>
+                        </t>
+                    </t>
+                    <!-- Au-delà de 10 restants : pastille compacte + liste déroulante -->
+                    <div class="o_biodoo_device_widget" t-if="!unpinnedCalendarsExpanded and unpinnedCalendars.length">
+                        <div t-attf-class="o_biodoo_calendar_chip o_biodoo_dropzone {{isZoneActive('calendar-list') ? 'o_biodoo_dropzone--active' : ''}}"
+                             t-on-click="onToggleCalendars"
+                             t-on-dragover.stop="(ev) => this.onDragOverZone(ev, 'calendar-list')"
+                             t-on-dragleave.stop="() => this.onDragLeaveZone('calendar-list')"
+                             t-on-drop.stop="(ev) => this.onDropOnListZone(ev, 'calendar')">
+                            <i class="fa fa-calendar-o"/>
+                            <span class="o_biodoo_calendar_name">Calendriers</span>
+                            <span class="o_biodoo_calendar_count"><t t-esc="unpinnedCalendars.length"/></span>
+                            <i t-attf-class="fa {{calendarUi.open ? 'fa-caret-up' : 'fa-caret-down'}}"/>
+                        </div>
+                        <div t-attf-class="o_biodoo_device_list o_biodoo_dropzone {{isZoneActive('calendar-list') ? 'o_biodoo_dropzone--active' : ''}}"
+                             t-if="calendarUi.open"
+                             t-on-dragover.stop="(ev) => this.onDragOverZone(ev, 'calendar-list')"
+                             t-on-dragleave.stop="() => this.onDragLeaveZone('calendar-list')"
+                             t-on-drop.stop="(ev) => this.onDropOnListZone(ev, 'calendar')">
+                            <t t-foreach="unpinnedCalendars" t-as="entry" t-key="entry.calendar_id">
+                                <div class="o_biodoo_device_row"
+                                     draggable="true"
+                                     t-on-dragstart="(ev) => this.onDragStart(ev, 'calendar', entry.calendar_id)"
+                                     t-on-dragend="onDragEnd"
+                                     t-on-click="() => this.onCalendarClick(entry)"
+                                     title="Glisser pour épingler">
+                                    <span class="o_biodoo_device_name"><t t-esc="entry.calendar_name"/></span>
+                                    <span class="o_biodoo_device_meta">
+                                        <t t-esc="entry.present_count"/>/<t t-esc="entry.contract_count"/>
+                                    </span>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cartes KPI du jour -->
+                <div class="o_biodoo_stat_grid">
+                    <t t-foreach="statCards" t-as="card" t-key="card.key">
+                        <div class="o_biodoo_stat_card" t-on-click="() => this.onDashboardCardClick(card.key)">
+                            <div class="o_biodoo_stat_head">
+                                <i t-attf-class="fa {{card.icon}} {{card.color}}"/>
+                                <span class="o_biodoo_stat_label"><t t-esc="card.label"/></span>
+                            </div>
+                            <span class="o_biodoo_stat_value"><t t-esc="dashboard[card.valueKey]"/></span>
+                        </div>
+                    </t>
+                </div>
+
+                <!-- Alertes contrats : à ce jour, indépendantes de la date choisie ci-dessus -->
+                <div class="o_biodoo_alert_section" t-if="alertCards.length">
+                    <div class="o_biodoo_alert_title">
+                        <i class="fa fa-bell-o"/> Alertes contrats — à ce jour, indépendant de la date ci-dessus
+                    </div>
+                    <div class="o_biodoo_stat_grid">
+                        <t t-foreach="alertCards" t-as="card" t-key="card.key">
+                            <div class="o_biodoo_stat_card o_biodoo_stat_card--alert" t-on-click="() => this.onDashboardCardClick(card.key)">
+                                <div class="o_biodoo_stat_head">
+                                    <i t-attf-class="fa {{card.icon}} o_biodoo_c_warning"/>
+                                    <span class="o_biodoo_stat_label"><t t-esc="card.label"/></span>
+                                </div>
+                                <span class="o_biodoo_stat_value"><t t-esc="dashboard[card.valueKey]"/></span>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+
+            </t>
+        </div>
+    </t>
+
+</templates>

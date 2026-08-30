@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <record id="civilite_monsieur" model="hr.civilite">
+            <field name="name">Monsieur</field>
+            <field name="code">M.</field>
+            <field name="sequence">1</field>
+        </record>
+
+        <record id="civilite_madame" model="hr.civilite">
+            <field name="name">Madame</field>
+            <field name="code">Mme</field>
+            <field name="sequence">2</field>
+        </record>
+
+        <record id="civilite_mademoiselle" model="hr.civilite">
+            <field name="name">Mademoiselle</field>
+            <field name="code">Mlle</field>
+            <field name="sequence">3</field>
+        </record>
+
+    </data>
+</odoo>

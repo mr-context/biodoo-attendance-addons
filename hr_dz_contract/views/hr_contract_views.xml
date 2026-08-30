@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ================================================================== -->
+    <!-- EMPLOYEE FORM: Smart button + basic contract info                   -->
+    <!-- ================================================================== -->
+    <record id="hr_employee_view_form_contract_dz" model="ir.ui.view">
+        <field name="name">hr.employee.form.contract.dz</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="priority">50</field>
+        <field name="arch" type="xml">
+
+            <!-- Smart button pour voir le(s) contrat(s) -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_open_contract" type="object"
+                        class="oe_stat_button" icon="fa-file-text"
+                        groups="hr.group_hr_user">
+                    <div class="o_stat_info">
+                        <field name="contract_count" class="o_stat_value"/>
+                        <span class="o_stat_text">Contrat(s)</span>
+                    </div>
+                </button>
+            </xpath>
+
+            <!-- Ajouter N° contrat et etat essai dans l'onglet Paie -->
+            <xpath expr="//page[@name='payroll_information']//group[@name='contract']" position="inside">
+                <field name="contract_reference" readonly="1"/>
+                <field name="trial_state" widget="badge"
+                       decoration-info="trial_state == 'pending'"
+                       decoration-warning="trial_state in ('ongoing', 'extended')"
+                       decoration-success="trial_state == 'confirmed'"
+                       decoration-danger="trial_state == 'failed'"/>
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- ================================================================== -->
+    <!-- HR.VERSION FORM: Extension for contract template view               -->
+    <!-- ================================================================== -->
+    <record id="hr_version_view_form_dz" model="ir.ui.view">
+        <field name="name">hr.version.form.dz</field>
+        <field name="model">hr.version</field>
+        <field name="inherit_id" ref="hr.hr_contract_template_form_view"/>
+        <field name="arch" type="xml">
+
+            <!-- Ajouter les boutons de workflow dans un header -->
+            <xpath expr="//sheet" position="before">
+                <header>
+                    <button name="action_confirm" type="object"
+                            string="Confirmer le contrat" class="btn-primary"
+                            invisible="state != 'draft'"
+                            groups="hr.group_hr_manager"/>
+                    <button name="action_set_pending" type="object"
+                            string="En attente signature" class="btn-secondary"
+                            invisible="state not in ('draft', 'active')"
+                            groups="hr.group_hr_manager"/>
+                    <button name="action_terminate" type="object"
+                            string="Resilier" class="btn-secondary"
+                            invisible="state not in ('active', 'pending')"
+                            groups="hr.group_hr_manager"
+                            confirm="Etes-vous sur de vouloir resilier ce contrat?"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,pending,active"/>
+                </header>
+            </xpath>
+
+            <!-- Ajouter les champs DZ apres contract_type_id -->
+            <xpath expr="//field[@name='contract_type_id']" position="after">
+                <field name="is_cdd" invisible="1"/>
+                <field name="duration_months" invisible="not is_cdd"/>
+                <field name="trial_date_end"/>
+                <field name="trial_duration_months"/>
+                <field name="trial_state" widget="badge"
+                       decoration-info="trial_state == 'pending'"
+                       decoration-warning="trial_state in ('ongoing', 'extended')"
+                       decoration-success="trial_state == 'confirmed'"
+                       decoration-danger="trial_state == 'failed'"/>
+            </xpath>
+
+            <!-- Ajouter le numero de contrat -->
+            <xpath expr="//sheet" position="inside">
+                <group>
+                    <field name="contract_reference" readonly="1"/>
+                </group>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>

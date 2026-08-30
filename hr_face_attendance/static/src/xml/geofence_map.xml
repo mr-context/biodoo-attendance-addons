@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates>
+    <t t-name="hr_face_attendance.GeofenceMap">
+        <div t-ref="map_container"
+             style="height: 400px; width: 100%; border-radius: 8px; border: 1px solid #dee2e6; z-index: 0;"/>
+    </t>
+</templates>

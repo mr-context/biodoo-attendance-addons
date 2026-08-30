@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- List view -->
+    <record id="view_hr_prime_type_list" model="ir.ui.view">
+        <field name="name">hr.prime.type.list</field>
+        <field name="model">hr.prime.type</field>
+        <field name="arch" type="xml">
+            <list string="Types de primes">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="is_cotisable"/>
+                <field name="is_imposable"/>
+                <field name="default_amount"/>
+                <field name="active" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form view -->
+    <record id="view_hr_prime_type_form" model="ir.ui.view">
+        <field name="name">hr.prime.type.form</field>
+        <field name="model">hr.prime.type</field>
+        <field name="arch" type="xml">
+            <form string="Type de prime">
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="Libellé de la prime..."/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="code"/>
+                            <field name="default_amount"/>
+                            <field name="sequence"/>
+                        </group>
+                        <group string="Fiscalité">
+                            <field name="is_cotisable" widget="boolean_toggle"/>
+                            <field name="is_imposable" widget="boolean_toggle"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                    </group>
+                    <group string="Description">
+                        <field name="description" nolabel="1"/>
+                    </group>
+                    <div class="alert alert-info" role="alert">
+                        <strong>Fiscalité :</strong>
+                        <strong>Cotisable</strong> = incluse dans l'assiette CNAS (Brut Cotisable).
+                        <strong>Imposable</strong> = incluse dans l'assiette IRG (Net Imposable).
+                        Par défaut, une prime est cotisable ET imposable.
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_hr_prime_type" model="ir.actions.act_window">
+        <field name="name">Types de primes</field>
+        <field name="res_model">hr.prime.type</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+</odoo>

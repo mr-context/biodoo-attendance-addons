@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+    <t t-name="core_nats.NatsDashboard">
+        <div class="o_nats_dashboard o_action_manager">
+
+            <!-- Loading -->
+            <div t-if="state.loading" class="o_nats_loading text-muted p-4 text-center">
+                <i class="fa fa-spinner fa-spin me-2"/>Loading…
+            </div>
+
+            <t t-if="!state.loading">
+
+                <!-- ── Header ──────────────────────────────────────────── -->
+                <div class="o_nats_header d-flex align-items-center justify-content-between px-4 py-3 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <span t-att-class="'o_nats_dot ' + (state.connected ? 'connected' : 'disconnected')"/>
+                        <strong t-esc="state.connected ? 'Connected' : 'Disconnected'"/>
+                        <code class="text-muted small" t-esc="state.url"/>
+                    </div>
+                    <small class="text-muted">
+                        <i class="fa fa-refresh me-1"/>
+                        <t t-esc="state.lastUpdate || '–'"/>
+                    </small>
+                </div>
+
+                <!-- ── Error banner ──────────────────────────────────── -->
+                <div t-if="state.error" class="alert alert-warning mx-4 mt-3">
+                    <i class="fa fa-exclamation-triangle me-2"/>
+                    <t t-esc="state.error"/>
+                </div>
+
+                <!-- ── Stat cards ─────────────────────────────────────── -->
+                <div class="row g-3 px-4 py-3">
+                    <div class="col-sm-4">
+                        <div class="card text-center o_nats_stat_card">
+                            <div class="card-body py-3">
+                                <div class="o_nats_stat_value" t-esc="state.subs.length"/>
+                                <div class="o_nats_stat_label">Subscriptions</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="card text-center o_nats_stat_card">
+                            <div class="card-body py-3">
+                                <div class="o_nats_stat_value" t-esc="state.total.toLocaleString()"/>
+                                <div class="o_nats_stat_label">Messages processed</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="card text-center o_nats_stat_card">
+                            <div class="card-body py-3">
+                                <div class="o_nats_stat_value">
+                                    <t t-esc="state.rate"/>
+                                    <small class="o_nats_stat_unit"> /min</small>
+                                </div>
+                                <div class="o_nats_stat_label">Message rate</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Main content row ───────────────────────────────── -->
+                <div class="row g-3 px-4 pb-4">
+
+                    <!-- Subscriptions table -->
+                    <div class="col-lg-4">
+                        <div class="card h-100">
+                            <div class="card-header fw-semibold">
+                                <i class="fa fa-list-ul me-2 text-muted"/>Subscriptions
+                            </div>
+                            <div class="card-body p-0">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Subject</th>
+                                            <th class="text-center">Type</th>
+                                            <th class="text-end">Msgs</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr t-foreach="state.subs" t-as="sub" t-key="sub.subject">
+                                            <td class="o_nats_sub_subject">
+                                                <span t-att-class="'o_nats_subject ' + subjectClass(sub.subject)"
+                                                      t-esc="sub.subject"/>
+                                            </td>
+                                            <td class="text-center">
+                                                <span t-if="sub.is_js" class="badge bg-primary">JS</span>
+                                                <span t-else="" class="badge bg-secondary">Core</span>
+                                            </td>
+                                            <td class="text-end text-monospace" t-esc="(sub.count || 0).toLocaleString()"/>
+                                        </tr>
+                                        <tr t-if="state.subs.length === 0">
+                                            <td colspan="3" class="text-muted text-center py-3">
+                                                No active subscriptions
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live feed -->
+                    <div class="col-lg-8">
+                        <div class="card h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span class="fw-semibold">
+                                    <i class="fa fa-bolt me-2 text-warning"/>Live Feed
+                                </span>
+                                <small class="text-muted">last 50 events · 2 s refresh</small>
+                            </div>
+                            <div class="card-body p-0 o_nats_feed_container">
+                                <div t-if="state.feed.length === 0"
+                                     class="text-muted text-center py-4 fst-italic">
+                                    Waiting for messages…
+                                </div>
+                                <div t-else="" class="o_nats_feed">
+                                    <div t-foreach="state.feed" t-as="msg" t-key="msg_index"
+                                         t-att-class="feedRowClass(msg_index)">
+                                        <span class="o_nats_feed_ts" t-esc="msg.ts"/>
+                                        <span t-att-class="'o_nats_feed_subject ' + subjectClass(msg.subject)"
+                                              t-esc="msg.subject"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </t>
+        </div>
+    </t>
+</templates>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <menuitem id="menu_nats_root"
+              name="NATS"
+              parent="base.menu_administration"
+              sequence="100"
+              groups="base.group_system"/>
+
+    <menuitem id="menu_nats_server"
+              name="Servers"
+              parent="menu_nats_root"
+              action="action_nats_server"
+              sequence="10"/>
+
+</odoo>

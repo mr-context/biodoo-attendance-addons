@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="face_enrollment_wizard_form" model="ir.ui.view">
+        <field name="name">face.enrollment.wizard.form</field>
+        <field name="model">face.enrollment.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Enregistrement du visage">
+                <field name="state" invisible="1"/>
+                <field name="employee_id" invisible="1"/>
+                <field name="emb_front" invisible="1"/>
+                <field name="emb_left" invisible="1"/>
+                <field name="emb_right" invisible="1"/>
+
+                <!-- ÉTAT IDLE -->
+                <div invisible="state != 'idle'">
+                    <div class="text-center py-4">
+                        <h4>
+                            <i class="fa fa-camera me-2"/>
+                            Enregistrement facial —
+                            <field name="employee_id" readonly="1" class="d-inline"/>
+                        </h4>
+                        <div class="alert alert-info mt-3" role="alert">
+                            <strong>Avant de commencer :</strong> placez l'employé face à la caméra
+                            dans un endroit bien éclairé. Trois angles seront capturés :
+                            <strong>face, gauche, droite</strong>.
+                        </div>
+                        <div class="alert alert-warning mt-2" role="alert"
+                             invisible="not face_enrolled">
+                            <i class="fa fa-exclamation-triangle me-2"/>
+                            Un visage est déjà enregistré pour cet employé.
+                            Lancer une nouvelle capture écrasera l'ancien.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ÉTAT CAPTURING -->
+                <div invisible="state != 'capturing'">
+                    <div class="text-center py-2">
+                        <h5>Capture en cours — <field name="employee_id" readonly="1" class="d-inline"/></h5>
+                    </div>
+                    <!-- Widget OWL de capture (accède au record via this.props.record) -->
+                    <widget name="face_enrollment_camera"/>
+                    <div class="text-center mt-2 text-muted">
+                        <field name="capture_progress" class="d-inline" readonly="1"/>
+                        / 3 angles capturés
+                    </div>
+                </div>
+
+                <!-- ÉTAT DONE -->
+                <div invisible="state != 'done'">
+                    <div class="text-center py-4">
+                        <i class="fa fa-check-circle fa-4x text-success mb-3" title="Succès"/>
+                        <h4 class="text-success">Visage enregistré avec succès</h4>
+                        <p class="text-muted">
+                            Enregistré le <field name="enrolled_date" readonly="1" class="d-inline"/>
+                        </p>
+                    </div>
+                </div>
+
+                <footer>
+                    <!-- Idle -->
+                    <button name="action_start_capture" type="object"
+                            string="Lancer la caméra" class="btn-primary"
+                            icon="fa-camera"
+                            invisible="state != 'idle'"/>
+                    <button name="action_delete_enrollment" type="object"
+                            string="Supprimer l'enrollment" class="btn-danger"
+                            icon="fa-trash"
+                            invisible="state != 'idle' or not face_enrolled"
+                            confirm="Supprimer l'embedding facial de cet employé ?"/>
+                    <button string="Fermer" class="btn-secondary" special="cancel"
+                            invisible="state != 'idle'"/>
+
+                    <!-- Capturing -->
+                    <button name="action_reset" type="object"
+                            string="Recommencer" class="btn-secondary"
+                            icon="fa-refresh"
+                            invisible="state != 'capturing'"/>
+                    <button string="Annuler" class="btn-secondary" special="cancel"
+                            invisible="state != 'capturing'"/>
+
+                    <!-- Done -->
+                    <button name="action_reset" type="object"
+                            string="Recapturer" class="btn-secondary"
+                            icon="fa-refresh"
+                            invisible="state != 'done'"/>
+                    <button string="Fermer" class="btn-primary" special="cancel"
+                            invisible="state != 'done'"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

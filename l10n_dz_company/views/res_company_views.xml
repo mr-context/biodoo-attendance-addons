@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="res_company_view_form_l10n_dz" model="ir.ui.view">
+        <field name="name">res.company.form.l10n_dz</field>
+        <field name="model">res.company</field>
+        <field name="inherit_id" ref="base.view_company_form"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//page[@name='general_info']" position="after">
+                <page string="Identifiants légaux" name="page_legal_ids">
+                    <group>
+                        <group string="Fiscalité">
+                            <field name="nif"/>
+                            <field name="nis"/>
+                            <field name="rc"/>
+                            <field name="art_impot"/>
+                        </group>
+                        <group string="Organismes sociaux">
+                            <field name="num_employeur_cnas"/>
+                            <field name="casnos_num"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>

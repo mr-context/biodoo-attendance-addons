@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!--
+            Communes d'Algérie - Échantillon des chefs-lieux de wilaya
+            Pour la liste complète (~1600 communes), importer via CSV
+        -->
+
+        <!-- Alger (16) -->
+        <record id="city_dz_alger_centre" model="res.city">
+            <field name="name">Alger Centre</field>
+            <field name="zipcode">16000</field>
+            <field name="state_id" ref="state_dz_16"/>
+            <field name="country_id" ref="base.dz"/>
+        </record>
+        <record id="city_dz_bab_el_oued" model="res.city">
+            <field name="name">Bab El Oued</field>
+            <field name="zipcode">16001</field>
+            <field name="state_id" ref="state_dz_16"/>
+            <field name="country_id" ref="base.dz"/>
+        </record>
+        <record id="city_dz_hussein_dey" model="res.city">
+            <field name="name">Hussein Dey</field>
+            <field name="zipcode">16040</field>
+            <field name="state_id" ref="state_dz_16"/>
+            <field name="country_id" ref="base.dz"/>
+        </record>
+        <record id="city_dz_el_harrach" model="res.city">
+            <field name="name">El Harrach</field>
+            <field name="zipcode">16200</field>
+            <field name="state_id" ref="state_dz_16"/>
+            <field name="country_id" ref="base.dz"/>
+        </record>
+
+        <!-- Oran (31) -->
+        <record id="city_dz_oran" model="res.city">
+            <field name="name">Oran</field>
+            <field name="zipcode">31000</field>
+            <field name="state_id" ref="state_dz_31"/>
+            <field name="country_id" ref="base.dz"/>
+        </record>
+
+        <!-- Constantine (25) -->
+        <record id="city_dz_constantine" model="res.city">
+            <field name="name">Constantine</field>
+            <field name="zipcode">25000</field>
+            <field name="state_id" ref="state_dz_25"/>
+            <field name="country_id" ref="base.dz"/>
+        </record>
+
+        <!-- Annaba (23) -->
+        <record id="city_dz_annaba" model="res.city">
+            <field name="name">Annaba</field>
+            <field name="zipcode">23000</field>
+            <field name="state_id" ref="state_dz_23"/>
+            <field name="country_id" ref="base.dz"/>
+        </record>
+
+        <!-- Blida (09) -->
+        <record id="city_dz_blida" model="res.city">
+            <field name="name">Blida</field>
+            <field name="zipcode">09000</field>
+            <field name="state_id" ref="state_dz_09"/>
+            <field name="country_id" ref="base.dz"/>
+        </record>
+
+        <!-- Batna (05) -->
+        <record id="city_dz_batna" model="res.city">
+            <field name="name">Batna</field>
+            <field name="zipcode">05000</field>
+            <field name="state_id" ref="state_dz_05"/>
+            <field name="country_id" ref="base.dz"/>
+        </record>
+
+        <!-- Sétif (19) -->
+        <record id="city_dz_setif" model="res.city">
+            <field name="name">Sétif</field>
+            <field name="zipcode">19000</field>
+            <field name="state_id" ref="state_dz_19"/>
+            <field name="country_id" ref="base.dz"/>
+        </record>
+
+        <!-- Tizi Ouzou (15) -->
+        <record id="city_dz_tizi_ouzou" model="res.city">
+            <field name="name">Tizi Ouzou</field>
+            <field name="zipcode">15000</field>
+            <field name="state_id" ref="state_dz_15"/>
+            <field name="country_id" ref="base.dz"/>
+        </record>
+
+        <!-- Béjaïa (06) -->
+        <record id="city_dz_bejaia" model="res.city">
+            <field name="name">Béjaïa</field>
+            <field name="zipcode">06000</field>
+            <field name="state_id" ref="state_dz_06"/>
+            <field name="country_id" ref="base.dz"/>
+        </record>
+
+        <!-- Boumerdès (35) -->
+        <record id="city_dz_boumerdes" model="res.city">
+            <field name="name">Boumerdès</field>
+            <field name="zipcode">35000</field>
+            <field name="state_id" ref="state_dz_35"/>
+            <field name="country_id" ref="base.dz"/>
+        </record>
+
+        <!-- Tipaza (42) -->
+        <record id="city_dz_tipaza" model="res.city">
+            <field name="name">Tipaza</field>
+            <field name="zipcode">42000</field>
+            <field name="state_id" ref="state_dz_42"/>
+            <field name="country_id" ref="base.dz"/>
+        </record>
+
+        <!-- Chlef (02) -->
+        <record id="city_dz_chlef" model="res.city">
+            <field name="name">Chlef</field>
+            <field name="zipcode">02000</field>
+            <field name="state_id" ref="state_dz_02"/>
+            <field name="country_id" ref="base.dz"/>
+        </record>
+
+        <!-- Tlemcen (13) -->
+        <record id="city_dz_tlemcen" model="res.city">
+            <field name="name">Tlemcen</field>
+            <field name="zipcode">13000</field>
+            <field name="state_id" ref="state_dz_13"/>
+            <field name="country_id" ref="base.dz"/>
+        </record>
+
+    </data>
+</odoo>

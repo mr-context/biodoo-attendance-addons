@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!--
+            Paramètres légaux Algérie
+            À mettre à jour selon les décrets en vigueur
+        -->
+
+        <!-- SMIG -->
+        <record id="param_smig_2024" model="hr.legal.parameter">
+            <field name="name">SMIG 2024</field>
+            <field name="code">smig</field>
+            <field name="value">20000</field>
+            <field name="date_from">2024-01-01</field>
+            <field name="notes">Salaire Minimum Interprofessionnel Garanti</field>
+        </record>
+
+        <!-- Taux CNAS -->
+        <record id="param_cnas_worker_2024" model="hr.legal.parameter">
+            <field name="name">Taux CNAS Salarié 2024</field>
+            <field name="code">cnas_worker_rate</field>
+            <field name="value">9.0</field>
+            <field name="date_from">2024-01-01</field>
+            <field name="notes">Part salarié des cotisations CNAS (9%)</field>
+        </record>
+
+        <record id="param_cnas_employer_2024" model="hr.legal.parameter">
+            <field name="name">Taux CNAS Employeur 2024</field>
+            <field name="code">cnas_employer_rate</field>
+            <field name="value">26.0</field>
+            <field name="date_from">2024-01-01</field>
+            <field name="notes">Part employeur des cotisations CNAS (26%)</field>
+        </record>
+
+        <!-- CASNOS -->
+        <record id="param_casnos_2024" model="hr.legal.parameter">
+            <field name="name">Taux CASNOS 2024</field>
+            <field name="code">casnos_rate</field>
+            <field name="value">15.0</field>
+            <field name="date_from">2024-01-01</field>
+            <field name="notes">Cotisation CASNOS pour non-salariés (15%)</field>
+        </record>
+
+        <!-- Abattement IRG Handicapé -->
+        <record id="param_irg_abattement_handicap" model="hr.legal.parameter">
+            <field name="name">Abattement IRG Handicapé</field>
+            <field name="code">irg_abattement_handicap</field>
+            <field name="value">0.30</field>
+            <field name="date_from">2024-01-01</field>
+            <field name="notes">Réduction de 30% sur l'IRG pour travailleurs handicapés</field>
+        </record>
+
+        <!-- PSU — Prime de Salaire Unique -->
+        <record id="param_psu_montant" model="hr.legal.parameter">
+            <field name="name">PSU — Prime de Salaire Unique</field>
+            <field name="code">psu_montant</field>
+            <field name="value">200</field>
+            <field name="date_from">2024-01-01</field>
+            <field name="notes">Décret 25-168. Versée au salarié marié dont le conjoint ne travaille pas. Configurable.</field>
+        </record>
+
+        <!-- ══ Règle plafond transport/panier (Instruction CNAS n°02/2011) ══════ -->
+        <!-- Activer/désactiver la règle des 500 DA/jour                           -->
+        <!-- 1 = activé (plafond appliqué), 0 = désactivé (tout exonéré sans cap) -->
+        <record id="param_transport_meal_cap_enabled" model="hr.legal.parameter">
+            <field name="name">Règle plafond transport+panier (activer/désactiver)</field>
+            <field name="code">transport_meal_cap_enabled</field>
+            <field name="value">1</field>
+            <field name="date_from">2011-05-15</field>
+            <field name="notes">1 = plafond CNAS actif (Instruction n°02 DG CNAS 15/05/2011). 0 = désactivé, tout le montant transport+panier est exonéré sans limite. Modifier transport_daily_cap et meal_daily_cap pour ajuster les seuils.</field>
+        </record>
+
+        <!-- Plafond transport exonéré CNAS (DA/jour travaillé) -->
+        <!-- Instruction n°02 du 15 mai 2011, DG CNAS : plafond global 500 DA/j  -->
+        <!-- réparti en 250 DA transport + 250 DA panier. Au-delà : réintégration -->
+        <!-- dans l'assiette CNAS sauf factures réelles (Décret 96-208, Art. 2b). -->
+        <record id="param_transport_daily_cap" model="hr.legal.parameter">
+            <field name="name">Plafond transport/jour (DA)</field>
+            <field name="code">transport_daily_cap</field>
+            <field name="value">250</field>
+            <field name="date_from">2011-05-15</field>
+            <field name="notes">DA/jour travaillé exonéré CNAS pour transport. Défaut : 250 DA (soit 500 DA global avec panier). Peut être porté à 500 DA si appliqué séparément. Instruction n°02 DG CNAS 15/05/2011.</field>
+        </record>
+
+        <!-- Plafond panier exonéré CNAS (DA/jour travaillé) -->
+        <record id="param_meal_daily_cap" model="hr.legal.parameter">
+            <field name="name">Plafond panier/jour (DA)</field>
+            <field name="code">meal_daily_cap</field>
+            <field name="value">250</field>
+            <field name="date_from">2011-05-15</field>
+            <field name="notes">DA/jour travaillé exonéré CNAS pour panier repas. Défaut : 250 DA (soit 500 DA global avec transport). Peut être porté à 500 DA si appliqué séparément. Instruction n°02 DG CNAS 15/05/2011.</field>
+        </record>
+
+        <!-- Allocations Familiales — taux et seuil (Décret 25-168) -->
+        <record id="param_af_rate_low" model="hr.legal.parameter">
+            <field name="name">AF — taux bas revenu (DA/enfant)</field>
+            <field name="code">af_rate_low</field>
+            <field name="value">600</field>
+            <field name="date_from">2024-01-01</field>
+            <field name="notes">Taux AF par enfant si brut cotisable ≤ seuil AF (Décret 25-168).</field>
+        </record>
+
+        <record id="param_af_rate_high" model="hr.legal.parameter">
+            <field name="name">AF — taux haut revenu (DA/enfant)</field>
+            <field name="code">af_rate_high</field>
+            <field name="value">300</field>
+            <field name="date_from">2024-01-01</field>
+            <field name="notes">Taux AF par enfant si brut cotisable > seuil AF (Décret 25-168).</field>
+        </record>
+
+        <record id="param_af_threshold" model="hr.legal.parameter">
+            <field name="name">AF — seuil brut cotisable (DA)</field>
+            <field name="code">af_threshold</field>
+            <field name="value">15000</field>
+            <field name="date_from">2024-01-01</field>
+            <field name="notes">Seuil de brut cotisable pour déterminer le taux AF (Décret 25-168).</field>
+        </record>
+
+        <!-- Prime de Scolarité (Décret 25-168) -->
+        <record id="param_scolarite_montant" model="hr.legal.parameter">
+            <field name="name">Prime scolarité (DA/enfant)</field>
+            <field name="code">scolarite_montant</field>
+            <field name="value">3000</field>
+            <field name="date_from">2024-01-01</field>
+            <field name="notes">Montant par enfant scolarisé, versé en septembre uniquement (Décret 25-168).</field>
+        </record>
+
+    </data>
+</odoo>

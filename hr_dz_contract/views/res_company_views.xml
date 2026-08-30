@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Extend Company Form View - Contract Configuration -->
+    <record id="res_company_view_form_contract_dz" model="ir.ui.view">
+        <field name="name">res.company.form.contract.dz</field>
+        <field name="model">res.company</field>
+        <field name="inherit_id" ref="hr_dz_base.res_company_view_form_dz"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//page[@name='page_legal_ids']" position="inside">
+                <group string="Configuration Numero de Contrat">
+                    <group>
+                        <field name="contract_prefix"/>
+                        <field name="contract_pattern"/>
+                        <field name="contract_separator" invisible="contract_pattern == 'seq_only'"/>
+                    </group>
+                    <group>
+                        <field name="contract_sequence_id"
+                               context="{'default_code': 'hr.contract.dz', 'default_name': 'Numero Contrat'}"/>
+                    </group>
+                </group>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>

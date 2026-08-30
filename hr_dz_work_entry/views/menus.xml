@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Menu Prestations sous Présences (pas de dépendance payroll) -->
+    <menuitem
+        id="menu_hr_work_entry_root"
+        name="Prestations"
+        parent="hr_attendance.menu_hr_attendance_root"
+        action="hr_work_entry_action_payroll"
+        sequence="7"
+        groups="hr.group_hr_user"/>
+
+    <!-- Menu Anomalies séparé -->
+    <menuitem
+        id="menu_hr_work_entry_anomalies"
+        name="Anomalies prestations"
+        parent="hr_attendance.menu_hr_attendance_root"
+        action="hr_work_entry_anomaly_action"
+        sequence="8"
+        groups="hr.group_hr_user"/>
+
+    <!-- Types de prestations dans Configuration -->
+    <menuitem
+        id="menu_hr_work_entry_type"
+        name="Types de prestations"
+        parent="hr_attendance.menu_hr_attendance_configuration"
+        action="hr_work_entry.hr_work_entry_type_action"
+        sequence="30"
+        groups="hr.group_hr_manager"/>
+
+</odoo>

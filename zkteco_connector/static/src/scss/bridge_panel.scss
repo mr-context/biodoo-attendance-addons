@@ -1,0 +1,16 @@
+.o_zk_bridge_panel {
+    .o_zk_bridge_toggle {
+        cursor: pointer;
+        user-select: none;
+
+        &:hover {
+            background-color: var(--gray-100, #f8f9fa);
+        }
+    }
+
+    .o_zk_chevron {
+        width: 0.9em;
+        text-align: center;
+        transition: transform 0.15s ease;
+    }
+}

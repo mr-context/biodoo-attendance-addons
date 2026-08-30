@@ -1,0 +1,393 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── KANBAN (vue par défaut, style « IoT Entreprise ») ─────── -->
+    <record id="view_zkteco_device_kanban" model="ir.ui.view">
+        <field name="name">zkteco.device.kanban</field>
+        <field name="model">zkteco.device</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state"
+                    default_order="custom_name, device_name"
+                    class="o_kanban_small_column o_zkteco_device_kanban"
+                    quick_create="false"
+                    group_create="false">
+                <field name="is_online"/>
+                <field name="state"/>
+                <field name="face_count"/>
+                <field name="fp_count"/>
+                <field name="user_count"/>
+                <field name="attendance_count"/>
+                <field name="pending_user_count"/>
+                <field name="cmd_error_count"/>
+                <templates>
+                    <t t-name="card" class="flex-row align-items-stretch p-0">
+                        <!-- Tuile d'état (emplacement carré — remplaçable par une image) -->
+                        <aside class="o_zkteco_icon d-flex align-items-center justify-content-center p-2">
+                            <div t-attf-class="o_zkteco_badge d-flex align-items-center justify-content-center #{
+                                    record.state.raw_value == 'pending' ? 'o_zk_pending'
+                                    : record.state.raw_value == 'rejected' ? 'o_zk_rejected'
+                                    : record.is_online.raw_value ? 'o_zk_online'
+                                    : 'o_zk_offline'
+                                }"
+                                t-att-title="record.is_online.raw_value ? 'En ligne' : record.state.value">
+                                <i class="fa fa-clock-o"/>
+                            </div>
+                        </aside>
+
+                        <!-- Corps de la carte -->
+                        <main class="flex-grow-1 p-2 pe-3">
+                            <div class="d-flex align-items-start">
+                                <div class="flex-grow-1">
+                                    <field name="display_name" class="fw-bold fs-6 d-block text-truncate"/>
+                                    <span class="text-muted small d-block text-truncate">
+                                        <field name="device_name"/>
+                                    </span>
+                                </div>
+                                <button name="action_open_approve_wizard" type="object"
+                                        class="btn btn-primary btn-sm ms-2"
+                                        t-if="record.state.raw_value == 'pending'"
+                                        title="Approuver">
+                                    <i class="fa fa-check"/>
+                                </button>
+                            </div>
+
+                            <div class="o_kanban_record_bottom mt-2 pt-1 border-top">
+                                <div class="text-muted small">
+                                    <i class="fa fa-hashtag me-1" title="N° de série"/><field name="serial_number"/>
+                                    <br/>
+                                    <i class="fa fa-globe me-1" title="Adresse IP"/><field name="ip_address"/>
+                                </div>
+                                <div class="ms-auto d-flex align-items-center gap-2 small">
+                                    <span class="text-muted" title="Utilisateurs enrôlés">
+                                        <i class="fa fa-users me-1"/><field name="user_count"/>
+                                    </span>
+                                    <span class="text-muted" title="Pointages">
+                                        <i class="fa fa-clock-o me-1"/><field name="attendance_count"/>
+                                    </span>
+                                    <span class="badge text-bg-danger"
+                                          t-if="record.cmd_error_count.raw_value &gt; 0"
+                                          title="Commandes en erreur">
+                                        <i class="fa fa-exclamation-triangle me-1"/><t t-out="record.cmd_error_count.value"/>
+                                    </span>
+                                </div>
+                            </div>
+                        </main>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- ── LIST ─────────────────────────────────────────────────── -->
+    <record id="view_zkteco_device_list" model="ir.ui.view">
+        <field name="name">zkteco.device.list</field>
+        <field name="model">zkteco.device</field>
+        <field name="arch" type="xml">
+            <list decoration-warning="state=='pending'"
+                  decoration-success="is_online"
+                  decoration-muted="state in ('offline','rejected')">
+                <field name="is_online"      column_invisible="1"/>
+                <field name="display_name"   string="Device"/>
+                <field name="serial_number"  string="N° Série"/>
+                <field name="ip_address"     string="IP"/>
+                <field name="platform"       optional="show"/>
+                <field name="firmware_version" optional="show" string="Firmware"/>
+                <field name="user_count"     optional="show" string="Utilisateurs"/>
+                <field name="state" widget="badge"
+                       decoration-warning="state=='pending'"
+                       decoration-success="state=='approved'"
+                       decoration-danger="state=='rejected'"
+                       decoration-muted="state=='offline'"
+                       string="Statut approb."/>
+                <field name="last_seen"      string="Dernier contact"/>
+                <field name="attendance_count" string="Pointages"/>
+                <button name="action_open_approve_wizard"
+                        type="object"
+                        icon="fa-check-circle"
+                        string="Approuver"
+                        invisible="state != 'pending'"
+                        class="btn-primary btn-sm"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ── FORM ─────────────────────────────────────────────────── -->
+    <record id="view_zkteco_device_form" model="ir.ui.view">
+        <field name="name">zkteco.device.form</field>
+        <field name="model">zkteco.device</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_open_approve_wizard"
+                            string="Approuver"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'pending'"/>
+                    <button name="action_reject"
+                            string="Rejeter"
+                            type="object"
+                            class="btn-danger"
+                            invisible="state not in ('pending','approved')"
+                            confirm="Rejeter ce device ? Les événements seront ignorés."/>
+                    <button name="action_reset_to_pending"
+                            string="Remettre en attente"
+                            type="object"
+                            invisible="state != 'rejected'"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="pending,approved,offline"/>
+                </header>
+
+                <sheet>
+                    <!-- Smart buttons -->
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_attendances"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-clock-o">
+                            <field name="attendance_count" widget="statinfo" string="Pointages"/>
+                        </button>
+                        <button name="action_view_device_users"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-users">
+                            <field name="device_user_count" widget="statinfo" string="Users device"/>
+                        </button>
+                        <button name="action_view_pending_users"
+                                type="object"
+                                class="oe_stat_button oe_stat_button_warning"
+                                icon="fa-exclamation-circle"
+                                invisible="pending_user_count == 0">
+                            <field name="pending_user_count" widget="statinfo" string="À mapper"/>
+                        </button>
+                        <button name="action_view_attlog_quarantine"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-lock"
+                                invisible="pending_attlog_count == 0">
+                            <field name="pending_attlog_count" widget="statinfo" string="Quarantaine"/>
+                        </button>
+                        <button name="action_view_raw_attlog"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-list">
+                            <field name="raw_attlog_count" widget="statinfo" string="Pointages bruts"/>
+                        </button>
+                        <button name="action_view_attlog_anomalies"
+                                type="object"
+                                class="oe_stat_button btn-danger"
+                                icon="fa-exclamation-triangle"
+                                invisible="anomaly_attlog_count == 0">
+                            <field name="anomaly_attlog_count" widget="statinfo" string="Anomalies"/>
+                        </button>
+                        <button name="action_view_cmd_logs"
+                                type="object"
+                                class="oe_stat_button btn-danger"
+                                icon="fa-exclamation-triangle"
+                                invisible="cmd_error_count == 0">
+                            <field name="cmd_error_count" widget="statinfo" string="Erreurs cmds"/>
+                        </button>
+                    </div>
+
+                    <!-- Title -->
+                    <div class="oe_title">
+                        <h1>
+                            <field name="custom_name"
+                                   placeholder="Nommez ce device (ex: Pointeuse salle de réunion)"/>
+                        </h1>
+                        <h2 class="text-muted">
+                            <field name="device_name" placeholder="Modèle inconnu" readonly="1"/>
+                            &amp;nbsp;·&amp;nbsp; S/N :
+                            <field name="serial_number" readonly="1"/>
+                        </h2>
+                        <!-- Online badge -->
+                        <div class="mt-1">
+                            <span class="badge rounded-pill text-bg-success"
+                                  invisible="not is_online">
+                                <i class="fa fa-circle me-1"/> En ligne
+                            </span>
+                            <span class="badge rounded-pill text-bg-secondary"
+                                  invisible="is_online or state != 'approved'">
+                                <i class="fa fa-circle-o me-1"/> Hors ligne
+                            </span>
+                        </div>
+                        <field name="is_online" column_invisible="1" invisible="1"/>
+                    </div>
+
+                    <!-- Tabs -->
+                    <notebook>
+                        <!-- Tab 1: Informations -->
+                        <page name="info" string="Informations">
+                            <group>
+                                <group string="Identification">
+                                    <field name="oem_vendor"    readonly="1"/>
+                                    <field name="platform"      readonly="1"/>
+                                    <field name="firmware_version" readonly="1"/>
+                                    <field name="multi_bio_version" readonly="1" string="Algo biométrique" invisible="not multi_bio_version"/>
+                                    <field name="product_time"  readonly="1" invisible="not product_time"/>
+                                    <field name="device_id_raw" readonly="1" string="Device ID" invisible="not device_id_raw"/>
+                                    <field name="language_code" readonly="1" string="Code langue" invisible="not language_code"/>
+                                </group>
+                                <group string="Réseau">
+                                    <field name="ip_address"  readonly="1"/>
+                                    <field name="mac_address" readonly="1"/>
+                                    <field name="push_version" readonly="1" string="Push Proto"/>
+                                </group>
+                            </group>
+                            <group string="Cycle de vie">
+                                <group>
+                                    <field name="first_seen"    readonly="1"/>
+                                    <field name="last_seen"     readonly="1"/>
+                                </group>
+                                <group>
+                                    <field name="approved_by"   readonly="1" invisible="not approved_by"/>
+                                    <field name="approved_date" readonly="1" invisible="not approved_date"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- Tab 2: Capacité -->
+                        <page name="capacity" string="Capacité"
+                              invisible="not max_user_count">
+                            <group>
+                                <group string="Utilisateurs &amp; biométrie">
+                                    <field name="user_count"     readonly="1" string="Utilisateurs enrôlés"/>
+                                    <field name="max_user_count" readonly="1" string="Capacité max"/>
+                                    <field name="admin_count"    readonly="1" string="Administrateurs"/>
+                                    <field name="fp_count"       readonly="1" string="Empreintes"/>
+                                    <field name="max_fp_count"   readonly="1" string="Capacité empreintes"/>
+                                    <field name="face_count"     readonly="1" string="Visages"/>
+                                    <field name="max_face_count" readonly="1" string="Capacité visages"/>
+                                </group>
+                                <group string="Logs">
+                                    <field name="attlog_count"      readonly="1" string="Logs présence"/>
+                                    <field name="max_attlog_count"  readonly="1" string="Capacité logs"/>
+                                    <field name="transaction_count" readonly="1" string="Transactions"/>
+                                    <field name="lock_count"        readonly="1" string="Serrures"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- Tab 3: Commandes -->
+                        <page name="commands" string="Commandes à distance"
+                              invisible="state not in ('approved','offline')">
+
+                            <div class="row mt-2">
+                                <!-- Maintenance -->
+                                <div class="col-12 col-md-6 mb-3">
+                                    <h6 class="text-muted text-uppercase small mb-2">Maintenance</h6>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button name="action_refresh_info"
+                                                type="object"
+                                                class="btn btn-secondary btn-sm">
+                                            <i class="fa fa-info-circle me-1"/> Infos device
+                                        </button>
+<button name="action_reboot"
+                                                type="object"
+                                                class="btn btn-warning btn-sm"
+                                                confirm="Redémarrer le device ?">
+                                            <i class="fa fa-power-off me-1"/> Redémarrer
+                                        </button>
+                                        <button name="action_clear_logs"
+                                                type="object"
+                                                class="btn btn-outline-danger btn-sm"
+                                                confirm="Effacer les logs de pointage du device ?">
+                                            <i class="fa fa-eraser me-1"/> Effacer logs
+                                        </button>
+                                        <button name="action_purge_commands"
+                                                type="object"
+                                                class="btn btn-outline-warning btn-sm"
+                                                confirm="Purger les commandes en attente de ce device côté bridge ? À utiliser si une commande semble bloquée.">
+                                            <i class="fa fa-broom me-1"/> Purger la file
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Utilisateurs -->
+                                <div class="col-12 col-md-6 mb-3">
+                                    <h6 class="text-muted text-uppercase small mb-2">Utilisateurs</h6>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button name="action_full_sync"
+                                                type="object"
+                                                class="btn btn-primary btn-sm"
+                                                confirm="Forcer un sync complet ? Le device va se re-enregistrer et renvoyer tous ses utilisateurs, empreintes et pointages.">
+                                            <i class="fa fa-refresh me-1"/> Sync complet
+                                        </button>
+                                        <button name="action_query_employees"
+                                                type="object"
+                                                class="btn btn-secondary btn-sm">
+                                            <i class="fa fa-download me-1"/> Récupérer utilisateurs
+                                        </button>
+                                        <button name="action_query_attlog"
+                                                type="object"
+                                                class="btn btn-secondary btn-sm">
+                                            <i class="fa fa-clock-o me-1"/> Récupérer pointages (30j)
+                                        </button>
+                                        <button name="action_enroll_all_employees"
+                                                type="object"
+                                                class="btn btn-primary btn-sm"
+                                                confirm="Enrôler tous les employés Odoo sur ce device ?">
+                                            <i class="fa fa-upload me-1"/> Pousser tous les employés
+                                        </button>
+                                        <button name="action_remove_all_employees"
+                                                type="object"
+                                                class="btn btn-danger btn-sm">
+                                            <i class="fa fa-trash me-1"/> Vider le device
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Note: time sync is automatic via HTTP Date header -->
+                            <div class="alert alert-info small mt-2" role="status">
+                                <i class="fa fa-info-circle me-1"/>
+                                La synchronisation de l'heure est automatique :
+                                le device lit le header HTTP <code>Date:</code> de chaque réponse serveur.
+                            </div>
+                        </page>
+
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── ACTIONS ───────────────────────────────────────────────── -->
+    <record id="action_zkteco_device" model="ir.actions.act_window">
+        <field name="name">Devices ZKTeco</field>
+        <field name="res_model">zkteco.device</field>
+        <field name="view_mode">kanban,list,form</field>
+    </record>
+
+    <record id="action_zkteco_device_pending" model="ir.actions.act_window">
+        <field name="name">Devices en attente</field>
+        <field name="res_model">zkteco.device</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="domain">[('state', '=', 'pending')]</field>
+    </record>
+
+    <!-- ── CMD LOG ───────────────────────────────────────────────── -->
+    <record id="view_zkteco_cmd_log_list" model="ir.ui.view">
+        <field name="name">zkteco.device.cmd.log.list</field>
+        <field name="model">zkteco.device.cmd.log</field>
+        <field name="arch" type="xml">
+            <list decoration-danger="is_error"
+                  decoration-muted="state in ('requested', 'published')"
+                  default_order="create_date desc" create="false">
+                <field name="state" string="État" widget="badge"
+                       decoration-success="state == 'ok'"
+                       decoration-danger="state == 'error'"
+                       decoration-warning="state == 'expired'"
+                       decoration-info="state in ('requested', 'published')"/>
+                <field name="requested_at" string="Demandée"/>
+                <field name="result_at" string="Résultat"/>
+                <field name="return_code" string="Code" optional="show"/>
+                <field name="cmd" string="Commande sémantique"/>
+                <field name="wire_cmd" string="Commande ADMS" optional="hide"/>
+                <field name="requested_by" string="Par" optional="show"/>
+                <field name="cmd_uuid" string="UUID" optional="hide"/>
+                <field name="is_error" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+</odoo>

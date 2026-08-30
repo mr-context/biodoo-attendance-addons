@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_resource_calendar_form_zkteco" model="ir.ui.view">
+        <field name="name">resource.calendar.form.zkteco</field>
+        <field name="model">resource.calendar</field>
+        <field name="inherit_id" ref="resource.resource_calendar_form"/>
+        <field name="arch" type="xml">
+            <field name="schedule_type" position="after">
+                <field name="zkteco_use_punch_state" widget="boolean_toggle"/>
+                <field name="zkteco_break_tolerance"
+                       invisible="not zkteco_use_punch_state"/>
+            </field>
+        </field>
+    </record>
+
+</odoo>

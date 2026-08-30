@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         Définition des types (noupdate=1 : ne pas écraser les modifs manuelles)
+
+         Comportement automatique (calculé depuis is_deductible / overtime_rate / is_leave) :
+           is_paid         = not is_deductible AND overtime_rate <= 1.0
+           is_standard_work = is_paid AND not is_leave
+
+         Types payés (is_paid=True)  : WORK100, CA, FERIE, MALADIE, RECUP, NIGHT, ...
+         Types non payés             : LATE, EARLY, ABSENT, CSS, OT25, OT50, OT100
+         Présence physique           : WORK100, NIGHT (pas les congés)
+         ══════════════════════════════════════════════════════════════════ -->
+    <data noupdate="1">
+
+        <!-- Absence non justifiée — is_deductible=True → is_paid=False automatique -->
+        <record id="work_entry_type_absent" model="hr.work.entry.type">
+            <field name="name">Absence non justifiée</field>
+            <field name="code">ABSENT</field>
+            <field name="display_code">ABS</field>
+            <field name="color">1</field>
+            <field name="is_leave">True</field>
+            <field name="is_deductible">True</field>
+            <field name="sequence">50</field>
+        </record>
+
+        <!-- Retard — is_deductible=True → is_paid=False automatique -->
+        <record id="work_entry_type_late" model="hr.work.entry.type">
+            <field name="name">Retard</field>
+            <field name="code">LATE</field>
+            <field name="display_code">RET</field>
+            <field name="color">3</field>
+            <field name="is_leave">False</field>
+            <field name="is_deductible">True</field>
+            <field name="sequence">51</field>
+        </record>
+
+        <!-- Départ anticipé — is_deductible=True → is_paid=False automatique -->
+        <record id="work_entry_type_early_leave" model="hr.work.entry.type">
+            <field name="name">Départ anticipé</field>
+            <field name="code">EARLY</field>
+            <field name="display_code">DEP</field>
+            <field name="color">3</field>
+            <field name="is_leave">False</field>
+            <field name="is_deductible">True</field>
+            <field name="sequence">52</field>
+        </record>
+
+        <!-- Heures supp 50% — overtime_rate=1.50 > 1 → is_paid=False automatique -->
+        <record id="work_entry_type_overtime_50" model="hr.work.entry.type">
+            <field name="name">Heures sup. 50%</field>
+            <field name="code">OT50</field>
+            <field name="display_code">HS50</field>
+            <field name="color">10</field>
+            <field name="is_leave">False</field>
+            <field name="overtime_rate">1.50</field>
+            <field name="sequence">30</field>
+        </record>
+
+        <!-- Heures supp 100% — overtime_rate=2.0 > 1 → is_paid=False automatique -->
+        <record id="work_entry_type_overtime_100" model="hr.work.entry.type">
+            <field name="name">Heures sup. 100%</field>
+            <field name="code">OT100</field>
+            <field name="display_code">HS100</field>
+            <field name="color">10</field>
+            <field name="is_leave">False</field>
+            <field name="overtime_rate">2.0</field>
+            <field name="sequence">32</field>
+        </record>
+
+        <!-- Travail de nuit — is_paid=True et is_standard_work=True automatique -->
+        <record id="work_entry_type_night" model="hr.work.entry.type">
+            <field name="name">Travail de nuit</field>
+            <field name="code">NIGHT</field>
+            <field name="display_code">NUI</field>
+            <field name="color">9</field>
+            <field name="is_leave">False</field>
+            <field name="sequence">40</field>
+        </record>
+
+        <!-- Congé annuel — is_leave=True, is_deductible=False → is_paid=True automatique -->
+        <record id="work_entry_type_annual_leave" model="hr.work.entry.type">
+            <field name="name">Congé annuel</field>
+            <field name="code">CA</field>
+            <field name="display_code">CA</field>
+            <field name="color">4</field>
+            <field name="is_leave">True</field>
+            <field name="sequence">60</field>
+        </record>
+
+        <!-- Congé maladie — is_leave=True, is_deductible=False → is_paid=True automatique -->
+        <record id="work_entry_type_sick" model="hr.work.entry.type">
+            <field name="name">Congé maladie</field>
+            <field name="code">MALADIE</field>
+            <field name="display_code">MAL</field>
+            <field name="color">2</field>
+            <field name="is_leave">True</field>
+            <field name="sequence">61</field>
+        </record>
+
+        <!-- Congé sans solde — is_deductible=True → is_paid=False automatique -->
+        <record id="work_entry_type_unpaid" model="hr.work.entry.type">
+            <field name="name">Congé sans solde</field>
+            <field name="code">CSS</field>
+            <field name="display_code">CSS</field>
+            <field name="color">1</field>
+            <field name="is_leave">True</field>
+            <field name="is_deductible">True</field>
+            <field name="sequence">62</field>
+        </record>
+
+        <!-- Jour férié — is_leave=True, is_deductible=False → is_paid=True automatique -->
+        <record id="work_entry_type_public_holiday" model="hr.work.entry.type">
+            <field name="name">Jour férié</field>
+            <field name="code">FERIE</field>
+            <field name="display_code">FER</field>
+            <field name="color">5</field>
+            <field name="is_leave">True</field>
+            <field name="sequence">70</field>
+        </record>
+
+        <!-- Récupération — is_leave=True, is_deductible=False → is_paid=True automatique -->
+        <record id="work_entry_type_recovery" model="hr.work.entry.type">
+            <field name="name">Récupération</field>
+            <field name="code">RECUP</field>
+            <field name="display_code">REC</field>
+            <field name="color">8</field>
+            <field name="is_leave">True</field>
+            <field name="sequence">63</field>
+        </record>
+
+    </data>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         Flags manuels (noupdate=0 : toujours appliqués lors de -u)
+         Seuls is_late_deduction et is_early_deduction ici —
+         is_paid et is_standard_work sont calculés automatiquement.
+         ══════════════════════════════════════════════════════════════════ -->
+    <data noupdate="0">
+
+        <!-- Identifie le type "retard" pour le wizard de génération -->
+        <record id="work_entry_type_late" model="hr.work.entry.type">
+            <field name="is_late_deduction" eval="True"/>
+        </record>
+
+        <!-- Identifie le type "départ anticipé" pour le wizard de génération -->
+        <record id="work_entry_type_early_leave" model="hr.work.entry.type">
+            <field name="is_early_deduction" eval="True"/>
+        </record>
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             Types HS forcés à noupdate=0 pour corriger l'illégal OT25
+             Art. 32 Loi 90-11 : minimum légal 50%. 25% est illégal.
+             OT75 = palier conventionnel (ex. vendredi hors fériés).
+             ═══════════════════════════════════════════════════════════════ -->
+
+        <!-- Correction : OT25 (illégal) → renommé OT75 (75%, palier conventionnel) -->
+        <record id="work_entry_type_overtime_25" model="hr.work.entry.type">
+            <field name="name">Heures sup. 75% (Conventionnel)</field>
+            <field name="code">OT75</field>
+            <field name="display_code">HS75</field>
+            <field name="color">10</field>
+            <field name="is_leave">False</field>
+            <field name="overtime_rate">1.75</field>
+            <field name="sequence">31</field>
+        </record>
+
+    </data>
+
+</odoo>

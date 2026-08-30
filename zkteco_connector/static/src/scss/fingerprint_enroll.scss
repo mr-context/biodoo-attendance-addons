@@ -1,0 +1,68 @@
+.o_zk_enroll {
+    .o_zk_fp_wrap {
+        position: relative;
+        width: 140px;
+        height: 168px;
+        overflow: hidden;
+    }
+
+    .o_zk_fp {
+        width: 100%;
+        height: 100%;
+        stroke: #adb5bd;
+        stroke-width: 3.2;
+        transition: stroke 0.3s ease;
+    }
+
+    // ── Ligne de scan qui balaye l'empreinte (état "waiting") ──────
+    .o_zk_scanline {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg,
+            rgba(13, 110, 253, 0) 0%,
+            rgba(13, 110, 253, 0.95) 50%,
+            rgba(13, 110, 253, 0) 100%);
+        box-shadow: 0 0 12px 3px rgba(13, 110, 253, 0.55);
+        animation: o_zk_scan 1.6s ease-in-out infinite;
+    }
+
+    .o_zk_badge {
+        position: absolute;
+        right: 6px;
+        bottom: 6px;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 20px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    }
+
+    // ── États ─────────────────────────────────────────────────────
+    &.o_zk_enroll_waiting .o_zk_fp {
+        stroke: #6ea8fe;
+        animation: o_zk_pulse 1.6s ease-in-out infinite;
+    }
+    &.o_zk_enroll_success .o_zk_fp { stroke: #198754; }
+    &.o_zk_enroll_success .o_zk_badge { background: #198754; }
+    &.o_zk_enroll_failed .o_zk_fp { stroke: #dc3545; }
+    &.o_zk_enroll_failed .o_zk_badge { background: #dc3545; }
+    &.o_zk_enroll_timeout .o_zk_fp { stroke: #fd7e14; }
+    &.o_zk_enroll_timeout .o_zk_badge { background: #fd7e14; }
+}
+
+@keyframes o_zk_scan {
+    0%   { top: 4%; }
+    50%  { top: 92%; }
+    100% { top: 4%; }
+}
+
+@keyframes o_zk_pulse {
+    0%, 100% { opacity: 0.55; }
+    50%      { opacity: 1; }
+}

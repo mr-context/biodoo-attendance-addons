@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_attendance_tree_dashboard_js" model="ir.ui.view">
+        <field name="name">hr.attendance.list.dashboard.js</field>
+        <field name="model">hr.attendance</field>
+        <field name="inherit_id" ref="hr_attendance.view_attendance_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="attributes">
+                <attribute name="js_class">biodoo_attendance_list_view</attribute>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_hr_attendance_kanban_dashboard_js" model="ir.ui.view">
+        <field name="name">hr.attendance.kanban.dashboard.js</field>
+        <field name="model">hr.attendance</field>
+        <field name="inherit_id" ref="hr_attendance.view_hr_attendance_kanban"/>
+        <field name="arch" type="xml">
+            <xpath expr="//kanban" position="attributes">
+                <attribute name="js_class">biodoo_attendance_kanban_view</attribute>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

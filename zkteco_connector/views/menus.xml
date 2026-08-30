@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <menuitem id="menu_zkteco_root"
+              name="ZKTeco"
+              parent="hr_attendance.menu_hr_attendance_root"
+              sequence="99"
+              groups="base.group_system"/>
+
+    <menuitem id="menu_zkteco_devices"
+              name="Devices"
+              parent="menu_zkteco_root"
+              action="action_zkteco_device"
+              sequence="10"/>
+
+    <menuitem id="menu_zkteco_devices_pending"
+              name="Devices en attente"
+              parent="menu_zkteco_root"
+              action="action_zkteco_device_pending"
+              sequence="20"/>
+
+    <menuitem id="menu_zkteco_device_users"
+              name="Sas — Users device"
+              parent="menu_zkteco_root"
+              action="action_zkteco_device_user"
+              sequence="25"/>
+
+    <menuitem id="menu_zkteco_device_users_pending"
+              name="À mapper"
+              parent="menu_zkteco_root"
+              action="action_zkteco_device_user_pending"
+              sequence="26"/>
+
+    <menuitem id="menu_zkteco_attlog"
+              name="Pointages bruts"
+              parent="menu_zkteco_root"
+              action="action_zkteco_attlog"
+              sequence="27"/>
+
+    <menuitem id="menu_zkteco_attlog_anomalies"
+              name="Anomalies de pointage"
+              parent="menu_zkteco_root"
+              action="action_zkteco_attlog_anomalies"
+              sequence="28"/>
+
+    <menuitem id="menu_zkteco_break"
+              name="Pauses"
+              parent="menu_zkteco_root"
+              action="action_zkteco_break"
+              sequence="29"/>
+
+    <menuitem id="menu_zkteco_attphoto"
+              name="Photos de vérification"
+              parent="menu_zkteco_root"
+              action="action_zkteco_attphoto"
+              sequence="30"/>
+
+</odoo>

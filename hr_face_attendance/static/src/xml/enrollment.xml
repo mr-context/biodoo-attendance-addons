@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="hr_face_attendance.FaceEnrollmentCamera">
+        <div class="fea-container">
+
+            <!-- Zone vidéo -->
+            <div class="fea-video-wrap">
+                <video t-ref="video" autoplay="1" playsinline="1" muted="1"/>
+                <canvas t-ref="canvas" style="display:none;"/>
+
+                <!-- Overlay landmarks (mesh facial) -->
+                <canvas t-ref="overlay" class="fea-overlay-canvas" width="300" height="300"/>
+
+                <!-- Oval guide -->
+                <svg class="fea-face-guide" viewBox="0 0 300 300">
+                    <ellipse cx="150" cy="148" rx="84" ry="114"
+                             fill="none" stroke="rgba(255,255,255,0.25)"
+                             stroke-width="1.5"/>
+                </svg>
+
+                <!-- Scan line -->
+                <div class="fea-scan-line"/>
+
+                <!-- Flash -->
+                <div t-attf-class="fea-capture-flash {{ state.isFlashing ? 'active' : '' }}"/>
+
+                <!-- Arcs de progression -->
+                <svg class="fea-ring" viewBox="0 0 300 300">
+                    <circle cx="150" cy="150" r="142"
+                            t-attf-class="fea-arc {{ state.capturedFront ? 'captured' : (state.currentAngle == 'front' ? 'active' : '') }}"
+                            stroke-dasharray="100 198" stroke-dashoffset="-50"
+                            transform="rotate(-90 150 150)"/>
+                    <circle cx="150" cy="150" r="142"
+                            t-attf-class="fea-arc {{ state.capturedLeft ? 'captured' : (state.currentAngle == 'left' ? 'active' : '') }}"
+                            stroke-dasharray="100 198" stroke-dashoffset="149"
+                            transform="rotate(-90 150 150)"/>
+                    <circle cx="150" cy="150" r="142"
+                            t-attf-class="fea-arc {{ state.capturedRight ? 'captured' : (state.currentAngle == 'right' ? 'active' : '') }}"
+                            stroke-dasharray="100 198" stroke-dashoffset="50"
+                            transform="rotate(30 150 150)"/>
+                </svg>
+
+                <!-- Chargement -->
+                <div t-if="state.isLoading" class="fea-loading-overlay">
+                    <div class="fea-loading-ring"/>
+                </div>
+            </div>
+
+            <!-- Instruction -->
+            <p class="fea-instruction" t-esc="state.instruction"/>
+
+            <!-- 3 dots progression -->
+            <div class="fea-dots">
+                <div t-attf-class="fea-dot {{ state.capturedFront ? 'done' : (state.currentAngle == 'front' ? 'active' : '') }}"/>
+                <div t-attf-class="fea-dot {{ state.capturedLeft  ? 'done' : (state.currentAngle == 'left'  ? 'active' : '') }}"/>
+                <div t-attf-class="fea-dot {{ state.capturedRight ? 'done' : (state.currentAngle == 'right' ? 'active' : '') }}"/>
+            </div>
+
+            <!-- Erreur -->
+            <p t-if="state.error" class="fea-error" t-esc="state.error"/>
+
+        </div>
+    </t>
+
+</templates>

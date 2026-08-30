@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── FORM : anomalies + planning + déductions ──────────────── -->
+    <record id="view_attendance_anomaly_form" model="ir.ui.view">
+        <field name="name">hr.attendance.anomaly.form</field>
+        <field name="model">hr.attendance</field>
+        <field name="inherit_id" ref="hr_attendance.hr_attendance_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_recompute_anomalies" type="object"
+                        string="Recalculer les anomalies" class="btn-warning"
+                        help="Recalcule anomalies + déductions sur ce pointage"/>
+                <button name="action_fill_scheduled_times" type="object"
+                        string="Remplir le planning"
+                        help="Remplit les heures prévues depuis le calendrier de l'employé"/>
+                <button name="action_validate_deductions" type="object"
+                        string="Valider déductions" class="btn-primary"
+                        invisible="deduction_status != 'to_validate'"/>
+                <button name="action_refuse_deductions" type="object"
+                        string="Refuser déductions"
+                        invisible="deduction_status != 'to_validate'"/>
+            </xpath>
+
+            <xpath expr="//sheet" position="inside">
+                <field name="is_manager" invisible="1"/>
+                <group string="Planning" invisible="not scheduled_start and not scheduled_end">
+                    <group>
+                        <field name="scheduled_start"/>
+                        <field name="scheduled_end"/>
+                    </group>
+                    <group>
+                        <field name="late_minutes" readonly="1"/>
+                        <field name="early_leave_minutes" readonly="1"/>
+                        <field name="checkout_only"/>
+                    </group>
+                </group>
+
+                <group string="Anomalies" invisible="not is_anomaly">
+                    <div class="alert alert-warning" role="alert" colspan="2">
+                        <i class="fa fa-exclamation-triangle me-2" title="Anomalie"/>
+                        <strong>Anomalies détectées :</strong>
+                        <field name="anomaly_ids" readonly="1" nolabel="1"
+                               widget="many2many_tags"
+                               options="{'color_field': 'color'}"/>
+                    </div>
+                </group>
+
+                <group string="Déductions salariales" invisible="not deduction_ids">
+                    <field name="deduction_ids" nolabel="1" colspan="2" readonly="1">
+                        <list create="0" delete="0">
+                            <field name="deduction_type" widget="badge"
+                                   decoration-warning="deduction_type == 'late'"
+                                   decoration-info="deduction_type == 'early'"/>
+                            <field name="duration" string="Durée" widget="float_time"/>
+                            <field name="status" widget="badge"
+                                   decoration-warning="status == 'to_validate'"
+                                   decoration-success="status == 'validated'"
+                                   decoration-danger="status == 'refused'"/>
+                            <field name="work_entry_id" optional="hide"/>
+                            <field name="is_manager" column_invisible="True"/>
+                            <button name="action_validate" icon="fa-check" type="object" string=" "
+                                    invisible="not is_manager or status != 'to_validate'"
+                                    class="btn-success btn-sm" title="Valider"/>
+                            <button name="action_refuse" icon="fa-times" type="object" string=" "
+                                    invisible="not is_manager or status not in ('to_validate', 'validated')"
+                                    class="btn-danger btn-sm" title="Refuser"/>
+                        </list>
+                    </field>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ── LIST : tags anomalie + déduction inline ───────────────── -->
+    <record id="view_attendance_anomaly_list" model="ir.ui.view">
+        <field name="name">hr.attendance.anomaly.list</field>
+        <field name="model">hr.attendance</field>
+        <field name="inherit_id" ref="hr_attendance.view_attendance_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="attributes">
+                <attribute name="decoration-warning">is_anomaly</attribute>
+            </xpath>
+            <field name="worked_hours" position="after">
+                <field name="is_anomaly" column_invisible="True"/>
+                <field name="is_manager" column_invisible="True"/>
+                <field name="anomaly_ids" string="Anomalies" optional="show"
+                       widget="many2many_tags" options="{'color_field': 'color'}"/>
+                <field name="anomaly_count" string="Nb" optional="hide"/>
+                <field name="late_minutes" string="Retard (min)" optional="hide"/>
+                <field name="early_leave_minutes" string="Départ ant. (min)" optional="hide"/>
+                <field name="deduction_status" string="Déduction" optional="show" widget="badge"
+                       decoration-warning="deduction_status == 'to_validate'"
+                       decoration-success="deduction_status == 'validated'"
+                       decoration-danger="deduction_status == 'refused'"/>
+                <button name="action_validate_deductions" icon="fa-check" type="object" string=" "
+                        invisible="not is_manager or deduction_status != 'to_validate'"
+                        class="btn-success btn-sm" title="Valider les déductions"/>
+                <button name="action_refuse_deductions" icon="fa-times" type="object" string=" "
+                        invisible="not is_manager or deduction_status not in ('to_validate', 'validated')"
+                        class="btn-danger btn-sm" title="Refuser les déductions"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- ── SEARCH : filtres par anomalie ─────────────────────────── -->
+    <record id="view_attendance_anomaly_search" model="ir.ui.view">
+        <field name="name">hr.attendance.anomaly.search</field>
+        <field name="model">hr.attendance</field>
+        <field name="inherit_id" ref="hr_attendance.hr_attendance_view_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <separator/>
+                <filter name="filter_anomaly" string="Avec anomalies"
+                        domain="[('is_anomaly', '=', True)]"/>
+                <filter name="filter_late" string="Retards"
+                        domain="[('anomaly_ids.code', '=', 'late')]"/>
+                <filter name="filter_early_leave" string="Départs anticipés"
+                        domain="[('anomaly_ids.code', '=', 'early_leave')]"/>
+                <filter name="filter_no_checkout" string="Sortie manquante"
+                        domain="[('anomaly_ids.code', '=', 'no_checkout')]"/>
+                <filter name="filter_long_duration" string="Durée excessive"
+                        domain="[('anomaly_ids.code', '=', 'long_duration')]"/>
+                <filter name="filter_overnight" string="Travail de nuit"
+                        domain="[('anomaly_ids.code', '=', 'overnight')]"/>
+                <separator/>
+                <filter name="filter_ded_to_validate" string="Déductions à valider"
+                        domain="[('deduction_status', '=', 'to_validate')]"/>
+                <filter name="filter_ded_validated" string="Déductions validées"
+                        domain="[('deduction_status', '=', 'validated')]"/>
+                <group>
+                    <filter name="groupby_anomaly" string="Par anomalie"
+                            context="{'group_by': 'anomaly_ids'}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ── Actions serveur (menu Action des listes) ──────────────── -->
+    <record id="action_server_recompute_anomalies" model="ir.actions.server">
+        <field name="name">Recalculer les anomalies</field>
+        <field name="model_id" ref="hr_attendance.model_hr_attendance"/>
+        <field name="binding_model_id" ref="hr_attendance.model_hr_attendance"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">records.action_recompute_anomalies()</field>
+    </record>
+
+    <record id="action_server_reset_anomaly_conditions" model="ir.actions.server">
+        <field name="name">Réinitialiser les conditions standard</field>
+        <field name="model_id" ref="model_hr_attendance_anomaly_type"/>
+        <field name="binding_model_id" ref="model_hr_attendance_anomaly_type"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">records.action_reset_conditions()</field>
+    </record>
+
+</odoo>
