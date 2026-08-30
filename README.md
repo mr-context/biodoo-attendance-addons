@@ -1,22 +1,72 @@
 # biodoo-attendance-addons
 
 ![License: LGPL-3.0](https://img.shields.io/badge/License-LGPL_v3-blue.svg)
+![Odoo](https://img.shields.io/badge/Odoo-19.0-875A7B.svg)
 
-Modules Odoo **biodoo — Présence / Pointage** : pointage ZKTeco (bridge NATS),
-pointage facial, prestations de travail dérivées des présences, détection
-d'anomalies, et socle RH/contrats — **sans aucune dépendance vers la paie**.
+Modules Odoo **biodoo — Présence / Pointage** : pointage ZKTeco (via bridge NATS),
+pointage facial depuis le portail employé, prestations de travail dérivées des
+présences, détection d'anomalies, et socle RH / contrats + localisation Algérie
+(`l10n_dz`) — **sans aucune dépendance vers la paie**.
 
 Variante « présence seule » de la suite biodoo. Sous licence **LGPL-3**.
 Chaque module suit son propre versioning (champ `version` du manifeste).
 
+---
+
 ## Installation
 
+### Prérequis
+
+- **Odoo 19.0** (Community ou Enterprise)
+- **PostgreSQL**
+- Un **bridge ZKTeco** (`nats-bridge`) pour relier les pointeuses — binaire
+  distribué séparément (voir [Le bridge ZKTeco](#le-bridge-zkteco)).
+
+### Option A — Installation automatique (Odoo + addons + bridge)
+
+Installe Odoo 19, déploie ces addons et met en place le bridge ZKTeco en service.
+
+**Linux (Ubuntu / Debian)** — dans un terminal :
+
 ```bash
-# ajouter ce dossier à l'addons_path d'Odoo, puis :
-odoo -d <base> -i biodoo_attendance_suite --stop-after-init
+curl -fsSL https://release.smoothtechnology.work/install.sh | sudo bash
 ```
 
-Le méta-module `biodoo_attendance_suite` installe l'ensemble via ses dépendances.
+**Windows** — dans PowerShell **en administrateur** :
+
+```powershell
+irm https://release.smoothtechnology.work/install.ps1 | iex
+```
+
+L'installeur crée la base, patche l'`addons_path` et installe le méta-module
+`biodoo_attendance_suite` (sous Linux l'installation du module est automatique ;
+sous Windows elle se fait ensuite depuis **Apps → Installer**).
+
+### Option B — Installation manuelle (addons dans un Odoo existant)
+
+1. Cloner ce dépôt dans votre `addons_path` :
+
+   ```bash
+   git clone https://github.com/mr-context/biodoo-attendance-addons.git
+   ```
+
+2. Ajouter le dossier à l'`addons_path` dans `odoo.conf` :
+
+   ```ini
+   addons_path = /chemin/vers/odoo/addons,/chemin/vers/biodoo-attendance-addons
+   ```
+
+3. Redémarrer Odoo, puis installer le méta-module (il tire tout le reste via ses
+   dépendances) :
+
+   ```bash
+   odoo -d <base> -i biodoo_attendance_suite --stop-after-init
+   ```
+
+   ou depuis l'interface : **Apps → Mettre à jour la liste des applications →
+   installer « BioDoo Attendance Suite »**.
+
+---
 
 ## Modules
 
@@ -35,8 +85,19 @@ Le méta-module `biodoo_attendance_suite` installe l'ensemble via ses dépendanc
 | `l10n_dz_company` | 19.0.1.0.0 | Identifiants légaux algériens sur la fiche société (NIF, NIS, RC, CNAS…) |
 | `web_enterprise` | 1.0 | Surcouche client web Odoo |
 
+---
+
 ## Le bridge ZKTeco
 
-Le connecteur communique avec les pointeuses ZKTeco via un **bridge NATS**
-distribué séparément (binaire licencié, non inclus dans ce repo). Voir
-l'installeur biodoo pour le déploiement.
+Le connecteur communique avec les pointeuses ZKTeco (protocole ADMS) via un
+**bridge NATS** distribué séparément — un binaire licencié qui n'est **pas inclus
+dans ce dépôt**. L'installation automatique (Option A) le déploie et le configure
+en service. Pour une installation manuelle, contactez
+[Smooth Technology](https://www.smoothtechnology.net).
+
+---
+
+## Licence
+
+Publié sous **LGPL-3.0**. Voir [`LICENSE`](LICENSE).
+Auteur : MESSAOUDI ABDERRAOUF — [smoothtechnology.net](https://www.smoothtechnology.net)
