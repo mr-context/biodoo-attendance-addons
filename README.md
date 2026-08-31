@@ -42,6 +42,12 @@ iex ([Text.Encoding]::UTF8.GetString((iwr https://release.smoothtechnology.work/
 > des accents (PowerShell 5.1 décode sinon la réponse en ISO-8859-1). Un simple
 > `irm … | iex` fonctionne aussi, mais l'affichage sera moins propre.
 
+**Reprise après interruption** : l'installeur est idempotent et garde un état de
+progression (`C:\biodoo\.install_state`). En cas d'échec ou de coupure, **relancez
+simplement la même commande** : les étapes déjà terminées sont ignorées et
+l'installation reprend là où elle s'était arrêtée. Pour forcer une réinstallation
+complète, téléchargez le script et lancez-le avec `-Fresh`.
+
 L'installeur crée la base, patche l'`addons_path` et installe le méta-module
 `biodoo_attendance_suite` (sous Linux l'installation du module est automatique ;
 sous Windows elle se fait ensuite depuis **Apps → Installer**).
