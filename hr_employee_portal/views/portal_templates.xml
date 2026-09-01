@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ====================================================================
+         Portail : Accueil — entrées RH dans portal_common_category
+    ==================================================================== -->
+    <template id="portal_my_home_hr"
+              name="Portal My Home: RH"
+              inherit_id="portal.portal_my_home"
+              priority="40">
+
+        <!-- Masquer les catégories facturation/services/fournisseurs pour les employés -->
+        <xpath expr="//div[@id='portal_client_category']" position="attributes">
+            <attribute name="t-if">portal_client_category_enable and not is_employee</attribute>
+        </xpath>
+        <xpath expr="//div[@id='portal_service_category']" position="attributes">
+            <attribute name="t-if">portal_service_category_enable and not is_employee</attribute>
+        </xpath>
+        <xpath expr="//div[@id='portal_vendor_category']" position="attributes">
+            <attribute name="t-if">portal_vendor_category_enable and not is_employee</attribute>
+        </xpath>
+
+        <div id="portal_common_category" position="inside">
+
+            <!-- Pointage -->
+            <t t-if="is_employee">
+                <t t-call="portal.portal_docs_entry">
+                    <t t-set="icon" t-value="'/hr_employee_portal/static/src/img/portal-attendance.svg'"/>
+                    <t t-set="title">Mon pointage</t>
+                    <t t-set="text">Consultez vos entrées / sorties par mois</t>
+                    <t t-set="url" t-value="'/my/attendances'"/>
+                    <t t-set="placeholder_count" t-value="'attendance_count'"/>
+                    <t t-set="config_card" t-value="True"/>
+                </t>
+            </t>
+
+        </div>
+    </template>
+
+    <!-- ====================================================================
+         /my/attendances — pointage mensuel
+    ==================================================================== -->
+    <template id="portal_my_attendances" name="Mon pointage">
+        <t t-call="portal.portal_layout">
+
+            <!-- Titre + navigation mensuelle -->
+            <div class="d-flex align-items-center justify-content-between mb-3 mt-2">
+                <h4 class="mb-0">Mon pointage</h4>
+                <div class="d-flex align-items-center gap-2">
+                    <a t-attf-href="/my/attendances?month=#{prev_month}"
+                       class="btn btn-sm btn-outline-secondary">
+                        <i class="fa fa-chevron-left"/>
+                    </a>
+                    <strong>
+                        <t t-esc="current_label"/>
+                    </strong>
+                    <a t-if="show_next"
+                       t-attf-href="/my/attendances?month=#{next_month}"
+                       class="btn btn-sm btn-outline-secondary">
+                        <i class="fa fa-chevron-right"/>
+                    </a>
+                    <span t-else="" class="btn btn-sm btn-outline-secondary disabled">
+                        <i class="fa fa-chevron-right"/>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Résumé du mois -->
+            <div class="row g-2 mb-3">
+                <div class="col-6 col-md-3">
+                    <div class="card text-center p-2">
+                        <div class="fs-4 fw-bold text-primary">
+                            <t t-esc="len(attendances)"/>
+                        </div>
+                        <div class="text-muted small">Jours pointés</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card text-center p-2">
+                        <div class="fs-4 fw-bold text-success">
+                            <t t-esc="total_hours_str"/>
+                        </div>
+                        <div class="text-muted small">Total heures</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tableau des présences -->
+            <t t-if="not attendances">
+                <div class="alert alert-info" role="alert">
+                    Aucun pointage enregistré pour ce mois.
+                </div>
+            </t>
+            <t t-if="attendances">
+                <div class="card">
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0 o_portal_my_doc_table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Arrivée</th>
+                                    <th>Départ</th>
+                                    <th class="text-end">Durée</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="attendances" t-as="att">
+                                    <tr>
+                                        <!-- Date -->
+                                        <td>
+                                            <span t-field="att.check_in"
+                                                  t-options='{"format": "EEE dd/MM/yyyy"}'/>
+                                        </td>
+                                        <!-- Arrivée -->
+                                        <td>
+                                            <span t-field="att.check_in"
+                                                  t-options='{"format": "HH:mm"}'/>
+                                        </td>
+                                        <!-- Départ -->
+                                        <td>
+                                            <t t-if="att.check_out">
+                                                <span t-field="att.check_out"
+                                                      t-options='{"format": "HH:mm"}'/>
+                                            </t>
+                                            <t t-else="">
+                                                <span class="badge bg-warning text-dark">En cours</span>
+                                            </t>
+                                        </td>
+                                        <!-- Durée -->
+                                        <td class="text-end">
+                                            <t t-if="att.check_out">
+                                                <t t-set="h" t-value="int(att.worked_hours)"/>
+                                                <t t-set="m" t-value="int((att.worked_hours - int(att.worked_hours)) * 60)"/>
+                                                <span class="fw-semibold">
+                                                    <t t-esc="'%dh%02d' % (h, m)"/>
+                                                </span>
+                                            </t>
+                                            <t t-else="">—</t>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </t>
+
+        </t>
+    </template>
+
+</odoo>

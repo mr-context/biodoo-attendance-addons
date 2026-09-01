@@ -32,6 +32,8 @@ automatiquement les dépendances.
         "hr_dz_attendance_anomaly",
         "hr_dz_attendance_dashboard",
         "hr_face_attendance",
+        # Portail employé (accès self-service, pointage en ligne)
+        "hr_employee_portal",
         # Connecteur ZKTeco (bridge NATS)
         "core_nats",
         "zkteco_connector",

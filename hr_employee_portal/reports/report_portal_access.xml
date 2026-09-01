@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_portal_access">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.external_layout">
+                    <t t-set="base_url" t-value="env['ir.config_parameter'].sudo().get_param('web.base.url', '')"/>
+                    <div class="page">
+
+                        <!-- En-tête -->
+                        <div class="row mb-4">
+                            <div class="col-12 text-center">
+                                <h2 style="color: #1f4e79; border-bottom: 2px solid #1f4e79; padding-bottom: 8px;">
+                                    ACCÈS PORTAIL RH
+                                </h2>
+                            </div>
+                        </div>
+
+                        <!-- Informations employé -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <table class="table table-bordered" style="background-color: #f8f9fa;">
+                                    <tbody>
+                                        <tr>
+                                            <th style="width: 35%; background-color: #1f4e79; color: white;">
+                                                Employé
+                                            </th>
+                                            <td>
+                                                <strong><t t-esc="doc.employee_id.name"/></strong>
+                                            </td>
+                                        </tr>
+                                        <t t-if="doc.employee_id.job_id">
+                                            <tr>
+                                                <th style="background-color: #1f4e79; color: white;">
+                                                    Poste
+                                                </th>
+                                                <td>
+                                                    <t t-esc="doc.employee_id.job_id.name"/>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Credentials -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h4 style="color: #1f4e79;">Vos identifiants de connexion</h4>
+                                <table class="table table-bordered">
+                                    <tbody>
+                                        <tr>
+                                            <th style="width: 35%; background-color: #e9ecef;">
+                                                Adresse du portail
+                                            </th>
+                                            <td>
+                                                <strong><t t-esc="base_url + '/my'"/></strong>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th style="background-color: #e9ecef;">Identifiant</th>
+                                            <td>
+                                                <strong><t t-esc="doc.login"/></strong>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th style="background-color: #e9ecef;">Mot de passe</th>
+                                            <td>
+                                                <strong><t t-esc="doc.password"/></strong>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Avertissement sécurité -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="alert alert-warning" role="alert" style="border-left: 4px solid #ffc107;">
+                                    <strong>Sécurité :</strong>
+                                    Changez votre mot de passe dès la première connexion.
+                                    Ne communiquez pas ces informations à des tiers.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accès disponibles -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h4 style="color: #1f4e79;">Vos accès disponibles</h4>
+                                <ul style="list-style: none; padding-left: 0;">
+                                    <li style="padding: 4px 0;">
+                                        <span style="color: #28a745; font-weight: bold; margin-right: 8px;">&#10003;</span>
+                                        Consultation de votre pointage (entrées / sorties)
+                                    </li>
+                                    <li style="padding: 4px 0;">
+                                        <span style="color: #28a745; font-weight: bold; margin-right: 8px;">&#10003;</span>
+                                        Suivi mensuel des heures travaillées
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Pied de page -->
+                        <div class="row mt-5">
+                            <div class="col-12 text-center text-muted"
+                                 style="font-size: 0.85em; border-top: 1px solid #dee2e6; padding-top: 10px;">
+                                Document confidentiel — remis en main propre à l'employé
+                            </div>
+                        </div>
+
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

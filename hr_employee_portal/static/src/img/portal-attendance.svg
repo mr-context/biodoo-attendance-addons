@@ -1,0 +1,28 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shadow ellipse -->
+  <ellipse cx="32" cy="59" rx="19" ry="4" fill="#C1DBF6"/>
+  <!-- Clock outer ring -->
+  <circle cx="32" cy="30" r="23" fill="#C1DBF6"/>
+  <circle cx="32" cy="30" r="23" stroke="#374874" stroke-width="1.5"/>
+  <!-- Clock face -->
+  <circle cx="32" cy="30" r="18" fill="white"/>
+  <!-- Hour tick marks -->
+  <line x1="32" y1="14" x2="32" y2="17.5" stroke="#374874" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="32" y1="42.5" x2="32" y2="46" stroke="#374874" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="14" y1="30" x2="17.5" y2="30" stroke="#374874" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="46.5" y1="30" x2="50" y2="30" stroke="#374874" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Minor ticks -->
+  <line x1="40.5" y1="16.1" x2="39" y2="19.2" stroke="#374874" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+  <line x1="23.5" y1="16.1" x2="25" y2="19.2" stroke="#374874" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+  <line x1="43.9" y1="22.5" x2="40.8" y2="24" stroke="#374874" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+  <line x1="43.9" y1="37.5" x2="40.8" y2="36" stroke="#374874" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+  <!-- Hour hand (pointing ~10 o'clock) -->
+  <line x1="32" y1="30" x2="25" y2="23" stroke="#374874" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Minute hand (pointing ~2 o'clock) -->
+  <line x1="32" y1="30" x2="39" y2="19" stroke="#374874" stroke-width="2" stroke-linecap="round"/>
+  <!-- Center dot -->
+  <circle cx="32" cy="30" r="2.5" fill="#374874"/>
+  <!-- Entry arrow bottom-right (check-in symbol) -->
+  <path d="M44 46 L52 46" stroke="#FBDBD0" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M48 42 L52 46 L48 50" stroke="#FBDBD0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

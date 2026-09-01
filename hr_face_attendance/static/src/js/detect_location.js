@@ -7,10 +7,11 @@ import { Component, useState, onMounted } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { rpc } from "@web/core/network/rpc";
+import { standardActionServiceProps } from "@web/webclient/actions/action_service";
 
 class DetectLocationAction extends Component {
     static template = "hr_face_attendance.DetectLocation";
-    static props = ["action", "actionStack?"];
+    static props = { ...standardActionServiceProps };
 
     setup() {
         this.notification = useService("notification");

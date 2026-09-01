@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_employee_form_portal_button" model="ir.ui.view">
+        <field name="name">hr.employee.form.portal.button</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <!-- Invisible field required for button visibility conditions -->
+                <field name="portal_user_state" invisible="1"/>
+
+                <!-- Smart button — portail inexistant ou bloqué -->
+                <button name="action_open_portal_wizard"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-user-circle-o"
+                        invisible="portal_user_state == 'active'">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Créer</span>
+                        <span class="o_stat_text">Portail</span>
+                    </div>
+                </button>
+
+                <!-- Smart button — portail actif (vert) -->
+                <button name="action_open_portal_wizard"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-user"
+                        invisible="portal_user_state != 'active'">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text" style="color: #28a745;">Portail Actif</span>
+                        <span class="o_stat_text">Gérer</span>
+                    </div>
+                </button>
+            </xpath>
+        </field>
+    </record>
+</odoo>

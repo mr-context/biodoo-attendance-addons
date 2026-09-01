@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_hr_portal_access_wizard_form" model="ir.ui.view">
+        <field name="name">hr.portal.access.wizard.form</field>
+        <field name="model">hr.portal.access.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Accès Portail Employé">
+                <sheet>
+                    <div class="alert alert-warning" role="alert"
+                         invisible="mode != 'internal'">
+                        Cet employé possède déjà un <strong>compte utilisateur interne</strong>.
+                        Cliquez sur <em>Accès minimal</em> pour lui retirer tous les droits
+                        applicatifs et ne garder que l'accès à <strong>Discussion</strong>.
+                        L'administrateur pourra lui accorder des droits supplémentaires ensuite.
+                    </div>
+                    <group>
+                        <group string="Employé">
+                            <field name="employee_id" readonly="1"/>
+                            <field name="email" invisible="mode == 'internal'"/>
+                            <field name="existing_user"
+                                   readonly="1"
+                                   invisible="mode == 'create'"
+                                   string="Compte existant"/>
+                        </group>
+                        <group string="Identifiants"
+                               invisible="mode in ('revoke', 'internal')">
+                            <field name="login"/>
+                            <field name="password" password="True"/>
+                        </group>
+                    </group>
+                    <group invisible="mode in ('revoke', 'internal')">
+                        <field name="send_email"/>
+                    </group>
+                    <field name="mode" invisible="1"/>
+                </sheet>
+                <footer>
+                    <button name="action_confirm"
+                            string="Créer &amp; Imprimer PDF"
+                            type="object"
+                            class="btn-primary"
+                            invisible="mode != 'create'"/>
+                    <button name="action_confirm"
+                            string="Réinitialiser &amp; Imprimer PDF"
+                            type="object"
+                            class="btn-primary"
+                            invisible="mode != 'reset'"/>
+                    <button name="action_confirm"
+                            string="Révoquer l'accès"
+                            type="object"
+                            class="btn-primary"
+                            invisible="mode != 'revoke'"/>
+                    <button name="action_set_minimal_access"
+                            string="Accès minimal (Discussion uniquement)"
+                            type="object"
+                            class="btn-primary"
+                            invisible="mode != 'internal'"
+                            confirm="Cela supprimera tous les droits applicatifs de cet utilisateur. Continuer ?"/>
+                    <button name="action_revoke"
+                            string="Révoquer l'accès"
+                            type="object"
+                            class="btn-danger"
+                            invisible="mode in ('create', 'internal')"
+                            confirm="Êtes-vous sûr de vouloir révoquer l'accès portail de cet employé ?"/>
+                    <button string="Fermer" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>
