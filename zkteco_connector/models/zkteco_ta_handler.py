@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from psycopg2 import OperationalError
 
 from odoo import models, api, fields
+from odoo.exceptions import MissingError, ValidationError, UserError
 
 _logger = logging.getLogger(__name__)
 
@@ -49,6 +50,16 @@ class ZktecoTaHandler(models.AbstractModel):
             # même rejouée. On logue et on avale (ack) pour ne pas boucler en
             # redelivery à l'infini.
             _logger.error(f"[zkteco_ta] payload invalide sur '{subject}' — ignoré: {exc}",
+                          exc_info=True)
+        except (MissingError, ValidationError, UserError) as exc:
+            # Erreurs ORM DÉTERMINISTES (record supprimé/inexistant, contrainte
+            # métier, garde utilisateur) : rejouer le même message donnera TOUJOURS
+            # la même erreur → nak = tempête de redelivery infinie (bug observé sur
+            # ATTLOG). On logue avec la trace complète et on ack. Le pointage brut
+            # est déjà persisté côté attlog (_stage) → la journée reste ré-résoluble
+            # (mapping PIN, cron _cron_resolve_recent) une fois la cause corrigée.
+            _logger.error(f"[zkteco_ta] erreur déterministe ({type(exc).__name__}) sur "
+                          f"'{subject}' — ackée pour éviter la boucle: {exc}",
                           exc_info=True)
         except Exception:
             # Erreur inattendue (infra/transitoire) : on la laisse remonter pour

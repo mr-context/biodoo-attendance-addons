@@ -405,6 +405,13 @@ class HrAttendance(models.Model):
         return res
 
     def unlink(self):
+        # Ignore les records déjà supprimés : un appelant peut unlinker un
+        # recordset dont certaines lignes ont été retirées entre-temps (ex.
+        # double-unlink via _close_dangling_open puis obsolete.unlink côté
+        # zkteco). Sans ça, lire att.check_in ci-dessous lève MissingError.
+        self = self.exists()
+        if not self:
+            return True
         # Mémorise les journées touchées pour réévaluer les segments restants.
         affected = set()
         for att in self:

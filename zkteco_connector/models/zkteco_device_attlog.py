@@ -459,7 +459,10 @@ class ZktecoDeviceAttlog(models.Model):
                 trailing.write({'state': 'imported', 'attendance_id': att.id})
 
         # Présences gérées par le moteur qui n'ont plus de segment → obsolètes.
-        obsolete = managed.filtered(lambda a: a.id not in keep_ids)
+        # .exists() : _close_dangling_open() a pu déjà supprimer certaines de ces
+        # présences ouvertes (leur id reste dans `managed`, périmé) → sans ce filtre
+        # on relance unlink() sur un fantôme = MissingError.
+        obsolete = managed.filtered(lambda a: a.id not in keep_ids).exists()
         if obsolete:
             self.sudo().search([('attendance_id', 'in', obsolete.ids)]).write({'attendance_id': False})
             obsolete.unlink()
