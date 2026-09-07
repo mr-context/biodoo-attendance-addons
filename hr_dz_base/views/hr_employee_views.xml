@@ -24,6 +24,18 @@
             </xpath>
 
             <!-- ============================================================ -->
+            <!-- TOP: Complétion du profil (widget affiché à côté de l'avatar) -->
+            <!-- ============================================================ -->
+            <xpath expr="//div[hasclass('oe_title')]" position="before">
+                <button type="object" name="action_show_profile_completion_missing"
+                        class="oe_stat_button d-inline-flex"
+                        style="--PercentPieField-size:3rem;--PercentPieField-gap:12px;"
+                        help="Cliquer pour voir les champs manquants">
+                    <field name="profile_completion" widget="percentpie" string="Profil complété"/>
+                </button>
+            </xpath>
+
+            <!-- ============================================================ -->
             <!-- TOP: Add civilite before name                                 -->
             <!-- ============================================================ -->
             <xpath expr="//field[@name='name']" position="before">

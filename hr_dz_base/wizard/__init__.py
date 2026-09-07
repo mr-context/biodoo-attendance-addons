@@ -1,0 +1,2 @@
+
+from . import hr_employee_profile_completion_wizard

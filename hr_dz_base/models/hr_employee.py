@@ -1,12 +1,89 @@
 
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
+from lxml import etree
 import re
 
 
 class HrEmployee(models.Model):
     _inherit = 'hr.employee'
 
+
+    # =========================================================================
+    # COMPLETION DU PROFIL
+    # =========================================================================
+    profile_completion = fields.Integer(
+        string='Complétion du profil',
+        compute='_compute_profile_completion',
+        help="Pourcentage de champs renseignés parmi ceux affichés sur la fiche employé. "
+             "Se met à jour automatiquement si des champs sont ajoutés/retirés de la vue formulaire.",
+    )
+
+    def _get_profile_completion_fields_by_tab(self):
+        """Champs pris en compte pour le taux de complétion : tous les champs
+        éditables et statiquement visibles de la vue formulaire employé
+        (héritages inclus), déterminés dynamiquement à chaque appel.
+        Retourne {nom_champ: libellé_onglet}."""
+        self.ensure_one()
+        view = self.get_view(view_type='form')
+        arch = etree.fromstring(view['arch'])
+        fields_by_tab = {}
+        for node in arch.iter('field'):
+            name = node.get('name')
+            if not name or name not in self._fields:
+                continue
+            field = self._fields[name]
+            if field.readonly or (field.compute and not field.store):
+                continue
+            if field.type in ('one2many', 'many2many', 'binary'):
+                continue
+            if node.get('invisible') in ('1', 'True', 'true'):
+                continue
+            if node.get('column_invisible') in ('1', 'True', 'true'):
+                continue
+            if name in fields_by_tab:
+                continue
+            tab = None
+            for ancestor in node.iterancestors('page'):
+                tab = ancestor.get('string')
+                break
+            fields_by_tab[name] = tab or _("Général")
+        return fields_by_tab
+
+    def _compute_profile_completion(self):
+        for employee in self:
+            fields_by_tab = employee._get_profile_completion_fields_by_tab()
+            if not fields_by_tab:
+                employee.profile_completion = 0
+                continue
+            filled = sum(1 for fname in fields_by_tab if employee[fname])
+            employee.profile_completion = round(100 * filled / len(fields_by_tab))
+
+    def action_show_profile_completion_missing(self):
+        """Ouvre une fenêtre listant les champs manquants pour compléter le profil."""
+        self.ensure_one()
+        fields_by_tab = self._get_profile_completion_fields_by_tab()
+        missing_lines = sorted(
+            (
+                (self._fields[fname].string, tab)
+                for fname, tab in fields_by_tab.items() if not self[fname]
+            ),
+            key=lambda line: (line[1].lower(), line[0].lower()),
+        )
+        wizard = self.env['hr.employee.profile.completion.wizard'].create({
+            'employee_id': self.id,
+            'line_ids': [
+                (0, 0, {'name': name, 'tab': tab}) for name, tab in missing_lines
+            ],
+        })
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Complétion du profil'),
+            'res_model': 'hr.employee.profile.completion.wizard',
+            'view_mode': 'form',
+            'res_id': wizard.id,
+            'target': 'new',
+        }
 
     # =========================================================================
     # IDENTIFICATION

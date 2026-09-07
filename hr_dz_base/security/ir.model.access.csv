@@ -11,3 +11,5 @@ access_hr_service_national_user,hr.service.national.user,model_hr_service_nation
 access_hr_service_national_manager,hr.service.national.manager,model_hr_service_national,hr.group_hr_manager,1,1,1,1
 access_hr_job_mission_user,hr.job.mission.user,model_hr_job_mission,hr.group_hr_user,1,0,0,0
 access_hr_job_mission_manager,hr.job.mission.manager,model_hr_job_mission,hr.group_hr_manager,1,1,1,1
+access_hr_employee_profile_completion_wizard,hr.employee.profile.completion.wizard,model_hr_employee_profile_completion_wizard,base.group_user,1,1,1,1
+access_hr_employee_profile_completion_wizard_line,hr.employee.profile.completion.wizard.line,model_hr_employee_profile_completion_wizard_line,base.group_user,1,1,1,1

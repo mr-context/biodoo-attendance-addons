@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="hr_employee_profile_completion_wizard_view_form" model="ir.ui.view">
+        <field name="name">hr.employee.profile.completion.wizard.form</field>
+        <field name="model">hr.employee.profile.completion.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Complétion du profil">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <field name="completion_percent" widget="percentpie" nolabel="1"
+                           style="--PercentPieField-size:3.5rem;--PercentPieField-gap:16px;"/>
+                    <div>
+                        <h4 class="mb-0">
+                            <field name="employee_id" readonly="1" nolabel="1"/>
+                        </h4>
+                        <span class="text-muted" invisible="line_ids">
+                            Profil complet, tous les champs sont renseignés.
+                        </span>
+                        <span class="text-muted" invisible="not line_ids">
+                            Champs restant à compléter :
+                        </span>
+                    </div>
+                </div>
+                <field name="line_ids" nolabel="1" invisible="not line_ids">
+                    <list create="0" delete="0" decoration-muted="1">
+                        <field name="tab" string="Onglet"/>
+                        <field name="name" string="Champ"/>
+                    </list>
+                </field>
+                <footer>
+                    <button string="Fermer" special="cancel" class="btn-primary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

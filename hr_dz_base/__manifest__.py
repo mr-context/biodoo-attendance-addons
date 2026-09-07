@@ -40,6 +40,8 @@ Conforme à:
         'data/hr_type_placement_data.xml',
         'data/hr_service_national_data.xml',
         'data/hr_legal_parameter_data.xml',
+        # Wizard
+        'wizard/hr_employee_profile_completion_wizard_views.xml',
         # Views
         'views/hr_legal_parameter_views.xml',
         'views/hr_employee_views.xml',
