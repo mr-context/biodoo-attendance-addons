@@ -6,7 +6,7 @@
         <field name="model_id" ref="model_zkteco_device"/>
         <field name="state">code</field>
         <field name="code">model._cron_mark_offline()</field>
-        <field name="interval_number">5</field>
+        <field name="interval_number">1</field>
         <field name="interval_type">minutes</field>
         <field name="active">True</field>
     </record>

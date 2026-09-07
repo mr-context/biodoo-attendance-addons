@@ -4,6 +4,8 @@ import logging
 import re
 from datetime import datetime, timedelta, timezone
 
+import pytz
+
 from odoo import models, fields, api
 
 _logger = logging.getLogger(__name__)
@@ -91,18 +93,38 @@ class ZktecoAttPhoto(models.Model):
         )
         return rec
 
-    @staticmethod
-    def _parse_filename_ts(file_name: str):
-        """Extract UTC datetime from device filename YYYYMMDDHHMMSS-PIN.ext."""
+    def _device_timezone(self):
+        """Fuseau à utiliser pour interpréter l'heure LOCALE encodée par le device.
+        Le bridge convertit déjà les pointages (ATTLOG) en UTC, mais PAS le nom de
+        fichier ATTPHOTO (heure locale brute). On aligne donc la photo sur le même
+        fuseau : param système `zkteco.device_timezone` s'il est posé, sinon le
+        fuseau de la société, sinon celui de l'utilisateur, sinon UTC."""
+        tzname = (
+            self.env['ir.config_parameter'].sudo().get_param('zkteco.device_timezone')
+            or self.env.company.partner_id.tz
+            or self.env.user.tz
+            or 'UTC'
+        )
+        try:
+            return pytz.timezone(tzname)
+        except Exception:  # noqa: BLE001 — nom de fuseau invalide → UTC sûr
+            return pytz.UTC
+
+    def _parse_filename_ts(self, file_name: str):
+        """Extrait un datetime UTC (naïf) du nom de fichier device YYYYMMDDHHMMSS-PIN.ext.
+        Le device encode l'heure LOCALE ; on la convertit en UTC via `_device_timezone`
+        pour qu'elle s'aligne sur `hr.attendance.check_in` (stocké en UTC). Sans cette
+        conversion, en UTC+1 la photo était décalée d'1 h et ne matchait jamais (I-12)."""
         m = _FNAME_RE.match(file_name)
         if not m:
             return None
         try:
-            dt = datetime.strptime(m.group(1), '%Y%m%d%H%M%S')
-            # Device sends local time — treat as UTC (no TZ info available here)
-            return dt
+            local_naive = datetime.strptime(m.group(1), '%Y%m%d%H%M%S')
         except ValueError:
             return None
+        tz = self._device_timezone()
+        # localize (heure locale device) → UTC → naïf pour stockage Odoo
+        return tz.localize(local_naive).astimezone(pytz.UTC).replace(tzinfo=None)
 
     def _match_attendance(self, pin: str, captured_at: datetime):
         """Find the closest attendance record (check_in within ±2 min) for this PIN."""

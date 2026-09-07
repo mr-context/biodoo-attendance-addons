@@ -1,0 +1,11 @@
+{
+  "_readme": "Registre des illustrations par modèle. Clé = nom du modèle (device_name ou platform, insensible à la casse) → fichier image dans CE dossier. Pour ajouter un modèle : déposez le PNG ici + ajoutez une ligne. Fallback automatique sur default.png si le modèle est inconnu ou si le fichier n'existe pas. Les clés commençant par _ sont ignorées.",
+  "facedepot 4a": "facedepot_4a.png",
+  "SpeedFace-V3L[QR]": "SpeedFace-V3L[QR].png",
+  "SpeedFace-V5L": "speedface-v5l.png",
+  "SenseFace-2A": "SenseFace-2A.png",
+  "uFace800": "ZKTeco-uFace800.png",
+  "IN01": "ZKTeco-IN01.png",
+  "K60": "K60-Pro.png",
+  "k50": "ZKTeco-K50-Pro.png"
+}

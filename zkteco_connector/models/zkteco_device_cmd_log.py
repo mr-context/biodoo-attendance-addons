@@ -16,6 +16,10 @@ class ZktecoDeviceCmdLog(models.Model):
                                    help='ID numérique assigné par le bridge Go dans sa file interne')
     return_code   = fields.Integer(string='Code retour', readonly=True)
     is_error      = fields.Boolean(string='Erreur', compute='_compute_is_error', store=True)
+    # F-1 : motif d'échec remonté par le device via ERRORLOG (code hex Annexe 9 +
+    # message), corrélé par bridge_cmd_id. Ex. "D01E0001 face detection failed".
+    error_detail  = fields.Char(string='Détail erreur', readonly=True,
+                                help='Code + message ERRORLOG remontés par le device (Annexe 9)')
 
     state = fields.Selection([
         ('requested',       'Demandée'),

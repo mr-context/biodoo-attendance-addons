@@ -19,6 +19,7 @@
                 <field name="attendance_count"/>
                 <field name="pending_user_count"/>
                 <field name="cmd_error_count"/>
+                <field name="device_image_url"/>
                 <templates>
                     <t t-name="card" class="flex-row align-items-stretch p-0">
                         <!-- Tuile d'état (emplacement carré — remplaçable par une image) -->
@@ -30,7 +31,8 @@
                                     : 'o_zk_offline'
                                 }"
                                 t-att-title="record.is_online.raw_value ? 'En ligne' : record.state.value">
-                                <i class="fa fa-clock-o"/>
+                                <img t-att-src="record.device_image_url.value" alt="Pointeuse"
+                                     style="max-width:66px;max-height:66px;object-fit:contain;"/>
                             </div>
                         </aside>
 
@@ -188,6 +190,11 @@
                         </button>
                     </div>
 
+                    <!-- Illustration du modèle (mappée via models.json, sinon mockup) -->
+                    <field name="device_image_url" widget="image_url"
+                           class="oe_avatar o_zkteco_device_photo"
+                           options="{'size': [200, 200]}" nolabel="1"/>
+
                     <!-- Title -->
                     <div class="oe_title">
                         <h1>
@@ -206,7 +213,7 @@
                                 <i class="fa fa-circle me-1"/> En ligne
                             </span>
                             <span class="badge rounded-pill text-bg-secondary"
-                                  invisible="is_online or state != 'approved'">
+                                  invisible="is_online or state not in ('approved', 'offline')">
                                 <i class="fa fa-circle-o me-1"/> Hors ligne
                             </span>
                         </div>
@@ -231,6 +238,15 @@
                                     <field name="ip_address"  readonly="1"/>
                                     <field name="mac_address" readonly="1"/>
                                     <field name="push_version" readonly="1" string="Push Proto"/>
+                                    <field name="device_timezone"
+                                           options="{'no_create': True}"
+                                           help="Fuseau de la pointeuse (heure affichée + interprétation des pointages). À régler par site."/>
+                                    <field name="device_time_preview" readonly="1"/>
+                                    <button name="action_apply_timezone" type="object"
+                                            string="Appliquer le fuseau (vérifie + redémarre)"
+                                            class="btn-link ps-0" icon="fa-clock-o"
+                                            invisible="not device_timezone"
+                                            confirm="La pointeuse va être vérifiée puis redémarrée pour appliquer le fuseau. Continuer ?"/>
                                 </group>
                             </group>
                             <group string="Cycle de vie">
@@ -241,6 +257,25 @@
                                 <group>
                                     <field name="approved_by"   readonly="1" invisible="not approved_by"/>
                                     <field name="approved_date" readonly="1" invisible="not approved_date"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- Tab: Localisation (coords GPS → vue carte) -->
+                        <page name="localisation" string="Localisation">
+                            <group>
+                                <group string="Coordonnées GPS">
+                                    <field name="location_address" placeholder="Ex: Siège, salle serveur…"/>
+                                    <field name="latitude"/>
+                                    <field name="longitude"/>
+                                    <field name="partner_id" invisible="1"/>
+                                </group>
+                                <group>
+                                    <div class="text-muted">
+                                        Saisissez la latitude / longitude de la pointeuse
+                                        (ex. 36.7538, 3.0588 pour Alger). Elle apparaîtra
+                                        alors sur la <b>vue Carte</b> (à côté du kanban et de la liste).
+                                    </div>
                                 </group>
                             </group>
                         </page>
@@ -351,11 +386,25 @@
         </field>
     </record>
 
+    <!-- ── MAP (vue carte : position des pointeuses) ─────────────── -->
+    <record id="view_zkteco_device_map" model="ir.ui.view">
+        <field name="name">zkteco.device.map</field>
+        <field name="model">zkteco.device</field>
+        <field name="arch" type="xml">
+            <map res_partner="partner_id" default_order="custom_name" hide_name="0">
+                <field name="display_name" string="Pointeuse"/>
+                <field name="serial_number" string="N° Série"/>
+                <field name="ip_address" string="IP"/>
+                <field name="location_address" string="Site"/>
+            </map>
+        </field>
+    </record>
+
     <!-- ── ACTIONS ───────────────────────────────────────────────── -->
     <record id="action_zkteco_device" model="ir.actions.act_window">
         <field name="name">Devices ZKTeco</field>
         <field name="res_model">zkteco.device</field>
-        <field name="view_mode">kanban,list,form</field>
+        <field name="view_mode">kanban,list,map,form</field>
     </record>
 
     <record id="action_zkteco_device_pending" model="ir.actions.act_window">

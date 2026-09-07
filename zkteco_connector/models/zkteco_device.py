@@ -1,11 +1,38 @@
 # -*- coding: utf-8 -*-
+import json
 import logging
+import os
 from datetime import timedelta
+
+import pytz
+
 from odoo import models, fields, api
 
 _logger = logging.getLogger(__name__)
 
-OFFLINE_THRESHOLD_MINUTES = 15
+# Illustrations par modèle : dossier + URL statique + registre JSON.
+_DEVICE_IMG_DIR = os.path.join(os.path.dirname(__file__), '..', 'static', 'src', 'img', 'devices')
+_DEVICE_IMG_URL = '/zkteco_connector/static/src/img/devices/'
+_DEVICE_IMG_DEFAULT = 'default.png'
+
+
+def _tz_get(self):
+    """Liste des fuseaux IANA (pattern standard Odoo, cf. res.partner.tz)."""
+    return [(tz, tz) for tz in sorted(pytz.all_timezones)]
+
+
+def _device_image_map():
+    """Charge le registre modèle→image (models.json). Clés normalisées en
+    minuscules ; les clés `_…` (readme) sont ignorées. Relu à chaque affichage
+    (petit fichier, une lecture par chargement de vue)."""
+    try:
+        with open(os.path.join(_DEVICE_IMG_DIR, 'models.json'), encoding='utf-8') as f:
+            raw = json.load(f)
+        return {k.strip().lower(): v for k, v in raw.items() if not k.startswith('_')}
+    except Exception:  # noqa: BLE001 — fichier absent/invalide → pas d'illustration custom
+        return {}
+
+OFFLINE_THRESHOLD_MINUTES = 2
 
 # A device polls every few seconds; a bare heartbeat that only bumps last_seen
 # is debounced to at most one write per this window. This kills the FK-lock
@@ -19,7 +46,7 @@ _INT_FIELDS = frozenset({
     'attlog_count', 'transaction_count', 'lock_count',
     'max_user_count', 'max_fp_count', 'max_face_count', 'max_attlog_count',
 })
-ONLINE_THRESHOLD_MINUTES  = 5   # last_seen < 5 min → considered online
+ONLINE_THRESHOLD_MINUTES  = 2   # last_seen < 2 min → considered online (device poll ~10-30s + debounce 30s → sûr, pas de clignotement)
 
 # ADMS field names → Odoo field names
 _INFO_MAP = {
@@ -77,6 +104,8 @@ class ZktecoDevice(models.Model):
     language_code = fields.Char(string='Code langue',      readonly=True)
 
     display_name = fields.Char(compute='_compute_display_name', store=True, string='Nom')
+    # Illustration du modèle : mappée via models.json, sinon mockup par défaut.
+    device_image_url = fields.Char(compute='_compute_device_image_url', string='Illustration')
 
     # ── Hardware ──────────────────────────────────────────────────
     platform         = fields.Char(string='Plateforme', readonly=True)
@@ -86,6 +115,32 @@ class ZktecoDevice(models.Model):
     ip_address   = fields.Char(string='Adresse IP',  readonly=True)
     mac_address  = fields.Char(string='Adresse MAC', readonly=True)
     push_version = fields.Char(string='Push Proto',  readonly=True)
+
+    # ── Fuseau horaire (F-8) ──────────────────────────────────────
+    # Fuseau propre à CETTE pointeuse (multi-sites : une pointeuse à Sydney et une
+    # à Alger n'ont pas le même). Poussé au bridge (SET_TZ) → le bloc d'init annonce
+    # le bon TimeZone (horloge/affichage device) et les ATTLOG sont interprétés dans
+    # ce fuseau. Défaut = fuseau de la société / de l'utilisateur.
+    device_timezone = fields.Selection(
+        _tz_get, string='Fuseau horaire',
+        default=lambda self: (self.env.company.partner_id.tz
+                              or self.env.user.tz or 'UTC'),
+        help="Fuseau horaire de la pointeuse. Détermine l'heure affichée sur "
+             "l'appareil et l'interprétation des pointages. À régler par site.")
+    device_time_preview = fields.Char(
+        string='Heure appliquée', compute='_compute_device_time_preview',
+        help="Heure qui sera affichée sur la pointeuse avec ce fuseau "
+             "(heure serveur convertie). Aperçu au moment de l'affichage.")
+
+    # ── Localisation (vue carte) ──────────────────────────────────
+    latitude  = fields.Float(string='Latitude',  digits=(10, 7))
+    longitude = fields.Float(string='Longitude', digits=(10, 7))
+    location_address = fields.Char(string='Adresse / site')
+    # Partenaire technique porteur des coordonnées GPS : la vue carte (web_map)
+    # trace un res.partner via partner_latitude/longitude. On le synchronise
+    # depuis les coords saisies ici (pas de géocodage : on écrit les coords brutes).
+    partner_id = fields.Many2one('res.partner', string='Point carte',
+                                 ondelete='set null', copy=False)
 
     # ── Capacity: current ─────────────────────────────────────────
     user_count        = fields.Integer(string='Utilisateurs',  readonly=True)
@@ -151,6 +206,21 @@ class ZktecoDevice(models.Model):
                 d.display_name = f"{d.device_name} ({d.serial_number})"
             else:
                 d.display_name = d.serial_number
+
+    @api.depends('device_name', 'platform')
+    def _compute_device_image_url(self):
+        mapping = _device_image_map()
+        for d in self:
+            fname = None
+            for key in (d.device_name, d.platform):
+                if key and key.strip().lower() in mapping:
+                    fname = mapping[key.strip().lower()]
+                    break
+            # image mappée ET présente sur le disque, sinon mockup par défaut
+            if fname and os.path.exists(os.path.join(_DEVICE_IMG_DIR, fname)):
+                d.device_image_url = _DEVICE_IMG_URL + fname
+            else:
+                d.device_image_url = _DEVICE_IMG_URL + _DEVICE_IMG_DEFAULT
 
     def _compute_is_online(self):
         threshold = fields.Datetime.now() - timedelta(minutes=ONLINE_THRESHOLD_MINUTES)
@@ -329,17 +399,16 @@ class ZktecoDevice(models.Model):
 
     def action_full_sync(self):
         """FULL_SYNC — force le device à tout re-envoyer (users, empreintes, pointages).
-        Côté bridge : stamps remis à 0 + REBOOT envoyé.
-        Côté Odoo : replay du consumer OPERLOG pour re-traiter les messages en attente."""
+        Côté bridge : stamps remis à 0 + REBOOT → le device re-pousse tout, qui
+        retransite normalement par les handlers NATS.
+        (I-11) L'ancien `svc.replay_subject('zkteco.ta.operlog.>')` était un no-op :
+        sur un consumer durable, JetStream reprend au dernier ack, donc rien n'était
+        rejoué. Le FULL_SYNC device suffit ; l'appel trompeur est retiré."""
         self.ensure_one()
-        from odoo.addons.core_nats.services.nats_service import get_service
-        svc = get_service()
-        if svc:
-            svc.replay_subject(f'zkteco.ta.operlog.>')
         self._send_command('FULL_SYNC')
         return self._notif(
             'Sync complet lancé',
-            f'{self.display_name} : replay OPERLOG + reboot device en cours.',
+            f'{self.display_name} : reboot device + renvoi complet en cours.',
         )
 
     def action_query_attlog(self):
@@ -357,6 +426,98 @@ class ZktecoDevice(models.Model):
         self.ensure_one()
         self._send_command('CLEAR LOG')
         return self._notif('Logs effacés', f'{self.display_name} : logs supprimés du device.', 'warning')
+
+    # ── fuseau horaire (F-8) ──────────────────────────────────────
+
+    @api.depends('device_timezone')
+    def _compute_device_time_preview(self):
+        # fields.Datetime.now() = maintenant en UTC (naïf) → on localise puis convertit.
+        utc_now = pytz.utc.localize(fields.Datetime.now())
+        for d in self:
+            if d.device_timezone:
+                try:
+                    local = utc_now.astimezone(pytz.timezone(d.device_timezone))
+                    d.device_time_preview = local.strftime('%H:%M — %d/%m/%Y (%Z, UTC%z)')
+                except Exception:  # noqa: BLE001 — fuseau invalide
+                    d.device_time_preview = ''
+            else:
+                d.device_time_preview = ''
+
+    def write(self, vals):
+        res = super().write(vals)
+        if 'device_timezone' in vals:
+            self._push_device_timezone()
+        if {'latitude', 'longitude', 'location_address', 'custom_name'} & set(vals):
+            self._sync_map_partner()
+        return res
+
+    def _sync_map_partner(self):
+        """Synchronise le partenaire technique (point carte) avec les coordonnées
+        GPS saisies. La vue carte web_map place le marqueur directement sur
+        partner_latitude/longitude (pas de géocodage). Créé à la demande."""
+        Partner = self.env['res.partner'].sudo()
+        for d in self:
+            if not (d.latitude or d.longitude):
+                continue
+            vals = {
+                'name': d.display_name or d.serial_number or 'Pointeuse',
+                'partner_latitude': d.latitude,
+                'partner_longitude': d.longitude,
+            }
+            if d.location_address:
+                vals['street'] = d.location_address
+            if d.partner_id:
+                d.partner_id.write(vals)
+            else:
+                d.partner_id = Partner.create(vals)
+
+    def action_apply_timezone(self):
+        """F-8 — applique le fuseau sur la pointeuse en 2 temps :
+        1) `settz` SYNCHRONE : le bridge enregistre le fuseau ET confirme la valeur
+           appliquée → on vérifie qu'elle égale bien ce qu'Odoo annonce (pas de
+           reboot dans le vide si le device est hors ligne ou le fuseau invalide) ;
+        2) REBOOT : le device relit le TimeZone à sa ré-inscription."""
+        self.ensure_one()
+        from odoo.exceptions import UserError
+        from odoo.addons.core_nats.services.nats_service import get_service
+        if not self.device_timezone:
+            raise UserError("Choisissez d'abord un fuseau horaire.")
+        svc = get_service()
+        if not svc or not svc.is_running:
+            raise UserError("Le service NATS n'est pas démarré.")
+        resp = svc.request_sync(
+            'zkteco.ta.bridge.settz',
+            {'sn': self.serial_number, 'tz': self.device_timezone}, timeout=3)
+        if not resp:
+            raise UserError("Le bridge n'a pas répondu (hors ligne ?). Réessayez.")
+        if not resp.get('ok') or resp.get('timezone') != self.device_timezone:
+            reason = resp.get('error') or resp.get('timezone') or '—'
+            raise UserError(
+                "Le bridge n'a pas pu appliquer le fuseau (%s). La pointeuse est "
+                "peut-être encore hors ligne — réessayez quand elle est connectée." % reason)
+        # Vérifié côté bridge → redémarrage pour appliquer sur l'appareil.
+        self._send_command('REBOOT')
+        return self._notif(
+            'Fuseau appliqué',
+            "%s : fuseau %s vérifié côté bridge (%s) — redémarrage envoyé." % (
+                self.display_name, self.device_timezone, self.device_time_preview))
+
+    def _push_device_timezone(self):
+        """F-8 — pousse le fuseau de chaque device au bridge (SET_TZ).
+        Publication DIRECTE (pas via _send_command) : SET_TZ est une config interne
+        au bridge, acquittée sans retour device — la tracer dans cmd.log créerait
+        des lignes 'requested' orphelines à chaque réconciliation. Si NATS est
+        arrêté, on ignore : la réconciliation (bridge.online / cron) re-poussera.
+        Le device applique le nouvel offset à sa prochaine ré-inscription
+        (ou via FULL_SYNC pour forcer)."""
+        from odoo.addons.core_nats.services.nats_service import get_service
+        svc = get_service()
+        if not svc or not svc.is_running:
+            return
+        for d in self:
+            if d.serial_number and d.device_timezone:
+                svc.publish_js_sync(f'zkteco.ta.cmd.{d.serial_number}',
+                                    {'cmd': f'SET_TZ TZ={d.device_timezone}'})
 
     # ── helpers ───────────────────────────────────────────────────
 
@@ -567,6 +728,11 @@ class ZktecoDevice(models.Model):
                     (now, dev_id),
                 )
                 device.invalidate_recordset(['last_seen'])
+                # A — le device réapparaît après avoir été affiché hors ligne
+                # (last_seen plus vieux que le seuil « en ligne ») → push live.
+                if (not cur_last_seen
+                        or (now - cur_last_seen).total_seconds() >= ONLINE_THRESHOLD_MINUTES * 60):
+                    device._notify_status_change()
                 return device
 
             # Substantive change (new info fields or offline→online): take the
@@ -576,9 +742,12 @@ class ZktecoDevice(models.Model):
                 (serial_number,)
             )
             vals = dict(field_vals, last_seen=now)
-            if cur_state == 'offline':
+            back_online = cur_state == 'offline'
+            if back_online:
                 vals['state'] = 'approved'
             device.write(vals)
+            if back_online:
+                device._notify_status_change()  # A — offline→online : push live
             return device
 
         # New device — create under a savepoint, re-locking on a concurrent insert.
@@ -607,6 +776,27 @@ class ZktecoDevice(models.Model):
     # ── offline cron ──────────────────────────────────────────────
 
     @api.model
+    @api.model
+    def _cron_cache_bridge_license(self):
+        """Rafraîchit le cache de l'expiration de la licence biodoo (ICP
+        'biodoo.license_expiration') depuis le bridge, pour que « Paramètres →
+        À propos » affiche la vraie date sans dépendre de l'ouverture du dashboard.
+        Silencieux si NATS/bridge indisponible (garde la dernière valeur connue)."""
+        from odoo.addons.core_nats.services.nats_service import get_service
+        svc = get_service()
+        if not svc or not svc.is_running:
+            return
+        status = svc.request_sync('zkteco.ta.bridge.status', b'', timeout=3.0)
+        if not (isinstance(status, dict) and status.get('active') and status.get('expires_at')):
+            return
+        from datetime import datetime
+        try:
+            dt = datetime.fromisoformat(str(status['expires_at']).replace('Z', '+00:00'))
+            self.env['ir.config_parameter'].sudo().set_param(
+                'biodoo.license_expiration', dt.strftime('%Y-%m-%d %H:%M:%S'))
+        except (ValueError, TypeError):
+            pass
+
     def _cron_mark_offline(self):
         threshold = fields.Datetime.now() - timedelta(minutes=OFFLINE_THRESHOLD_MINUTES)
         stale = self.sudo().search([
@@ -616,3 +806,18 @@ class ZktecoDevice(models.Model):
         if stale:
             stale.write({'state': 'offline'})
             _logger.info(f"[zkteco] offline: {', '.join(stale.mapped('serial_number'))}")
+            # A — push live : ces devices viennent de passer hors ligne → notifier
+            # les vues ouvertes pour qu'elles rechargent (l'indicateur bascule sans
+            # rechargement manuel).
+            stale._notify_status_change()
+
+    # ── indicateur en ligne / hors ligne — push live (A) ──────────
+
+    def _notify_status_change(self):
+        """Pousse une notif bus quand le statut en ligne/hors ligne d'un device
+        change, pour que les vues kanban/liste ouvertes se rechargent en direct.
+        Émis UNIQUEMENT sur transition (pas à chaque heartbeat) → trafic minimal."""
+        if not self:
+            return
+        self.env['bus.bus']._sendone('zkteco_device_status', 'zkteco_device_status',
+                                     {'ids': self.ids})

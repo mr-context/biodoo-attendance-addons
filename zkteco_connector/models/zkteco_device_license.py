@@ -88,6 +88,13 @@ class ZktecoDeviceLicense(models.Model):
         _logger.info("[zkteco_lic] réconciliation: %d device(s) ré-asserté(s) au bridge",
                      len(devices))
         self._license_publish_sync(devices.mapped('mac_address'))
+        # F-8 — le bridge garde le fuseau par-device EN MÉMOIRE (perdu au redémarrage) ;
+        # bridge.online déclenche cette réconciliation → on re-pousse SET_TZ pour que
+        # chaque device retrouve son fuseau après un restart du bridge.
+        devices._push_device_timezone()
+        # Rafraîchit aussi l'expiration de la licence biodoo (« À propos ») depuis
+        # le bridge — on réutilise ce cron (15 min) plutôt qu'un cron dédié.
+        self._cron_cache_bridge_license()
 
     @api.model
     def _license_publish_sync(self, macs):

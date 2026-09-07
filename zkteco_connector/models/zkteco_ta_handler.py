@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 
 from psycopg2 import OperationalError
@@ -13,6 +14,26 @@ _logger = logging.getLogger(__name__)
 _CMD_EXPIRED_RC = -9999
 # Durée après laquelle une commande jamais confirmée est considérée expirée.
 _CMD_LOG_MAX_AGE_HOURS = 24
+
+# I-10 : reconnaître une suppression user aboutie dans le wire command échoé.
+# `DATA DELETE USERINFO PIN=x` = un user ; sans PIN = tous (spec 12.1.2.1).
+_DELETE_USER_RE = re.compile(r'DATA\s+DELETE\s+USERINFO\b', re.I)
+_PIN_RE = re.compile(r'\bPIN=(\S+)', re.I)
+
+# F-2 : libellés lisibles des codes de retour d'enrôlement (Annexe 1). Les codes
+# non listés (dont les négatifs -1001..-1008) tombent sur un libellé générique.
+_ENROLL_RC_LABELS = {
+    2: "L'utilisateur existe déjà",
+    4: "Qualité biométrique insuffisante",
+    5: "Doublon — déjà enrôlé",
+    6: "Enrôlement annulé",
+    7: "Périphérique occupé",
+}
+
+
+def _enroll_rc_label(rc):
+    """Libellé d'un code de retour d'enrôlement (jamais vide)."""
+    return _ENROLL_RC_LABELS.get(rc, f"Échec de l'enrôlement (code {rc})")
 
 
 class ZktecoTaHandler(models.AbstractModel):
@@ -28,6 +49,7 @@ class ZktecoTaHandler(models.AbstractModel):
         'zkteco.ta.operlog.>',
         'zkteco.ta.biodata.>',
         'zkteco.ta.cmdresult.>',
+        'zkteco.ta.errorlog.>',
     ]
 
     @api.model
@@ -39,6 +61,7 @@ class ZktecoTaHandler(models.AbstractModel):
             elif 'userinfo'    in subject: self._process_userinfo(subject, payload)
             elif 'operlog'     in subject: self._process_operlog(subject, payload)
             elif 'biodata'     in subject: self._process_biodata(subject, payload)
+            elif 'errorlog'    in subject: self._process_errorlog(subject, payload)
             elif 'cmdresult'   in subject: self._process_cmdresult(subject, payload)
         except OperationalError:
             # Erreurs de concurrence/sérialisation (verrou FK sur zkteco_device
@@ -191,6 +214,19 @@ class ZktecoTaHandler(models.AbstractModel):
         else:
             new_state = 'ok' if return_code == 0 else 'error'
 
+        # I-10 : refléter dans le sas (miroir zkteco.device.user) une suppression
+        # user confirmée par le device, quel que soit le déclencheur (bouton,
+        # désautorisation employé, WIPE). Avant, seul action_delete_from_device
+        # posait 'deleted' → le miroir divergeait du device.
+        if return_code == 0 and cmd:
+            self._reflect_user_deletion(sn, cmd)
+
+        # F-2 : un enrôlement rejeté par le device (Return≠0, hors -9999 expiré) →
+        # prévenir le moniteur OWL avec un libellé Annexe 1. Avant, seul le succès
+        # (arrivée d'un template) était signalé ; l'échec restait invisible.
+        if return_code not in (0, _CMD_EXPIRED_RC) and cmd:
+            self._push_enroll_cmd_failure(sn, cmd, return_code)
+
         # Balayage défensif, event-driven (pas de cron) : à chaque cmdresult on
         # ferme les commandes de CE device restées 'published'/'requested' au-delà
         # de 24h — le device ne les exécutera jamais (le bridge les a expirées).
@@ -253,6 +289,95 @@ class ZktecoTaHandler(models.AbstractModel):
         if stale:
             stale.write({'state': 'expired', 'result_at': fields.Datetime.now()})
             _logger.info("[zkteco_ta] %d commande(s) expirée(s) pour %s", len(stale), sn)
+
+    @api.model
+    def _reflect_user_deletion(self, sn, cmd):
+        """(I-10) Sur un `DATA DELETE USERINFO` confirmé (Return=0), passe le(s)
+        user(s) miroir de CE device en 'deleted'. Avec PIN → un user ; sans PIN
+        → tous les users du device (spec 12.1.2.1)."""
+        if not _DELETE_USER_RE.search(cmd):
+            return
+        domain = [('device_id.serial_number', '=', sn), ('state', '!=', 'deleted')]
+        m = _PIN_RE.search(cmd)
+        if m:
+            domain.append(('pin', '=', m.group(1)))
+        users = self.env['zkteco.device.user'].sudo().search(domain)
+        if users:
+            users.write({'state': 'deleted'})
+            _logger.info(
+                "[zkteco_ta] miroir user: %d passé(s) 'deleted' sur %s "
+                "(suppression device confirmée)", len(users), sn)
+
+    # ── errorlog — motifs d'échec device (F-1) ────────────────────
+
+    @api.model
+    def _process_errorlog(self, subject: str, payload: dict):
+        """(I-4 / F-1) Un ERRORLOG device (ex. D01E0001 « face detection failed »,
+        Annexe 9). On le corrèle à la commande d'origine via CmdID = bridge_cmd_id,
+        on marque la ligne cmd.log en erreur avec le détail, et — si c'était un
+        enrôlement — on prévient le moniteur OWL (F-2)."""
+        sn       = str(payload.get('SerialNumber', '')).strip()
+        err_code = str(payload.get('ErrCode', '')).strip()
+        err_msg  = str(payload.get('ErrMsg', '')).strip()
+        cmd_id   = payload.get('CmdID') or payload.get('CmdId')
+        if not sn:
+            return
+        detail = (f"{err_code} {err_msg}").strip() or err_code or err_msg
+
+        log = None
+        try:
+            bid = int(cmd_id)
+        except (ValueError, TypeError):
+            bid = 0
+        if bid:
+            log = self.env['zkteco.device.cmd.log'].sudo().search([
+                ('bridge_cmd_id', '=', bid),
+                ('device_id.serial_number', '=', sn),
+            ], limit=1)
+        if log:
+            log.write({
+                'state':        'error',
+                'error_detail': detail[:512],
+                'result_at':    fields.Datetime.now(),
+            })
+        _logger.warning("[zkteco_ta] ERRORLOG %s sur %s: %s (cmd_id=%s)",
+                        err_code or '?', sn, err_msg or '-', cmd_id or '-')
+        self._push_enroll_error(sn, log, detail)
+
+    @api.model
+    def _push_enroll_error(self, sn, log, detail):
+        """F-2 : si l'ERRORLOG concerne une commande d'enrôlement, pousse un échec
+        sur le bus 'zkteco_enroll' pour que le dialog OWL bascule en échec avec le
+        motif device. Best-effort : silencieux si non corrélé à un enrôlement."""
+        if not log or not log.cmd:
+            return
+        verb = (log.cmd.split() or [''])[0].upper()
+        if not verb.startswith('ENROLL'):
+            return
+        m = _PIN_RE.search(log.cmd)
+        pin = m.group(1) if m else ''
+        self.env['bus.bus']._sendone('zkteco_enroll', 'zkteco_enroll_result', {
+            'serial_number': sn,
+            'pin':           pin,
+            'valid':         False,
+            'reason':        detail or 'échec',
+        })
+
+    @api.model
+    def _push_enroll_cmd_failure(self, sn, cmd, return_code):
+        """F-2 : un cmdresult d'enrôlement (ENROLL_*) avec Return≠0 → échec au
+        moniteur OWL avec un libellé Annexe 1. Silencieux si ce n'est pas un enrôlement."""
+        verb = (cmd.split() or [''])[0].upper()
+        if not verb.startswith('ENROLL'):
+            return
+        m = _PIN_RE.search(cmd)
+        pin = m.group(1) if m else ''
+        self.env['bus.bus']._sendone('zkteco_enroll', 'zkteco_enroll_result', {
+            'serial_number': sn,
+            'pin':           pin,
+            'valid':         False,
+            'reason':        _enroll_rc_label(return_code),
+        })
 
     # ── biodata — templates empreintes / visages ──────────────────
 

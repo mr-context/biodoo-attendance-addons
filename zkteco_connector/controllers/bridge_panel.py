@@ -30,6 +30,19 @@ class ZktecoBridgePanelController(http.Controller):
             # Timeout = aucun bridge n'a répondu sur ce NATS.
             return {'reachable': False, 'error': "Bridge hors ligne (aucune réponse)."}
 
+        # Cache l'expiration de la licence bridge (ex-2099 hardcodé côté
+        # web_enterprise). session_info la relit ensuite sans appel NATS. Le
+        # PanelStatus embarque Status → expires_at (RFC3339). On stocke en SQL.
+        exp = status.get('expires_at') if status.get('active') else None
+        if exp:
+            from datetime import datetime
+            try:
+                dt = datetime.fromisoformat(str(exp).replace('Z', '+00:00'))
+                request.env['ir.config_parameter'].sudo().set_param(
+                    'biodoo.license_expiration', dt.strftime('%Y-%m-%d %H:%M:%S'))
+            except (ValueError, TypeError):
+                pass
+
         devices = svc.request_sync('zkteco.ta.bridge.devices', b'', timeout=2.0)
         return {
             'reachable': True,

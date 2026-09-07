@@ -7,7 +7,7 @@
     'author': 'MESSAOUDI ABDERRAOUF',
     'website': 'https://www.smoothtechnology.net',
     'license': 'LGPL-3',
-    'depends': ['hr_attendance', 'core_nats'],
+    'depends': ['hr_attendance', 'core_nats', 'web_map', 'base_geolocalize'],
     'external_dependencies': {
         # Crop serveur du visage à l'enrôlement (wizard zkteco.enroll.face.wizard).
         # Noms d'IMPORT, pas pip : cv2 → opencv-python-headless. À installer sur
@@ -44,6 +44,7 @@
             'zkteco_connector/static/src/xml/bridge_panel.xml',
             'zkteco_connector/static/src/js/fingerprint_enroll_dialog.js',
             'zkteco_connector/static/src/xml/fingerprint_enroll_dialog.xml',
+            'zkteco_connector/static/src/js/device_status_live.js',
         ],
     },
     'installable': True,

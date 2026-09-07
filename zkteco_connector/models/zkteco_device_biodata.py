@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import base64
 import logging
+
+from psycopg2 import IntegrityError
+
 from odoo import models, fields, api
 
 _logger = logging.getLogger(__name__)
@@ -104,25 +107,45 @@ class ZktecoDeviceBiodata(models.Model):
             'template':    base64.b64encode(raw).decode() if raw else False,
         }
 
-        existing = self.sudo().search([
+        domain = [
             ('device_user_id', '=', device_user.id),
             ('bio_type',       '=', str(bio_type)),
             ('finger_id',      '=', finger_id),
-        ], limit=1)
+        ]
+        existing = self.sudo().search(domain, limit=1)
 
         if existing:
             existing.write(vals)
-        else:
-            self.sudo().create({
-                'device_user_id': device_user.id,
-                'bio_type':       str(bio_type),
-                'finger_id':      finger_id,
-                **vals,
-            })
+            return
+
+        # Idempotence sous concurrence : le même template peut arriver deux fois
+        # quasi simultanément (upload spontané + réponse à QUERY_BIODATA, ou
+        # resync). Le search-then-create se courait alors une UniqueViolation
+        # (contrainte device_user/bio_type/finger_id) qui remontait → NAK →
+        # redelivery bruyante. On isole le create dans un savepoint : en cas de
+        # collision, on retombe proprement sur un write (l'autre livraison a
+        # committé la ligne entre-temps).
+        try:
+            with self.env.cr.savepoint():
+                self.sudo().create({
+                    'device_user_id': device_user.id,
+                    'bio_type':       str(bio_type),
+                    'finger_id':      finger_id,
+                    **vals,
+                })
             _logger.info(
                 f"[zkteco] biodata stocké: PIN={pin} type={bio_type} "
                 f"finger={finger_id} sur {serial_number}"
             )
+        except IntegrityError:
+            other = self.sudo().search(domain, limit=1)
+            if other:
+                other.write(vals)
+                _logger.info(
+                    "[zkteco] biodata: course résolue en write (PIN=%s type=%s finger=%s sur %s)",
+                    pin, bio_type, finger_id, serial_number)
+            else:
+                raise
 
 
 class ZktecoDeviceBiophoto(models.Model):
