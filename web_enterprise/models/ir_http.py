@@ -27,6 +27,11 @@ class IrHttp(models.AbstractModel):
     def session_info(self):
         result = super().session_info()
         result['support_url'] = "https://www.odoo.com/help"
-        result['expiration_date'] = '2099-12-31 00:00:00'
+        # Expiration = celle de la licence biodoo (bridge), mise en cache par le
+        # panneau bridge (zkteco_connector/controllers/bridge_panel.py) dans
+        # l'ICP 'biodoo.license_expiration'. Repli sur une date lointaine tant que
+        # le panneau n'a pas encore été consulté (aucun appel NATS ici).
+        exp = self.env['ir.config_parameter'].sudo().get_param('biodoo.license_expiration')
+        result['expiration_date'] = exp or '2099-12-31 00:00:00'
         result['expiration_reason'] = 'valid'
         return result
