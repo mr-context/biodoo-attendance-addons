@@ -22,8 +22,13 @@
                                     </span>
                                     <t t-elif="state.bridge">
                                         <span t-att-class="'o_nats_dot ' + (state.bridge.active ? 'connected' : 'disconnected')"/>
-                                        <span class="text-muted">
-                                            <t t-esc="state.bridge.active ? 'Actif' : 'Inactif'"/>
+                                        <!-- Replié, c'est souvent la SEULE chose lue : une suspension
+                                             doit s'y voir, pas se cacher derrière « Inactif ». -->
+                                        <span t-att-class="bridgeLicence().message ? 'text-' + bridgeLicence().level + ' fw-semibold' : 'text-muted'">
+                                            <t t-esc="bridgeLicence().label"/>
+                                        </span>
+                                        <!-- Sans licence, 0/0 ne dit rien : on ne l'affiche que s'il y a un plafond. -->
+                                        <span t-if="state.bridge.max_devices" class="text-muted">
                                             · <t t-esc="state.bridge.device_count"/>/<t t-esc="state.bridge.max_devices"/>
                                         </span>
                                     </t>
@@ -52,12 +57,33 @@
                                     <div class="d-flex align-items-center">
                                         <span t-att-class="'o_nats_dot ' + (state.bridge.active ? 'connected' : 'disconnected')"/>
                                         <strong class="ms-2">ZKTeco Bridge</strong>
-                                        <span class="ms-1" t-esc="state.bridge.active ? 'Actif' : 'Inactif'"/>
+                                        <span class="ms-1" t-esc="bridgeLicence().label"/>
                                     </div>
                                     <div class="d-flex align-items-center">
                                         <span t-att-class="'o_nats_dot ' + (state.bridge.server_connected ? 'connected' : 'disconnected')"/>
                                         <span class="ms-2">Serveur de licences</span>
                                         <small class="text-muted ms-1" t-esc="'· ' + bridgeLastContact()"/>
+                                    </div>
+                                </div>
+
+                                <!-- Licence inactive : ce qui se passe, et ce qu'il faut faire.
+                                     Absent pour une licence active ou un bridge antérieur au contrat. -->
+                                <t t-set="lic" t-value="bridgeLicence()"/>
+                                <div t-if="lic and lic.message" role="alert"
+                                     t-attf-class="alert alert-#{lic.level} d-flex gap-3 align-items-start mb-3 o_zk_licence_alert">
+                                    <i t-attf-class="fa #{lic.icon} fa-lg mt-1"/>
+                                    <div>
+                                        <div class="fw-semibold">
+                                            <t t-esc="lic.title"/>
+                                            <small t-if="lic.since" class="fw-normal text-muted ms-2">
+                                                depuis le <t t-esc="lic.since"/>
+                                            </small>
+                                        </div>
+                                        <div t-esc="lic.message"/>
+                                        <div t-if="lic.action" class="mt-1 fw-semibold small" t-esc="lic.action"/>
+                                        <div t-if="lic.detail" class="mt-1 small text-muted">
+                                            Motif transmis par le serveur : « <t t-esc="lic.detail"/> »
+                                        </div>
                                     </div>
                                 </div>
 
@@ -73,9 +99,9 @@
                                     </div>
                                     <div class="col-sm-6 col-lg-3">
                                         <div class="o_nats_stat_label">Expiration</div>
-                                        <div t-att-class="(state.bridge.days_left &lt;= 30) ? 'fw-semibold text-warning' : 'fw-semibold'">
+                                        <div t-att-class="(state.bridge.active and state.bridge.days_left &lt;= 30) ? 'fw-semibold text-warning' : 'fw-semibold'">
                                             <t t-esc="bridgeExpiry()"/>
-                                            <small class="text-muted"> (<t t-esc="state.bridge.days_left"/> j)</small>
+                                            <small t-if="state.bridge.active" class="text-muted"> (<t t-esc="state.bridge.days_left"/> j)</small>
                                         </div>
                                     </div>
                                     <div class="col-sm-6 col-lg-3">

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'ZKTeco Connector',
-    'version': '19.0.3.0.0',
+    'version': '19.0.3.1.0',
     'category': 'Human Resources/Attendances',
     'summary': 'ZKTeco ADMS via NATS — device approval, enrollment, check-in/out',
     'author': 'MESSAOUDI ABDERRAOUF',
@@ -40,6 +40,7 @@
             'zkteco_connector/static/src/scss/fingerprint_enroll.scss',
             'zkteco_connector/static/src/scss/device_kanban.scss',
             'zkteco_connector/static/src/scss/bridge_panel.scss',
+            'zkteco_connector/static/src/js/licence_state.js',
             'zkteco_connector/static/src/js/bridge_panel.js',
             'zkteco_connector/static/src/xml/bridge_panel.xml',
             'zkteco_connector/static/src/js/fingerprint_enroll_dialog.js',

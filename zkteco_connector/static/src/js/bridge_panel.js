@@ -7,6 +7,7 @@
 import { onMounted, onWillUnmount } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { patch } from "@web/core/utils/patch";
+import { formatSince, licenceState } from "@zkteco_connector/js/licence_state";
 
 const BRIDGE_POLL_MS = 30000;
 const NatsDashboard = registry.category("actions").get("nats_dashboard");
@@ -84,8 +85,10 @@ patch(NatsDashboard.prototype, {
     },
 
     bridgeExpiry() {
+        // Sans licence, le bridge envoie la date zéro de Go (0001-01-01) : l'afficher
+        // donnait « 01/01/1 » sous l'encart de suspension. formatSince l'écarte.
         const s = this.state.bridge && this.state.bridge.expires_at;
-        return s ? new Date(s).toLocaleDateString("fr-FR") : "–";
+        return formatSince(s) ? new Date(s).toLocaleDateString("fr-FR") : "–";
     },
 
     bridgeDevicePct() {
@@ -94,6 +97,12 @@ patch(NatsDashboard.prototype, {
             return 0;
         }
         return Math.min(100, Math.round(((b.device_count || 0) * 100) / b.max_devices));
+    },
+
+    // État de la licence tel qu'il doit être LU : suspendue, révoquée,
+    // transférée… et non un simple « Inactif » (voir licence_state.js).
+    bridgeLicence() {
+        return licenceState(this.state.bridge);
     },
 
     toggleBridge() {
