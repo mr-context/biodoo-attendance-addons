@@ -20,25 +20,32 @@ class HrVersion(models.Model):
     )
 
     def _is_work_entry_source_attendance(self):
-        """Retourne True si la source est 'attendance'"""
+        """Retourne True si la source de CETTE version est 'attendance'."""
+        self.ensure_one()
         return self.work_entry_source == 'attendance'
-
-    def _should_generate_work_entries(self):
-        """Override pour gérer la source attendance"""
-        if self._is_work_entry_source_attendance():
-            return True
-        return super()._should_generate_work_entries()
 
     def _get_work_entries_values(self, date_start, date_stop):
         """
         Override pour générer les work entries depuis les présences
         quand work_entry_source == 'attendance'.
-        """
-        if not self._is_work_entry_source_attendance():
-            return super()._get_work_entries_values(date_start, date_stop)
 
-        # Générer depuis les présences
-        return self._get_work_entries_values_from_attendance(date_start, date_stop)
+        Odoo 19 appelle cette méthode sur un LOT de versions
+        (`versions._get_work_entries_values(...)` dans `_generate_work_entries`).
+        L'ancienne version lisait `self.work_entry_source` comme sur une seule
+        fiche : dès que deux employés étaient en source « Présences », le cron
+        « Generate Missing Work Entries » plantait (« too many values to unpack »)
+        et aucune prestation n'était générée — 570 échecs relevés sur la démo le
+        2026-09-22. On répartit donc le lot : les versions pointage une à une,
+        les autres à Odoo, en une seule fois.
+        """
+        par_pointage = self.filtered(lambda v: v.work_entry_source == 'attendance')
+        autres = self - par_pointage
+        vals_list = []
+        if autres:
+            vals_list += super(HrVersion, autres)._get_work_entries_values(date_start, date_stop)
+        for version in par_pointage:
+            vals_list += version._get_work_entries_values_from_attendance(date_start, date_stop)
+        return vals_list
 
     def _get_work_entries_values_from_attendance(self, date_start, date_stop):
         """
