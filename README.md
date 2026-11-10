@@ -1,15 +1,42 @@
-# biodoo-attendance-addons
+# biodoo — logiciel de pointage et de gestion des présences pour l'Algérie, compatible ZKTeco
 
 ![License: LGPL-3.0](https://img.shields.io/badge/License-LGPL_v3-blue.svg)
 ![Odoo](https://img.shields.io/badge/Odoo-19.0-875A7B.svg)
 
-Modules Odoo **biodoo — Présence / Pointage** : pointage ZKTeco (via bridge NATS),
-pointage facial depuis le portail employé, prestations de travail dérivées des
-présences, détection d'anomalies, et socle RH / contrats + localisation Algérie
-(`l10n_dz`) — **sans aucune dépendance vers la paie**.
+**biodoo** est un logiciel de pointage et de gestion des présences conçu pour les
+entreprises algériennes. Il se connecte directement aux **pointeuses biométriques
+ZKTeco** (empreinte digitale, visage, badge) par leur protocole natif ADMS (push)
+et s'appuie sur **Odoo 19**. Il s'installe chez vous, sur **Windows ou Linux**,
+en une seule commande.
 
-Variante « présence seule » de la suite biodoo. Sous licence **LGPL-3**.
-Chaque module suit son propre versioning (champ `version` du manifeste).
+Édité par [Smooth Technology](https://www.smoothtechnology.net) (Algérie).
+
+## Ce que fait biodoo
+
+- **Pointeuses ZKTeco en temps réel** : les pointages remontent seuls vers Odoo,
+  sans export de fichier ni clé USB. Approbation des pointeuses, enrôlement des
+  employés et synchronisation depuis Odoo.
+- **Pointage facial en ligne** : l'employé pointe depuis son portail, avec
+  reconnaissance faciale et détection d'usurpation (photo, écran).
+- **Anomalies de pointage** : retards, départs anticipés et absences détectés
+  automatiquement.
+- **Prestations de travail** générées à partir des présences.
+- **Tableau de bord** des présents, absents et retards.
+- **Adapté à l'Algérie** : wilayas et communes, identifiants légaux de la société
+  (NIF, NIS, RC, CNAS), contrats de travail algériens.
+- **Alternative à ZKBioTime** : multi-utilisateurs, accessible depuis un
+  navigateur, et utilisable sur Linux comme sur Windows.
+
+Ce dépôt contient la variante « présence seule » de la suite biodoo, **sans aucune
+dépendance vers la paie**. Les modules sont publiés sous licence **LGPL-3** ;
+chacun suit son propre versioning (champ `version` du manifeste).
+
+> **In English** — biodoo is a time and attendance software for Algeria, built on
+> Odoo 19 and compatible with ZKTeco biometric devices (fingerprint, face, card)
+> through the ADMS push protocol. It includes online face attendance from the
+> employee portal, attendance anomaly detection, work entries generated from
+> attendance, and the Algerian localisation (`l10n_dz`). It runs on premises, on
+> Windows or Linux.
 
 ---
 
@@ -82,11 +109,12 @@ sous Windows elle se fait ensuite depuis **Apps → Installer**).
 
 | Module | Version | Description |
 |---|---|---|
-| `biodoo_attendance_suite` | 19.0.1.0.0 | Méta-module : installe le produit Présence/Pointage ZKTeco (sans paie) |
+| `biodoo_attendance_suite` | 19.0.1.3.0 | Méta-module : installe le produit Présence/Pointage ZKTeco (sans paie) |
 | `core_nats` | 19.0.2.0.0 | Infrastructure NATS JetStream — framework pub/sub pour le connecteur |
-| `zkteco_connector` | 19.0.3.0.0 | ZKTeco ADMS via NATS — approbation device, enrôlement, check-in/out |
+| `zkteco_connector` | 19.0.3.1.0 | ZKTeco ADMS via NATS — approbation des pointeuses, enrôlement, check-in/out |
 | `hr_face_attendance` | 19.0.1.0.0 | Pointage facial depuis le portail employé (InsightFace + MiniFASNet) |
-| `hr_dz_work_entry` | 19.0.1.0.0 | Génération automatique des prestations depuis les présences |
+| `hr_employee_portal` | 19.0.1.0.0 | Portail RH employé — gestion des accès et pointage |
+| `hr_dz_work_entry` | 19.0.1.0.1 | Génération automatique des prestations depuis les présences |
 | `hr_dz_attendance_anomaly` | 19.0.1.0.0 | Détection d'anomalies de pointage (retard, départ anticipé…) |
 | `hr_dz_attendance_dashboard` | 19.0.1.0.0 | Bandeau statistique dynamique (présents/absents/retards) |
 | `hr_dz_base` | 19.0.1.0.0 | Module RH de base pour entreprises algériennes |
@@ -94,6 +122,7 @@ sous Windows elle se fait ensuite depuis **Apps → Installer**).
 | `l10n_dz_base` | 19.0.1.0.0 | Wilayas et Communes d'Algérie |
 | `l10n_dz_company` | 19.0.1.0.0 | Identifiants légaux algériens sur la fiche société (NIF, NIS, RC, CNAS…) |
 | `web_enterprise` | 1.0 | Surcouche client web Odoo |
+| `web_map` | 1.0 | Vue carte : affiche les enregistrements sur une carte |
 
 ---
 
