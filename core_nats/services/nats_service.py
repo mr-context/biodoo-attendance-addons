@@ -71,6 +71,11 @@ _instance_lock = threading.Lock()
 
 _STAT_SYNC_INTERVAL = 30
 
+# Période (secondes) à laquelle le service tente de repasser en JetStream les
+# sujets abonnés en simple « core » alors qu'un flux les couvre (voir
+# NatsService._upgrade_core_subscriptions).
+_JS_UPGRADE_INTERVAL = 30
+
 
 def get_service() -> Optional['NatsService']:
     return _instance
@@ -117,6 +122,11 @@ class NatsService:
         self._lock = threading.Lock()
         self._subscribed: set[str] = set()
         self._subscribed_as_js: set[str] = set()
+        # Abonnement nats-py vivant de chaque sujet. Le garder est ce qui permet
+        # de le RÉSILIER : sans cela, se réabonner ne fait qu'en ajouter un
+        # second et chaque message est traité deux fois.
+        self._subs: dict[str, object] = {}
+        self._subscribing: set[str] = set()   # garde contre deux _subscribe concurrents
 
         self._stats: dict[str, dict] = {}
         self._stat_lock = threading.Lock()
@@ -152,8 +162,7 @@ class NatsService:
             return
 
         async def _do_replay():
-            self._subscribed.discard(subject)
-            self._subscribed_as_js.discard(subject)
+            await self._unsubscribe(subject)
             await self._subscribe(subject)
             _logger.info(f"NATS replay triggered for '{subject}'")
 
@@ -337,6 +346,12 @@ class NatsService:
 
                 await self._sync_server_state('running')
 
+                # Connexion NEUVE : aucun abonnement d'une connexion précédente
+                # n'existe plus côté serveur, on repart d'un suivi vide.
+                self._subs.clear()
+                self._subscribed.clear()
+                self._subscribed_as_js.clear()
+
                 # Wildcard monitor — sees ALL NATS traffic, no dispatch, for dashboard only.
                 await self._nc.subscribe('>', cb=self._monitor_cb)
 
@@ -345,8 +360,13 @@ class NatsService:
                 for subject in subjects:
                     await self._subscribe(subject)
 
+                ticks = 0
                 while self._running:
                     await asyncio.sleep(1)
+                    ticks += 1
+                    if ticks >= _JS_UPGRADE_INTERVAL:
+                        ticks = 0
+                        await self._upgrade_core_subscriptions()
 
             except Exception as exc:
                 _logger.error(f"NATS connection failed: {exc}")
@@ -357,8 +377,33 @@ class NatsService:
                     retry_delay = min(retry_delay * 2, 60)
 
     async def _subscribe(self, subject: str) -> None:
-        if subject in self._subscribed or not self._nc or self._nc.is_closed:
+        """Abonne le sujet une seule fois : en JetStream (consommateur durable)
+        si un flux le couvre, sinon en core NATS."""
+        if (subject in self._subscribed or subject in self._subscribing
+                or not self._nc or self._nc.is_closed):
             return
+        self._subscribing.add(subject)
+        try:
+            if await self._subscribe_js(subject):
+                return
+            # Fall back to plain core NATS
+            self._subs[subject] = await self._nc.subscribe(
+                subject, cb=self._make_cb(subject, ack=False)
+            )
+            self._subscribed.add(subject)
+            _logger.info(f"NATS core subscribed: '{subject}'")
+            await self._sync_subscription_state(subject, 'active', jetstream=False)
+        finally:
+            self._subscribing.discard(subject)
+
+    async def _subscribe_js(self, subject: str) -> bool:
+        """Tente l'abonnement JetStream durable. Retourne True s'il est établi.
+
+        Ne touche pas à un éventuel abonnement core existant du même sujet :
+        l'appelant décide quoi en faire (voir _upgrade_core_subscriptions).
+        """
+        if not self._js:
+            return False
 
         # Build a valid JetStream durable name from the subject.
         # Strip wildcards, replace non-alphanum with hyphens, cap at 50 chars.
@@ -366,40 +411,79 @@ class NatsService:
             r'[^a-zA-Z0-9_-]', '-', subject.rstrip('.>*')
         )[:50]
 
-        if self._js:
-            try:
-                # Attempt to subscribe with DeliverAll so that a brand-new durable
-                # consumer replays messages already in the stream (e.g. after a module
-                # upgrade that adds new subjects).  If the consumer already exists,
-                # NATS ignores the config and resumes from its last ack'd position.
-                from nats.js.api import ConsumerConfig, DeliverPolicy
-                cfg = ConsumerConfig(deliver_policy=DeliverPolicy.ALL)
-            except ImportError:
-                cfg = None
+        try:
+            # Attempt to subscribe with DeliverAll so that a brand-new durable
+            # consumer replays messages already in the stream (e.g. after a module
+            # upgrade that adds new subjects).  If the consumer already exists,
+            # NATS ignores the config and resumes from its last ack'd position.
+            from nats.js.api import ConsumerConfig, DeliverPolicy
+            cfg = ConsumerConfig(deliver_policy=DeliverPolicy.ALL)
+        except ImportError:
+            cfg = None
 
-            try:
-                await self._js.subscribe(
-                    subject,
-                    cb=self._make_cb(subject, ack=True),
-                    durable=durable,
-                    manual_ack=True,
-                    config=cfg,
-                )
-                self._subscribed.add(subject)
-                self._subscribed_as_js.add(subject)
-                _logger.info(f"NATS JS subscribed: '{subject}' (durable={durable})")
-                await self._sync_subscription_state(subject, 'active', jetstream=True)
-                return
-            except Exception as e:
-                _logger.debug(
-                    f"JetStream subscribe failed for '{subject}': {e} — trying core NATS"
-                )
+        try:
+            sub = await self._js.subscribe(
+                subject,
+                cb=self._make_cb(subject, ack=True),
+                durable=durable,
+                manual_ack=True,
+                config=cfg,
+            )
+        except Exception as e:
+            _logger.debug(
+                f"JetStream subscribe failed for '{subject}': {e} — trying core NATS"
+            )
+            return False
 
-        # Fall back to plain core NATS
-        await self._nc.subscribe(subject, cb=self._make_cb(subject, ack=False))
+        self._subs[subject] = sub
         self._subscribed.add(subject)
-        _logger.info(f"NATS core subscribed: '{subject}'")
-        await self._sync_subscription_state(subject, 'active', jetstream=False)
+        self._subscribed_as_js.add(subject)
+        _logger.info(f"NATS JS subscribed: '{subject}' (durable={durable})")
+        await self._sync_subscription_state(subject, 'active', jetstream=True)
+        return True
+
+    async def _unsubscribe(self, subject: str) -> None:
+        """Résilie l'abonnement vivant du sujet et l'oublie. Le consommateur
+        durable JetStream reste en place côté serveur, avec sa position."""
+        sub = self._subs.pop(subject, None)
+        self._subscribed.discard(subject)
+        self._subscribed_as_js.discard(subject)
+        if sub is not None:
+            try:
+                await sub.unsubscribe()
+            except Exception as e:
+                _logger.debug(f"NATS unsubscribe '{subject}': {e}")
+
+    async def _upgrade_core_subscriptions(self) -> None:
+        """Repasse en JetStream les sujets abonnés en core alors qu'un flux les
+        couvre désormais.
+
+        Un sujet se retrouve en core à tort quand JetStream n'était pas prêt au
+        moment de l'abonnement : Odoo démarré avant que le bridge ait créé ses
+        flux, ou serveur NATS tout juste relancé. Sans ce rattrapage il y
+        restait jusqu'au redémarrage d'Odoo, en perdant la persistance et
+        l'acquittement des messages.
+
+        L'abonnement JetStream est établi AVANT de résilier le core : aucun
+        message n'est manqué (au pire un message arrive par les deux, ce que
+        les handlers tolèrent déjà), et un échec laisse le core intact.
+        """
+        if not self._connected or not self._js or not self._nc or self._nc.is_closed:
+            return
+        for subject in sorted(self._subscribed - self._subscribed_as_js):
+            try:
+                await self._js.find_stream_name_by_subject(subject)
+            except Exception:
+                continue  # aucun flux ne couvre ce sujet : core est le bon mode
+            core_sub = self._subs.get(subject)
+            if not await self._subscribe_js(subject):
+                continue
+            if core_sub is not None:
+                try:
+                    await core_sub.unsubscribe()
+                except Exception as e:
+                    _logger.debug(f"NATS unsubscribe '{subject}': {e}")
+            _logger.info(f"NATS '{subject}' repassé de core à JetStream")
 
     async def _monitor_cb(self, msg) -> None:
         """Wildcard '>' subscriber — logs every subject for the dashboard feed, no dispatch."""
@@ -618,17 +702,37 @@ class NatsService:
         await self._sync_server_state('error')
 
     async def _on_reconnected(self) -> None:
+        """Rétablit les abonnements après une reconnexion (typiquement : le
+        bridge, qui embarque le serveur NATS, vient de redémarrer).
+
+        nats-py restaure DE LUI-MÊME tous les abonnements de la connexion —
+        le moniteur '>', les abonnements core et ceux des consommateurs
+        JetStream. Se réabonner par-dessus, comme le faisait ce code, doublait
+        donc chaque abonnement : JetStream refusait le second (« consumer is
+        already bound »), on retombait en core, et chaque message était traité
+        deux fois en parallèle jusqu'au redémarrage d'Odoo — d'où des erreurs
+        de sérialisation PostgreSQL à chaque battement de pointeuse.
+
+        - moniteur et abonnements core : laissés tels quels, déjà restaurés ;
+        - abonnements JetStream : résiliés puis refaits, pour se rattacher au
+          consommateur durable — ou le recréer si le serveur a perdu ses
+          données. Si JetStream n'est pas encore prêt, le sujet passe en core
+          et _upgrade_core_subscriptions le repasse en JetStream ensuite.
+        """
         self._connected = True
         self._js = self._nc.jetstream()
-        _logger.info("NATS reconnected — re-subscribing")
-        self._subscribed.clear()
-        self._subscribed_as_js.clear()
-        # Re-attach wildcard monitor after reconnect.
-        await self._nc.subscribe('>', cb=self._monitor_cb)
+        js_subjects = sorted(self._subscribed_as_js)
+        _logger.info(
+            "NATS reconnected — %d abonnement(s) JetStream à rétablir, "
+            "%d abonnement(s) core restaurés par le client",
+            len(js_subjects), len(self._subscribed) - len(js_subjects),
+        )
+        for subject in js_subjects:
+            await self._unsubscribe(subject)
         with self._lock:
             subjects = list(self._handlers.keys())
         for subject in subjects:
-            await self._subscribe(subject)
+            await self._subscribe(subject)   # sans effet pour les sujets encore suivis
         await self._sync_server_state('running')
 
     # ── DB state sync helpers ─────────────────────────────────────

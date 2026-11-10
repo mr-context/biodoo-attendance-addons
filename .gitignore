@@ -24,3 +24,6 @@ ANALYSE.md
 .DS_Store
 .idea/
 .vscode/
+
+# Documents commerciaux (contrats TimeMaster) : jamais dans ce depot public
+contrat_recurence/
