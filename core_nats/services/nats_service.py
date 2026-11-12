@@ -742,19 +742,48 @@ class NatsService:
         await loop.run_in_executor(None, self._db_set_server_state, state)
 
     def _db_set_server_state(self, state: str) -> None:
-        try:
-            from odoo import api, SUPERUSER_ID
-            with self._registry.cursor() as cr:
-                env = api.Environment(cr, SUPERUSER_ID, {})
-                servers = env['nats.server'].sudo().search([])
-                servers.write({'state': state})
-                if state == 'error':
-                    env['nats.subscription'].sudo().search([
-                        ('server_id', 'in', servers.ids)
-                    ]).write({'state': 'inactive'})
-                cr.commit()
-        except Exception as exc:
-            _logger.debug(f"_db_set_server_state: {exc}")
+        """Aligne `nats.server.state` sur l'état réel du service.
+
+        Au démarrage d'Odoo, deux transactions veulent écrire la même ligne en
+        même temps : le démarrage automatique (`action_start`, qui pose
+        'running' puis synchronise les abonnements avant de valider) et ce
+        thread, dès que la connexion est établie. Une écriture directe perdait
+        la course à chaque démarrage : une erreur « could not serialize access »
+        dans le journal (et dans la télémétrie d'erreurs), pour deux écritures
+        de la même valeur.
+
+        On prend donc le verrou sans attendre et sans trace d'erreur ; si la
+        ligne est tenue ou vient d'être modifiée, on recommence sur une
+        transaction neuve, qui voit alors la valeur validée par l'autre — et n'a
+        le plus souvent plus rien à écrire.
+        """
+        for attempt in range(_MAX_NATS_TRIES):
+            try:
+                from odoo import api, SUPERUSER_ID
+                with self._registry.cursor() as cr:
+                    cr.execute(
+                        'SELECT id FROM nats_server '
+                        'WHERE state IS DISTINCT FROM %s FOR UPDATE NOWAIT',
+                        (state,), log_exceptions=False,
+                    )
+                    ids = [row[0] for row in cr.fetchall()]
+                    env = api.Environment(cr, SUPERUSER_ID, {})
+                    if ids:
+                        env['nats.server'].browse(ids).write({'state': state})
+                    if state == 'error':
+                        env['nats.subscription'].sudo().search([
+                            ('state', '!=', 'inactive'),
+                        ]).write({'state': 'inactive'})
+                    cr.commit()
+                return
+            except _PG_RETRY_ERRORS:
+                time.sleep(0.1 * (attempt + 1) + random.uniform(0, 0.05))
+            except Exception as exc:
+                _logger.debug(f"_db_set_server_state: {exc}")
+                return
+        _logger.warning(
+            "NATS : état du serveur (%s) non enregistré après %d essais — "
+            "il le sera au prochain changement d'état", state, _MAX_NATS_TRIES)
 
     async def _sync_subscription_state(
         self, subject: str, state: str, jetstream: bool = False

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Core NATS',
-    'version': '19.0.2.0.1',
+    'version': '19.0.2.0.2',
     'category': 'Technical',
     'summary': 'NATS JetStream infrastructure — pub/sub framework for connector modules',
     'author': 'MESSAOUDI ABDERRAOUF',
