@@ -1,4 +1,10 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_hr_work_entry_anomaly_user,hr.work.entry.anomaly.user,model_hr_work_entry_anomaly,hr.group_hr_user,1,1,1,0
-access_hr_work_entry_anomaly_manager,hr.work.entry.anomaly.manager,model_hr_work_entry_anomaly,hr.group_hr_manager,1,1,1,1
 access_hr_work_entry_compute_wizard,hr.work.entry.compute.wizard,model_hr_work_entry_compute_wizard,hr.group_hr_user,1,1,1,1
+access_attendance_policy_hr_manager,attendance.policy.hr.manager,model_hr_attendance_policy,hr.group_hr_manager,1,1,1,1
+access_attendance_policy_att_manager,attendance.policy.att.manager,model_hr_attendance_policy,hr_attendance.group_hr_attendance_manager,1,1,1,1
+access_attendance_policy_hr_user,attendance.policy.hr.user,model_hr_attendance_policy,hr.group_hr_user,1,0,0,0
+access_attendance_policy_att_user,attendance.policy.att.user,model_hr_attendance_policy,hr_attendance.group_hr_attendance_user,1,0,0,0
+access_dz_recovery_hr_user,dz.recovery.hr.user,model_hr_dz_recovery,hr.group_hr_user,1,1,1,0
+access_dz_recovery_hr_manager,dz.recovery.hr.manager,model_hr_dz_recovery,hr.group_hr_manager,1,1,1,1
+access_dz_recovery_att_user,dz.recovery.att.user,model_hr_dz_recovery,hr_attendance.group_hr_attendance_user,1,0,0,0
+access_dz_recovery_holiday_user,dz.recovery.holiday.user,model_hr_dz_recovery,hr_holidays.group_hr_holidays_user,1,1,1,0

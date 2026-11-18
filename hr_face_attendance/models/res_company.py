@@ -1,8 +1,21 @@
-from odoo import models, fields
+from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class ResCompany(models.Model):
     _inherit = 'res.company'
+
+    @api.constrains('face_attendance_threshold', 'face_liveness_threshold')
+    def _check_face_thresholds(self):
+        """Seuils bornés : un seuil de similarité trop large accepte n'importe
+        quel visage, un seuil de vivacité à 0 désactive l'anti-fraude."""
+        for company in self:
+            if not 0.2 <= company.face_attendance_threshold <= 0.6:
+                raise ValidationError(_("Le seuil de similarité faciale doit être entre 0,2 et 0,6 "
+                                        "(0,4 recommandé)."))
+            if not 0.2 <= company.face_liveness_threshold <= 0.9:
+                raise ValidationError(_("Le seuil de vivacité doit être entre 0,2 et 0,9 "
+                                        "(0,35 recommandé)."))
 
     face_attendance_threshold = fields.Float(
         string='Seuil similarité faciale',

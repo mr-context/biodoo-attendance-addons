@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Type de congé « Récupération » : chaque droit acquis est une
+         attribution de ce type (avec sa date limite), chaque repos pris un
+         congé de ce type. Solde, demandes, validation et calendrier sont ceux
+         des congés Odoo. Modifiable par le client (noupdate). -->
+    <data noupdate="1">
+        <record id="leave_type_recovery" model="hr.leave.type">
+            <field name="name">Récupération</field>
+            <field name="requires_allocation" eval="True"/>
+            <field name="employee_requests" eval="False"/>
+            <field name="allocation_validation_type">no_validation</field>
+            <field name="leave_validation_type">hr</field>
+            <field name="request_unit">hour</field>
+            <field name="time_type">leave</field>
+            <field name="work_entry_type_id" ref="work_entry_type_recovery"/>
+            <field name="company_id" eval="False"/>
+            <field name="sequence">20</field>
+        </record>
+    </data>
+</odoo>

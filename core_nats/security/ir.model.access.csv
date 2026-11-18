@@ -5,3 +5,4 @@ access_nats_subscription_admin,nats.subscription admin,model_nats_subscription,b
 access_nats_subscription_user,nats.subscription user,model_nats_subscription,base.group_user,1,0,0,0
 access_nats_stream_admin,nats.stream admin,model_nats_stream,base.group_system,1,1,1,1
 access_nats_stream_user,nats.stream user,model_nats_stream,base.group_user,1,0,0,0
+access_nats_dead_letter_admin,nats.dead.letter admin,model_nats_dead_letter,base.group_system,1,1,1,1

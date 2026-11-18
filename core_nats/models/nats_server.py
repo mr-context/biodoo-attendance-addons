@@ -2,6 +2,7 @@
 import threading
 import logging
 from odoo import models, fields, api
+from odoo.tools import config
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
@@ -17,7 +18,15 @@ class NatsServer(models.Model):
         string='URL',
         required=True,
         default='nats://localhost:4222',
-        help='NATS server URL — the embedded NATS runs on port 4222 by default.',
+        help='Adresse du bus (le bridge l’écoute sur 127.0.0.1:4222).',
+    )
+    auth_token = fields.Char(
+        string="Jeton d'accès",
+        groups='base.group_system',
+        copy=False,
+        help="Secret partagé avec le bridge (variable NATS_TOKEN). Laisser vide pour "
+             "utiliser celui que l'installeur a écrit dans odoo.conf (nats_token). "
+             "Sans jeton valable, le bus refuse la connexion.",
     )
     auto_start = fields.Boolean(
         default=True,
@@ -30,20 +39,20 @@ class NatsServer(models.Model):
     )
 
     subscription_ids = fields.One2many(
-        'nats.subscription', 'server_id', string='Subscriptions', readonly=True,
+        'nats.subscription', 'server_id', string='Abonnements', readonly=True,
     )
     subscription_count = fields.Integer(
-        compute='_compute_subscription_count', string='Subscriptions'
+        compute='_compute_subscription_count', string='Nb abonnements'
     )
     stream_ids = fields.One2many(
-        'nats.stream', 'server_id', string='Streams', readonly=True,
+        'nats.stream', 'server_id', string='Flux', readonly=True,
     )
     stream_count = fields.Integer(
-        compute='_compute_stream_count', string='Streams'
+        compute='_compute_stream_count', string='Nb flux'
     )
 
     is_connected = fields.Boolean(
-        compute='_compute_live_status', string='Connected'
+        compute='_compute_live_status', string='Connecté'
     )
 
     @api.depends('subscription_ids')
@@ -83,6 +92,8 @@ class NatsServer(models.Model):
         service = NatsService(
             url=self.url,
             registry=self.env.registry,
+            # Jeton de la fiche, sinon celui posé par l'installeur dans odoo.conf.
+            token=self.sudo().auth_token or config.get('nats_token') or None,
         )
         for model_name, subjects in _handler_registry.items():
             for subject in subjects:

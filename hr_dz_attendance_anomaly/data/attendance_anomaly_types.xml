@@ -79,11 +79,11 @@ result = bool(check_out) and not is_crossday and check_in.date() != check_out.da
             <field name="sequence">10</field>
             <field name="color">2</field>
             <field name="severity">warning</field>
-            <field name="description">Arrivée après l'heure prévue au planning (tolérance configurable sur la société)</field>
+            <field name="description">Arrivée après l'heure prévue au planning (tolérance réglée dans la politique de présence)</field>
             <field name="condition_code">result = False
 if scheduled_start and check_in &gt; scheduled_start:
     delta = (check_in - scheduled_start).total_seconds() / 60
-    result = delta &gt;= late_tolerance
+    result = delta &gt; late_tolerance
     late_min = int(delta) if result else 0</field>
         </record>
 
@@ -93,11 +93,11 @@ if scheduled_start and check_in &gt; scheduled_start:
             <field name="sequence">11</field>
             <field name="color">2</field>
             <field name="severity">warning</field>
-            <field name="description">Sortie avant l'heure prévue au planning (tolérance configurable sur la société)</field>
+            <field name="description">Sortie avant l'heure prévue au planning (tolérance réglée dans la politique de présence)</field>
             <field name="condition_code">result = False
 if scheduled_end and check_out and check_out &lt; scheduled_end:
     delta = (scheduled_end - check_out).total_seconds() / 60
-    result = delta &gt;= early_tolerance
+    result = delta &gt; early_tolerance
     early_min = int(delta) if result else 0</field>
         </record>
 
@@ -114,5 +114,9 @@ if scheduled_start and check_in &lt; scheduled_start:
     result = delta &gt;= 30</field>
         </record>
 
+    </data>
+    <data noupdate="1">
+        <!-- Une seule fois, à l'installation : réglage par seuil, sans code. -->
+        <function model="hr.attendance.anomaly.type" name="_init_standard_mode"/>
     </data>
 </odoo>

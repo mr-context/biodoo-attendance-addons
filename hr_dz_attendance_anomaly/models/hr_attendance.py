@@ -40,6 +40,14 @@ class HrAttendance(models.Model):
         store=True,
     )
 
+    # File « À corriger » : un pointage en anomalie y reste jusqu'à ce qu'il
+    # soit corrigé (heures modifiées → réexaminé) ou marqué comme vu.
+    dz_reviewed = fields.Boolean(string='Vu', default=False, copy=False, tracking=True,
+                                 help="Coché : l'anomalie a été examinée et acceptée telle quelle.")
+
+    def action_mark_reviewed(self):
+        self.write({'dz_reviewed': True})
+
     # Comparaison avec le planning
     scheduled_start = fields.Datetime(string='Début prévu', help='Heure de début selon le planning')
     scheduled_end = fields.Datetime(string='Fin prévue', help='Heure de fin selon le planning')
@@ -51,10 +59,10 @@ class HrAttendance(models.Model):
         'hr.attendance.deduction', 'attendance_id', string='Déductions')
 
     deduction_status = fields.Selection([
-        ('to_validate', 'À valider'),
-        ('validated',   'Validée'),
-        ('refused',     'Refusée'),
-    ], string='État déductions',
+        ('to_validate', 'À décider'),
+        ('validated',   'Retenue'),
+        ('refused',     'Sans retenue'),
+    ], string='Retenue',
        compute='_compute_deduction_status', store=True, index=True)
 
     # Droits manager/officer (pour les boutons valider/refuser en ligne)
@@ -76,7 +84,7 @@ class HrAttendance(models.Model):
                 att.deduction_status = False
             elif 'to_validate' in statuses:
                 att.deduction_status = 'to_validate'
-            elif all(s == 'validated' for s in statuses):
+            elif 'validated' in statuses:
                 att.deduction_status = 'validated'
             else:
                 att.deduction_status = 'refused'
@@ -93,7 +101,8 @@ class HrAttendance(models.Model):
         if not self.check_in or not self.employee_id:
             return
         Deduction = self.env['hr.attendance.deduction']
-        date = self.check_in.date()
+        engine = self.env['hr.dz.work.entry.engine']
+        date = engine._local_date(self.check_in, engine._tz(self.employee_id))
 
         for dtype, minutes in [('late', late_min), ('early', early_min)]:
             existing = self.deduction_ids.filtered(lambda d: d.deduction_type == dtype)
@@ -130,15 +139,13 @@ class HrAttendance(models.Model):
         if self.check_out:
             worked_minutes = (self.check_out - self.check_in).total_seconds() / 60
 
-        # Tolérances depuis la société (remplace l'ancienne biotime.config)
-        company = self.employee_id.company_id or self.env.company
-        late_tolerance = company.late_tolerance_minutes or 5
-        early_tolerance = company.early_tolerance_minutes or 5
+        # Tolérances de la politique de présence de l'employé (à défaut, celle
+        # de sa société). 0 est une tolérance valable : aucun retard toléré.
+        policy = self.employee_id._dz_attendance_policy()
+        late_tolerance = policy.late_tolerance_minutes
+        early_tolerance = policy.early_tolerance_minutes
 
-        rules = self.env['hr.attendance.anomaly.type'].search([
-            ('active', '=', True),
-            ('condition_code', '!=', False),
-        ])
+        rules = self.env['hr.attendance.anomaly.type'].search([('active', '=', True)])
 
         for rule in rules:
             localdict = {
@@ -157,9 +164,13 @@ class HrAttendance(models.Model):
                 'early_min':       0,
             }
             try:
-                safe_eval(rule.condition_code, localdict, mode='exec')
-            except Exception as e:
+                condition = rule._effective_condition()
+                if not condition:
+                    continue
+                safe_eval(condition, localdict, mode='exec')
+            except Exception as e:  # biodoo: except-ok code saisi par l'utilisateur ; erreur affichée sur la règle
                 _logger.warning("Anomalie '%s' — erreur code : %s", rule.name, e)
+                rule._record_error('%s : %s' % (type(e).__name__, e))
                 continue
 
             if localdict.get('result'):
@@ -208,13 +219,8 @@ class HrAttendance(models.Model):
 
     @api.model
     def _tz_for_employee(self, employee):
-        name = (employee.tz
-                or (employee.resource_calendar_id and employee.resource_calendar_id.tz)
-                or 'Africa/Algiers')
-        try:
-            return pytz.timezone(name)
-        except Exception:
-            return pytz.timezone('Africa/Algiers')
+        """Fuseau de l'employé : une seule définition, celle du moteur de prestations."""
+        return self.env['hr.dz.work.entry.engine']._tz(employee)
 
     def _anomaly_tz(self):
         self.ensure_one()
@@ -308,84 +314,29 @@ class HrAttendance(models.Model):
             attendance.anomaly_ids = [(6, 0, triggered.ids)]
 
     def _fill_scheduled_times(self):
-        """Remplit scheduled_start / scheduled_end depuis le calendrier de l'employé.
+        """Remplit scheduled_start / scheduled_end : début du premier créneau et
+        fin du dernier créneau prévus le jour LOCAL du pointage.
 
-        Gère Ramadan (hr_ramadan_schedule, optionnel via getattr) et les postes de
-        nuit (convention Odoo hour_to>=24 ou wrap hour_to<hour_from).
+        Le « prévu » vient du moteur de prestations (_planned_intervals) : même
+        planning sur deux semaines, même pause, même Ramadan, même poste de nuit
+        que pour les absences.
         """
+        engine = self.env['hr.dz.work.entry.engine']
         for attendance in self:
             if attendance.scheduled_start and attendance.scheduled_end:
                 continue
             if not attendance.check_in or not attendance.employee_id:
                 continue
-
             employee = attendance.employee_id
-            calendar = None
-            if employee.resource_id and employee.resource_id.calendar_id:
-                calendar = employee.resource_id.calendar_id
-            if not calendar:
-                continue
-
-            check_date = attendance.check_in.date()
-            dayofweek = str(check_date.weekday())
-            day_lines = calendar.attendance_ids.filtered(
-                lambda l: l.dayofweek == dayofweek)
-            if not day_lines:
-                continue  # jour non travaillé (week-end)
-
-            try:
-                tz = pytz.timezone(calendar.tz or 'Africa/Algiers')
-                first_line = min(day_lines, key=lambda l: l.hour_from)
-                last_line = max(day_lines, key=lambda l: l.hour_to)
-                hour_from = first_line.hour_from
-                hour_to = last_line.hour_to
-
-                # ── Override Ramadan (optionnel) ──
-                if getattr(calendar, 'is_ramadan', False):
-                    r_from = getattr(calendar, 'ramadan_hour_from', 0.0)
-                    r_to = getattr(calendar, 'ramadan_hour_to', 0.0)
-                    if r_to:
-                        if getattr(calendar, 'ramadan_mode', 'uniform') == 'gender':
-                            sex = getattr(employee, 'sex', 'male') or 'male'
-                            if sex == 'female':
-                                f_from = getattr(calendar, 'ramadan_hour_from_female', 0.0)
-                                f_to = getattr(calendar, 'ramadan_hour_to_female', 0.0)
-                                hour_to = f_to if f_to else r_to
-                                hour_from = f_from if f_from else (r_from or hour_from)
-                            else:
-                                hour_to = r_to
-                                if r_from:
-                                    hour_from = r_from
-                        else:
-                            hour_to = r_to
-                            if r_from:
-                                hour_from = r_from
-
-                start_h, start_m = int(hour_from), int((hour_from % 1) * 60)
-                local_start = tz.localize(datetime(
-                    check_date.year, check_date.month, check_date.day,
-                    start_h, start_m, 0))
-
-                if hour_to >= 24:
-                    effective_to = hour_to - 24
-                    end_date = check_date + timedelta(days=1)
-                else:
-                    effective_to = hour_to
-                    end_date = check_date
-                end_h = int(effective_to)
-                end_m = int((effective_to % 1) * 60)
-                local_end = tz.localize(datetime(
-                    end_date.year, end_date.month, end_date.day,
-                    end_h, end_m, 0))
-                if local_end <= local_start:
-                    local_end += timedelta(days=1)
-
-                attendance.scheduled_start = local_start.astimezone(pytz.UTC).replace(tzinfo=None)
-                attendance.scheduled_end = local_end.astimezone(pytz.UTC).replace(tzinfo=None)
-            except Exception as e:
-                _logger.warning(
-                    "Calcul des heures prévues impossible (présence %s) : %s",
-                    attendance.id, e)
+            tz = engine._tz(employee)
+            day = engine._local_date(attendance.check_in, tz)
+            calendar = engine._calendar(employee, employee._get_version(day))
+            intervals = engine._planned_intervals(employee, calendar, day)
+            if not intervals:
+                continue  # jour non travaillé
+            start, stop = intervals[0][0], max(i[1] for i in intervals)
+            attendance.scheduled_start = tz.localize(start).astimezone(pytz.utc).replace(tzinfo=None)
+            attendance.scheduled_end = tz.localize(stop).astimezone(pytz.utc).replace(tzinfo=None)
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -395,6 +346,10 @@ class HrAttendance(models.Model):
         return records
 
     def write(self, vals):
+        # Heures corrigées : le pointage est réexaminé (il quitte la file
+        # « À corriger » s'il n'est plus en anomalie, il y revient sinon).
+        if ({'check_in', 'check_out'} & set(vals)) and 'dz_reviewed' not in vals:
+            vals = dict(vals, dz_reviewed=False)
         if 'check_in' in vals:
             vals = dict(vals, scheduled_start=False, scheduled_end=False)
         res = super().write(vals)

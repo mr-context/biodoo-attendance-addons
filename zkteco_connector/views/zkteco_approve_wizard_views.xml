@@ -7,7 +7,7 @@
         <field name="arch" type="xml">
             <form string="Approuver le device ZKTeco">
 
-                <group string="Device">
+                <group string="Pointeuse">
                     <field name="device_id"     readonly="1"/>
                     <field name="device_serial" readonly="1" string="N° Série"/>
                     <field name="device_name"   readonly="1" string="Modèle"

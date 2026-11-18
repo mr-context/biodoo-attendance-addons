@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="web_dz_gantt.GanttPopover">
+        <div class="o_dz_gantt_popover p-3" style="min-width: 16rem; max-width: 26rem;">
+            <h6 class="mb-2 text-break" t-esc="props.title or props.pill.record.display_name"/>
+            <div class="d-grid column-gap-3 row-gap-1 small"
+                 style="grid-template-columns: max-content minmax(0, 1fr);">
+                <t t-if="props.showPeriod !== false">
+                    <span class="fw-medium text-muted">Période</span>
+                    <span t-esc="period"/>
+                </t>
+                <t t-foreach="lines" t-as="line" t-key="line_index">
+                    <span class="fw-medium text-muted" t-esc="line.label"/>
+                    <span class="text-break" t-att-class="line.className or ''" t-esc="line.text"/>
+                </t>
+            </div>
+            <div class="d-flex gap-2 mt-3" t-if="props.canEdit or props.canDelete">
+                <button class="btn btn-sm btn-primary o_dz_gantt_popover_open" t-on-click="onOpen">
+                    <t t-if="props.canEdit">Modifier</t><t t-else="">Ouvrir</t>
+                </button>
+                <button t-if="props.canDelete" class="btn btn-sm btn-secondary o_dz_gantt_popover_delete"
+                        t-on-click="onDelete">Supprimer</button>
+            </div>
+        </div>
+    </t>
+
+</templates>

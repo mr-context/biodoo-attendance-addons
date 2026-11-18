@@ -15,10 +15,10 @@
                         string="Remplir le planning"
                         help="Remplit les heures prévues depuis le calendrier de l'employé"/>
                 <button name="action_validate_deductions" type="object"
-                        string="Valider déductions" class="btn-primary"
+                        string="Retenir les écarts" class="btn-primary"
                         invisible="deduction_status != 'to_validate'"/>
                 <button name="action_refuse_deductions" type="object"
-                        string="Refuser déductions"
+                        string="Tolérer les écarts"
                         invisible="deduction_status != 'to_validate'"/>
             </xpath>
 
@@ -46,7 +46,7 @@
                     </div>
                 </group>
 
-                <group string="Déductions salariales" invisible="not deduction_ids">
+                <group string="Écarts (retards, départs)" invisible="not deduction_ids">
                     <field name="deduction_ids" nolabel="1" colspan="2" readonly="1">
                         <list create="0" delete="0">
                             <field name="deduction_type" widget="badge"
@@ -89,7 +89,7 @@
                 <field name="anomaly_count" string="Nb" optional="hide"/>
                 <field name="late_minutes" string="Retard (min)" optional="hide"/>
                 <field name="early_leave_minutes" string="Départ ant. (min)" optional="hide"/>
-                <field name="deduction_status" string="Déduction" optional="show" widget="badge"
+                <field name="deduction_status" string="Retenue" optional="show" widget="badge"
                        decoration-warning="deduction_status == 'to_validate'"
                        decoration-success="deduction_status == 'validated'"
                        decoration-danger="deduction_status == 'refused'"/>
@@ -124,9 +124,9 @@
                 <filter name="filter_overnight" string="Travail de nuit"
                         domain="[('anomaly_ids.code', '=', 'overnight')]"/>
                 <separator/>
-                <filter name="filter_ded_to_validate" string="Déductions à valider"
+                <filter name="filter_ded_to_validate" string="Retenues à décider"
                         domain="[('deduction_status', '=', 'to_validate')]"/>
-                <filter name="filter_ded_validated" string="Déductions validées"
+                <filter name="filter_ded_validated" string="Retenues appliquées"
                         domain="[('deduction_status', '=', 'validated')]"/>
                 <group>
                     <filter name="groupby_anomaly" string="Par anomalie"

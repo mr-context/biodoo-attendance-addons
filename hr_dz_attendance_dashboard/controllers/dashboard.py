@@ -10,7 +10,7 @@ from datetime import date, datetime, time, timedelta
 
 import pytz
 
-from odoo import http
+from odoo import http, fields
 from odoo.http import request
 
 
@@ -20,7 +20,7 @@ class AttendanceDashboardController(http.Controller):
         tz_name = company.partner_id.tz or 'Africa/Algiers'
         try:
             return pytz.timezone(tz_name)
-        except Exception:
+        except pytz.UnknownTimeZoneError:
             return pytz.timezone('Africa/Algiers')
 
     @http.route('/biodoo_attendance/dashboard_stats', type='jsonrpc', auth='user')
@@ -32,7 +32,7 @@ class AttendanceDashboardController(http.Controller):
         company = env.company
         tz = self._company_tz(company)
 
-        d = date.fromisoformat(date_str) if date_str else date.today()
+        d = date.fromisoformat(date_str) if date_str else fields.Date.context_today(request.env.user)
         start_local = tz.localize(datetime.combine(d, time.min))
         end_local = tz.localize(datetime.combine(d + timedelta(days=1), time.min))
         start_utc = start_local.astimezone(pytz.UTC).replace(tzinfo=None)
@@ -58,7 +58,15 @@ class AttendanceDashboardController(http.Controller):
             ('contract_date_end', '>=', d),
         ])
         contract_employee_ids = set(contract_versions.mapped('employee_id').ids)
-        absent_employee_ids = contract_employee_ids - present_employee_ids
+        # Absent = attendu ce jour-là (planning, ni férié ni congé) et pas
+        # pointé : même lecture que les prestations et la paie (day_facts).
+        # Le jour même, « pas encore pointé » compte comme absent.
+        engine = env['hr.dz.work.entry.engine']
+        absent_employee_ids = set()
+        for employee in env['hr.employee'].browse(contract_employee_ids - present_employee_ids):
+            fact = engine.day_facts(employee, d, d)[0]
+            if fact['status'] in ('absent', 'pending'):
+                absent_employee_ids.add(employee.id)
 
         # Répartition par calendrier (chaque calendrier peut avoir son propre
         # régime de pause — cf. resource.calendar.zkteco_use_punch_state — donc
@@ -160,7 +168,7 @@ class AttendanceDashboardController(http.Controller):
         # ── Alertes contrats : indépendantes de la date sélectionnée dans le
         # bandeau (toujours "aujourd'hui"), ce sont des rappels d'échéance,
         # pas une photo d'un jour passé. ────────────────────────────────────
-        real_today = date.today()
+        real_today = fields.Date.context_today(request.env.user)
 
         trial_versions = Version.search([
             ('company_id', '=', company.id),
@@ -181,8 +189,20 @@ class AttendanceDashboardController(http.Controller):
             ('contract_date_end', '<=', cdd_alert_date),
         ])
 
+        # Erreurs à corriger (jamais cachées dans le journal seul).
+        Employee = env['hr.employee']
+        work_entry_error_ids = (Employee.search([
+            ('company_id', '=', company.id), ('dz_work_entry_error', '!=', False)]).ids
+            if 'dz_work_entry_error' in Employee._fields else [])
+        rule_error_ids = env['hr.attendance.anomaly.type'].search(
+            [('last_error', '!=', False)]).ids
+
         return {
             'authorized': True,
+            'work_entry_error_count': len(work_entry_error_ids),
+            'work_entry_error_ids': work_entry_error_ids,
+            'rule_error_count': len(rule_error_ids),
+            'rule_error_ids': rule_error_ids,
             'date': d.isoformat(),
             'contract_count': contract_count,
             'present_count': present_count,

@@ -1,6 +1,7 @@
 """
 Extension du modèle hr.work.entry pour l'Algérie.
-Ajoute le lien avec les présences et les anomalies.
+Ajoute le lien avec les présences et l'origine de chaque prestation
+(calcul automatique, retenue validée, saisie RH).
 """
 
 from odoo import models, fields, api, _
@@ -16,32 +17,33 @@ class HrWorkEntry(models.Model):
         'attendance_id',
         string='Présences liées',
     )
-    anomaly_ids = fields.One2many(
-        'hr.work.entry.anomaly',
-        'work_entry_id',
-        string='Anomalies',
-    )
-    has_anomaly = fields.Boolean(
-        compute='_compute_has_anomaly',
-        store=True,
-    )
+    # Qui est maître de la prestation. Le moteur de calcul ne touche qu'aux
+    # siennes ('auto') ; une prestation créée ou corrigée par les RH devient
+    # 'manual' et n'est plus jamais écrasée. Vide = antérieure au moteur.
+    dz_origin = fields.Selection([
+        ('auto', 'Calcul automatique'),
+        ('deduction', 'Retenue validée'),
+        ('manual', 'Saisie RH'),
+    ], string='Origine', readonly=True, copy=False, index=True)
 
-    @api.depends('anomaly_ids', 'anomaly_ids.state')
-    def _compute_has_anomaly(self):
-        for entry in self:
-            entry.has_anomaly = bool(entry.anomaly_ids.filtered(lambda a: a.state == 'pending'))
+    # Champs dont la modification par un utilisateur vaut décision RH.
+    _DZ_HR_FIELDS = frozenset({'duration', 'work_entry_type_id', 'date', 'employee_id', 'active'})
 
-    def action_view_anomalies(self):
-        """Voir les anomalies liées"""
-        self.ensure_one()
-        return {
-            'type': 'ir.actions.act_window',
-            'name': _('Anomalies'),
-            'res_model': 'hr.work.entry.anomaly',
-            'view_mode': 'list,form',
-            'domain': [('work_entry_id', '=', self.id)],
-            'context': {'default_work_entry_id': self.id},
-        }
+    @api.model_create_multi
+    def create(self, vals_list):
+        from_engine = self.env.context.get('dz_work_entry_engine')
+        for vals in vals_list:
+            vals.setdefault('dz_origin', 'auto' if from_engine else 'manual')
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if (not self.env.context.get('dz_work_entry_engine')
+                and 'dz_origin' not in vals
+                and self._DZ_HR_FIELDS.intersection(vals)):
+            touched = self.filtered(lambda e: e.dz_origin in ('auto', False))
+            if touched:
+                super(HrWorkEntry, touched).write({'dz_origin': 'manual'})
+        return super().write(vals)
 
 
 class HrWorkEntryType(models.Model):
@@ -96,12 +98,25 @@ class HrWorkEntryType(models.Model):
              'création des prestations depuis les déductions validées.',
     )
 
-    @api.depends('is_deductible', 'overtime_rate', 'is_leave')
+    # Rôle dans les récupérations (vide = aucun).
+    dz_recovery_role = fields.Selection([
+        ('premium', 'Majoration seule (temps rendu en repos)'),
+        ('banked', 'Heures mises en récupération'),
+        ('taken', 'Récupération prise'),
+    ], string='Récupération', index=True,
+        help="Majoration seule : heures sup. dont seule la majoration est payée "
+             "(ex. 50 %), le temps étant rendu en repos.\n"
+             "Heures mises en récupération : heures ni payées ni retenues, rendues en repos.\n"
+             "Récupération prise : jour de repos payé, ni absence ni congé annuel.")
+
+    @api.depends('is_deductible', 'overtime_rate', 'is_leave', 'dz_recovery_role')
     def _compute_semantic_flags(self):
         for t in self:
             # Jour payé = tout ce qui n'est ni déductible ni des heures supp
-            # Les HS ont leur propre règle de calcul → overtime_rate > 1
-            t.is_paid = not t.is_deductible and t.overtime_rate <= 1.0
+            # Les HS ont leur propre règle de calcul → overtime_rate > 1.
+            # Heures mises en récupération : payées plus tard, en repos.
+            t.is_paid = (not t.is_deductible and t.overtime_rate <= 1.0
+                         and t.dz_recovery_role != 'banked')
             # Présence physique = payé + pas un congé (transport/panier versés
             # uniquement les jours où l'employé est physiquement présent)
             t.is_standard_work = t.is_paid and not t.is_leave

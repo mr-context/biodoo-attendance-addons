@@ -2,31 +2,31 @@
 <odoo>
 
     <menuitem id="menu_zkteco_root"
-              name="ZKTeco"
+              name="Pointeuses"
               parent="hr_attendance.menu_hr_attendance_root"
               sequence="99"
-              groups="base.group_system"/>
+              groups="group_zkteco_user"/>
 
     <menuitem id="menu_zkteco_devices"
-              name="Devices"
+              name="Pointeuses"
               parent="menu_zkteco_root"
               action="action_zkteco_device"
               sequence="10"/>
 
     <menuitem id="menu_zkteco_devices_pending"
-              name="Devices en attente"
+              name="Pointeuses à approuver"
               parent="menu_zkteco_root"
               action="action_zkteco_device_pending"
               sequence="20"/>
 
     <menuitem id="menu_zkteco_device_users"
-              name="Sas — Users device"
+              name="Utilisateurs des pointeuses"
               parent="menu_zkteco_root"
               action="action_zkteco_device_user"
               sequence="25"/>
 
     <menuitem id="menu_zkteco_device_users_pending"
-              name="À mapper"
+              name="À rattacher à un employé"
               parent="menu_zkteco_root"
               action="action_zkteco_device_user_pending"
               sequence="26"/>
@@ -38,7 +38,7 @@
               sequence="27"/>
 
     <menuitem id="menu_zkteco_attlog_anomalies"
-              name="Anomalies de pointage"
+              name="Pointages bruts rejetés"
               parent="menu_zkteco_root"
               action="action_zkteco_attlog_anomalies"
               sequence="28"/>
@@ -54,5 +54,9 @@
               parent="menu_zkteco_root"
               action="action_zkteco_attphoto"
               sequence="30"/>
+
+    <menuitem id="menu_zkteco_attlog_catchup" name="Récupérer des pointages"
+              parent="menu_zkteco_root" action="action_zkteco_attlog_catchup"
+              sequence="40" groups="group_zkteco_manager"/>
 
 </odoo>

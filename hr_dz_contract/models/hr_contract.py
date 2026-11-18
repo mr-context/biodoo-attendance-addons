@@ -498,11 +498,11 @@ class HrVersion(models.Model):
 
         if pattern == 'prefix_seq':
             # Format: Prefixe-Annee-Sequence (ex: CTR-2024-00001)
-            year = date.today().year
+            year = fields.Date.context_today(self).year
             return f"{prefix}{separator}{year}{separator}{sequence}"
         elif pattern == 'year_seq':
             # Format: Annee/Sequence (ex: 2024/00001)
-            year = date.today().year
+            year = fields.Date.context_today(self).year
             return f"{year}{separator}{sequence}"
         elif pattern == 'type_seq':
             # Format: Type-Sequence (ex: CDI-00001)
@@ -638,8 +638,20 @@ class HrVersion(models.Model):
             note=_('La période d\'essai de %s se termine le %s. '
                    'Veuillez confirmer ou prolonger.') % (
                 self.employee_id.name, self.trial_date_end),
-            user_id=self.hr_responsible_id.id if self.hr_responsible_id else self.env.user.id,
+            user_id=self._dz_alert_user().id,
         )
+
+    def _dz_alert_user(self):
+        """Destinataire d'une alerte de contrat : le responsable RH du contrat,
+        sinon un responsable RH de la société — jamais l'utilisateur système
+        de la tâche planifiée (personne ne verrait l'alerte)."""
+        self.ensure_one()
+        if self.hr_responsible_id and not self.hr_responsible_id._is_superuser():
+            return self.hr_responsible_id
+        company = self.company_id or self.env.company
+        managers = self.env.ref('hr.group_hr_manager').sudo().all_user_ids.filtered(
+            lambda u: company in u.company_ids and u.active and not u._is_superuser() and u.share is False)
+        return managers[:1] or self.env.ref('base.user_admin')
 
     @api.model
     def _cron_contract_end_alerts(self):
@@ -664,8 +676,31 @@ class HrVersion(models.Model):
                     note=_('Le contrat CDD de %s se termine le %s. '
                            'Renouveler ou préparer la sortie.') % (
                         version.employee_id.name, version.contract_date_end),
+                    user_id=version._dz_alert_user().id,
                 )
                 version.contract_end_notified = True
+
+        # CDD échus sans renouvellement ni sortie : l'employé est toujours
+        # actif alors que son contrat est terminé (pointages, paie…).
+        expired = self.search([
+            ('contract_date_end', '<', today),
+            ('contract_date_end', '>=', today - relativedelta(days=60)),
+            ('employee_id.active', '=', True),
+            ('employee_id.current_version_id', '!=', False),
+        ]).filtered(lambda v: v == v.employee_id.current_version_id)
+        summary = _('CDD échu sans décision')
+        for version in expired:
+            if version.activity_ids.filtered(lambda a: a.summary == summary):
+                continue
+            version.activity_schedule(
+                'mail.mail_activity_data_todo',
+                date_deadline=today,
+                summary=summary,
+                note=_('Le contrat de %s a pris fin le %s et aucun renouvellement '
+                       'ni sortie n\'a été saisi. Il reste actif (pointages, paie).') % (
+                    version.employee_id.name, version.contract_date_end),
+                user_id=version._dz_alert_user().id,
+            )
 
     # =========================================================================
     # SURCHARGE CONTRAINTES ODOO - Permettre suppression/archivage

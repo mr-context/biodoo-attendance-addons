@@ -7,13 +7,10 @@
         <field name="inherit_id" ref="hr_work_entry.hr_work_entry_view_tree"/>
         <field name="arch" type="xml">
             <field name="state" position="after">
-                <field name="has_anomaly" column_invisible="1"/>
-                <button name="action_view_anomalies"
-                    type="object"
-                    icon="fa-exclamation-triangle"
-                    class="text-warning"
-                    invisible="not has_anomaly"
-                    title="Anomalies"/>
+                <field name="dz_origin" optional="show" widget="badge"
+                    decoration-info="dz_origin == 'auto'"
+                    decoration-warning="dz_origin == 'manual'"
+                    decoration-danger="dz_origin == 'deduction'"/>
             </field>
         </field>
     </record>
@@ -25,6 +22,9 @@
         <field name="inherit_id" ref="hr_work_entry.hr_work_entry_view_form"/>
         <field name="arch" type="xml">
             <sheet position="inside">
+                <group>
+                    <field name="dz_origin"/>
+                </group>
                 <notebook position="inside">
                     <page string="Présences" invisible="not attendance_ids">
                         <field name="attendance_ids" readonly="1">
@@ -32,16 +32,6 @@
                                 <field name="check_in"/>
                                 <field name="check_out"/>
                                 <field name="worked_hours" widget="float_time"/>
-                            </list>
-                        </field>
-                    </page>
-                    <page string="Anomalies" invisible="not anomaly_ids">
-                        <field name="anomaly_ids" readonly="1">
-                            <list>
-                                <field name="anomaly_type"/>
-                                <field name="theoretical_hours" widget="float_time"/>
-                                <field name="actual_hours" widget="float_time"/>
-                                <field name="state" widget="badge"/>
                             </list>
                         </field>
                     </page>
@@ -111,8 +101,12 @@
         <field name="inherit_id" ref="hr_work_entry.hr_work_entry_view_search"/>
         <field name="arch" type="xml">
             <filter name="current_month" position="after">
-                <filter name="has_anomaly" string="Avec anomalies"
-                    domain="[('has_anomaly', '=', True)]"/>
+                <filter name="origin_auto" string="Calcul automatique"
+                    domain="[('dz_origin', 'in', ('auto', False))]"/>
+                <filter name="origin_manual" string="Saisie RH"
+                    domain="[('dz_origin', '=', 'manual')]"/>
+                <filter name="origin_deduction" string="Retenues"
+                    domain="[('dz_origin', '=', 'deduction')]"/>
                 <filter name="to_validate" string="À valider"
                     domain="[('state', '=', 'draft')]"/>
             </filter>

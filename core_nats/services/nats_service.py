@@ -71,6 +71,17 @@ _instance_lock = threading.Lock()
 
 _STAT_SYNC_INTERVAL = 30
 
+# ── Consommation JetStream ──────────────────────────────────────────────────
+# Un consommateur durable en mode PULL, partagé par tous les workers Odoo :
+# chaque message est traité par UN seul worker, puis acquitté. Pas de repli
+# silencieux sur un abonnement sans acquittement.
+ACK_WAIT_S = 120          # délai d'acquittement (traitements lents : photos)
+MAX_DELIVER = 8           # au-delà, le message part dans « Messages en échec »
+MAX_ACK_PENDING = 256
+FETCH_BATCH = 16
+FETCH_TIMEOUT_S = 5
+NAK_DELAY_MAX_S = 300     # délai de relivraison croissant, plafonné
+
 # Période (secondes) à laquelle le service tente de repasser en JetStream les
 # sujets abonnés en simple « core » alors qu'un flux les couvre (voir
 # NatsService._upgrade_core_subscriptions).
@@ -107,8 +118,11 @@ class NatsService:
     falls back to plain core NATS otherwise.
     """
 
-    def __init__(self, url: str, registry):
+    def __init__(self, url: str, registry, token: str | None = None):
         self._url      = url
+        # Jeton d'authentification du bus (le bridge l'exige quand NATS_TOKEN
+        # est défini) ; jamais journalisé.
+        self._token    = token or None
         self._registry = registry
 
         self._loop: Optional[asyncio.AbstractEventLoop] = None
@@ -122,6 +136,11 @@ class NatsService:
         self._lock = threading.Lock()
         self._subscribed: set[str] = set()
         self._subscribed_as_js: set[str] = set()
+        # Boucles de lecture (mode pull) par sujet.
+        self._pull_tasks: dict[str, asyncio.Task] = {}
+        # Messages comptés par ce processus, ajoutés en base périodiquement
+        # (les compteurs sont donc justes même avec plusieurs workers).
+        self._stat_delta: dict[str, int] = {}
         # Abonnement nats-py vivant de chaque sujet. Le garder est ce qui permet
         # de le RÉSILIER : sans cela, se réabonner ne fait qu'en ajouter un
         # second et chaque message est traité deux fois.
@@ -261,7 +280,7 @@ class NatsService:
         )
         try:
             return future.result(timeout=timeout + 1.0)
-        except Exception as exc:
+        except Exception as exc:   # biodoo: except-ok request_sync renvoie None (documenté), journalisé ; l'appelant traite None
             _logger.warning(f"NATS request failed [{subject}]: {exc}")
             return None
 
@@ -315,7 +334,7 @@ class NatsService:
         future = asyncio.run_coroutine_threadsafe(self._fetch_streams(), self._loop)
         try:
             return future.result(timeout=5)
-        except Exception as e:
+        except Exception as e:   # biodoo: except-ok liste des flux pour l'écran : vide si NATS indisponible, journalisé
             _logger.warning(f"get_streams: {e}")
             return []
 
@@ -333,6 +352,7 @@ class NatsService:
             try:
                 self._nc = await nats_lib.connect(
                     self._url,
+                    token=self._token,
                     reconnect_time_wait=2,
                     max_reconnect_attempts=-1,
                     error_cb=self._on_error,
@@ -348,6 +368,9 @@ class NatsService:
 
                 # Connexion NEUVE : aucun abonnement d'une connexion précédente
                 # n'existe plus côté serveur, on repart d'un suivi vide.
+                for task in self._pull_tasks.values():
+                    task.cancel()
+                self._pull_tasks.clear()
                 self._subs.clear()
                 self._subscribed.clear()
                 self._subscribed_as_js.clear()
@@ -386,61 +409,132 @@ class NatsService:
         try:
             if await self._subscribe_js(subject):
                 return
-            # Fall back to plain core NATS
+            # Aucun flux JetStream ne couvre ce sujet (ex. requêtes) : abonnement
+            # simple, en GROUPE (un seul worker reçoit chaque message) ; ces
+            # messages ne sont pas persistés côté NATS. Repassé en JetStream dès
+            # qu'un flux apparaît (_upgrade_core_subscriptions).
             self._subs[subject] = await self._nc.subscribe(
-                subject, cb=self._make_cb(subject, ack=False)
+                subject, queue=self._durable_name(subject), cb=self._make_cb(subject, ack=False)
             )
             self._subscribed.add(subject)
-            _logger.info(f"NATS core subscribed: '{subject}'")
+            _logger.warning(f"NATS '{subject}' : aucun flux JetStream — abonnement simple en groupe")
             await self._sync_subscription_state(subject, 'active', jetstream=False)
         finally:
             self._subscribing.discard(subject)
 
-    async def _subscribe_js(self, subject: str) -> bool:
-        """Tente l'abonnement JetStream durable. Retourne True s'il est établi.
+    @staticmethod
+    def _durable_name(subject: str) -> str:
+        """Nom durable valide dérivé du sujet (même nom pour tous les workers)."""
+        return "odoo-pull-" + re.sub(r'[^a-zA-Z0-9_-]', '-', subject.rstrip('.>*'))[:45]
 
-        Ne touche pas à un éventuel abonnement core existant du même sujet :
-        l'appelant décide quoi en faire (voir _upgrade_core_subscriptions).
+    async def _subscribe_js(self, subject: str) -> bool:
+        """Consommateur JetStream durable en mode PULL, partagé entre workers.
+
+        Retourne False si aucun flux ne couvre le sujet. Un ancien consommateur
+        « push » du même sujet (versions précédentes) est supprimé : le nouveau
+        reprend tout le flux (DeliverAll) ; les traitements sont idempotents.
         """
         if not self._js:
             return False
-
-        # Build a valid JetStream durable name from the subject.
-        # Strip wildcards, replace non-alphanum with hyphens, cap at 50 chars.
-        durable = "odoo-" + re.sub(
-            r'[^a-zA-Z0-9_-]', '-', subject.rstrip('.>*')
-        )[:50]
-
+        from nats.js.api import AckPolicy, ConsumerConfig, DeliverPolicy
+        from nats.js.errors import NotFoundError
         try:
-            # Attempt to subscribe with DeliverAll so that a brand-new durable
-            # consumer replays messages already in the stream (e.g. after a module
-            # upgrade that adds new subjects).  If the consumer already exists,
-            # NATS ignores the config and resumes from its last ack'd position.
-            from nats.js.api import ConsumerConfig, DeliverPolicy
-            cfg = ConsumerConfig(deliver_policy=DeliverPolicy.ALL)
-        except ImportError:
-            cfg = None
-
-        try:
-            sub = await self._js.subscribe(
-                subject,
-                cb=self._make_cb(subject, ack=True),
-                durable=durable,
-                manual_ack=True,
-                config=cfg,
-            )
-        except Exception as e:
-            _logger.debug(
-                f"JetStream subscribe failed for '{subject}': {e} — trying core NATS"
-            )
+            stream = await self._js.find_stream_name_by_subject(subject)
+        except NotFoundError:
             return False
-
-        self._subs[subject] = sub
+        durable = self._durable_name(subject)
+        legacy = "odoo-" + re.sub(r'[^a-zA-Z0-9_-]', '-', subject.rstrip('.>*'))[:50]
+        # Bascule depuis l'ancien consommateur « push » : le nouveau reprend
+        # JUSTE APRÈS le dernier message que l'ancien avait acquitté. Sans cela,
+        # « tout depuis le début » rejouerait tout le flux conservé (pointages,
+        # résultats de commandes, fiches utilisateurs) à la mise à jour.
+        start_seq = None
+        try:
+            info = await self._js.consumer_info(stream, legacy)
+            start_seq = (info.ack_floor.stream_seq or 0) + 1
+            await self._js.delete_consumer(stream, legacy)
+            _logger.info(f"NATS : ancien consommateur push '{legacy}' remplacé par '{durable}' "
+                         f"(reprise au message {start_seq})")
+        except NotFoundError:
+            pass
+        if start_seq:
+            cfg = ConsumerConfig(
+                durable_name=durable, deliver_policy=DeliverPolicy.BY_START_SEQUENCE,
+                opt_start_seq=start_seq,
+                ack_policy=AckPolicy.EXPLICIT, ack_wait=ACK_WAIT_S,
+                max_deliver=MAX_DELIVER, max_ack_pending=MAX_ACK_PENDING,
+            )
+        else:
+            # Installation neuve (aucun ancien consommateur) : tout le flux.
+            cfg = ConsumerConfig(
+                durable_name=durable, deliver_policy=DeliverPolicy.ALL,
+                ack_policy=AckPolicy.EXPLICIT, ack_wait=ACK_WAIT_S,
+                max_deliver=MAX_DELIVER, max_ack_pending=MAX_ACK_PENDING,
+            )
+        psub = await self._js.pull_subscribe(subject, durable=durable, stream=stream, config=cfg)
+        self._subs[subject] = psub
         self._subscribed.add(subject)
         self._subscribed_as_js.add(subject)
-        _logger.info(f"NATS JS subscribed: '{subject}' (durable={durable})")
+        self._pull_tasks[subject] = asyncio.get_event_loop().create_task(self._pull_loop(subject, psub))
+        _logger.info(f"NATS JetStream (pull) : '{subject}' (durable={durable})")
         await self._sync_subscription_state(subject, 'active', jetstream=True)
         return True
+
+    async def _pull_loop(self, subject: str, psub) -> None:
+        """Lit les messages du consommateur partagé tant que le sujet est abonné."""
+        from nats.errors import TimeoutError as NatsTimeout
+        while self._running and self._subs.get(subject) is psub:
+            try:
+                msgs = await psub.fetch(FETCH_BATCH, timeout=FETCH_TIMEOUT_S)
+            except NatsTimeout:
+                continue
+            except asyncio.CancelledError:
+                raise
+            except Exception:   # biodoo: except-ok coupure réseau : journalisée, la boucle réessaie
+                _logger.warning(f"NATS : lecture de '{subject}' interrompue, nouvel essai", exc_info=True)
+                await asyncio.sleep(2)
+                continue
+            for msg in msgs:
+                await self._handle_js_msg(subject, msg)
+
+    async def _handle_js_msg(self, pattern: str, msg) -> None:
+        """Traite un message JetStream : acquitte, redemande plus tard (délai
+        croissant), ou le met à l'écart dans « Messages en échec »."""
+        try:
+            payload = json.loads(msg.data.decode())
+        except (ValueError, UnicodeDecodeError):
+            await self._run(self._dead_letter, msg.subject, msg.data, 'Message illisible (JSON invalide)', 1)
+            await msg.ack()
+            return
+        ok, poison = await self._run(self._dispatch, msg.subject, payload, pattern)
+        if ok:
+            await msg.ack()
+            return
+        delivered = getattr(getattr(msg, 'metadata', None), 'num_delivered', 1) or 1
+        if poison or delivered >= MAX_DELIVER:
+            reason = poison or f"Échec après {delivered} essais"
+            await self._run(self._dead_letter, msg.subject, msg.data, reason, delivered)
+            await msg.ack()
+        else:
+            await msg.nak(delay=min(2 ** delivered, NAK_DELAY_MAX_S))
+
+    async def _run(self, func, *args):
+        return await asyncio.get_event_loop().run_in_executor(None, func, *args)
+
+    def _dead_letter(self, subject: str, data: bytes, reason: str, deliveries: int) -> None:
+        """Enregistre un message mis à l'écart (visible par l'administrateur)."""
+        from odoo import api, SUPERUSER_ID
+        try:
+            with self._registry.cursor() as cr:
+                env = api.Environment(cr, SUPERUSER_ID, {})
+                env['nats.dead.letter'].create({
+                    'subject': subject,
+                    'payload': data.decode(errors='replace')[:100000],
+                    'reason': reason[:500],
+                    'deliveries': deliveries,
+                })
+        except Exception:   # biodoo: except-ok ne doit pas bloquer la lecture ; journalisé avec le contenu
+            _logger.exception("NATS : message en échec non enregistré [%s] %s", subject, data[:500])
 
     async def _unsubscribe(self, subject: str) -> None:
         """Résilie l'abonnement vivant du sujet et l'oublie. Le consommateur
@@ -448,11 +542,14 @@ class NatsService:
         sub = self._subs.pop(subject, None)
         self._subscribed.discard(subject)
         self._subscribed_as_js.discard(subject)
+        task = self._pull_tasks.pop(subject, None)
+        if task:
+            task.cancel()
         if sub is not None:
             try:
                 await sub.unsubscribe()
-            except Exception as e:
-                _logger.debug(f"NATS unsubscribe '{subject}': {e}")
+            except Exception:   # biodoo: except-ok abonnement déjà fermé côté serveur : sans effet
+                _logger.debug("NATS : désabonnement de '%s' déjà effectif", subject, exc_info=True)
 
     async def _upgrade_core_subscriptions(self) -> None:
         """Repasse en JetStream les sujets abonnés en core alors qu'un flux les
@@ -473,7 +570,7 @@ class NatsService:
         for subject in sorted(self._subscribed - self._subscribed_as_js):
             try:
                 await self._js.find_stream_name_by_subject(subject)
-            except Exception:
+            except Exception:   # biodoo: except-ok flux absent pour ce sujet : l'abonnement simple reste le bon mode
                 continue  # aucun flux ne couvre ce sujet : core est le bon mode
             core_sub = self._subs.get(subject)
             if not await self._subscribe_js(subject):
@@ -481,7 +578,7 @@ class NatsService:
             if core_sub is not None:
                 try:
                     await core_sub.unsubscribe()
-                except Exception as e:
+                except Exception as e:   # biodoo: except-ok désabonnement d'un abonnement déjà fermé : sans effet, journalisé
                     _logger.debug(f"NATS unsubscribe '{subject}': {e}")
             _logger.info(f"NATS '{subject}' repassé de core à JetStream")
 
@@ -503,20 +600,16 @@ class NatsService:
             actual_subject = msg.subject
             try:
                 payload = json.loads(msg.data.decode())
-            except Exception:
-                payload = {'_raw': msg.data.decode()}
+            except (ValueError, UnicodeDecodeError):
+                payload = {'_raw': msg.data.decode(errors='replace')}
             loop = asyncio.get_event_loop()
-            ok = await loop.run_in_executor(
+            ok, poison = await loop.run_in_executor(
                 None, self._dispatch, actual_subject, payload, pattern
             )
-            if ack:
-                if ok:
-                    await msg.ack()
-                else:
-                    try:
-                        await msg.nak()
-                    except Exception:
-                        pass
+            if not ok:
+                # Abonnement simple : rien à acquitter ; on garde une trace.
+                await loop.run_in_executor(None, self._dead_letter, actual_subject, msg.data,
+                                           poison or 'Traitement en échec (abonnement simple)', 1)
         return _cb
 
     def _dispatch(self, actual_subject: str, payload: dict, pattern: str = None) -> bool:
@@ -541,7 +634,7 @@ class NatsService:
                         break
 
         if not model_names:
-            return True  # No handler — ack so it doesn't loop forever
+            return True, None  # aucun traitement : acquitter pour ne pas boucler
 
         stat_key = lookup_key or actual_subject
         now_ts = time.time()
@@ -550,11 +643,13 @@ class NatsService:
                 self._stats[stat_key] = {"count": 0, "last_at": None}
             self._stats[stat_key]["count"] += 1
             self._stats[stat_key]["last_at"] = now_ts
+            self._stat_delta[stat_key] = self._stat_delta.get(stat_key, 0) + 1
             needs_db_sync = (
                 now_ts - self._stat_last_sync.get(stat_key, 0)
             ) >= _STAT_SYNC_INTERVAL
             if needs_db_sync:
                 self._stat_last_sync[stat_key] = now_ts
+                delta = self._stat_delta.pop(stat_key, 0)
 
         # ── transaction 1 : logique métier ───────────────────────────
         # Pass the ACTUAL subject (e.g. zkteco.ta.cmdresult.SN1) to handlers
@@ -567,11 +662,17 @@ class NatsService:
         # READ. On retente la transaction entière, comme la couche HTTP d'Odoo.
         from odoo import api, SUPERUSER_ID
         success = True
+        poison = None
         for tryno in range(1, _MAX_NATS_TRIES + 1):
             success = True
             try:
                 with self._registry.cursor() as cr:
                     env = api.Environment(cr, SUPERUSER_ID, {})
+                    # Message mal formé pour ce sujet : jamais rejoué.
+                    for model_name in model_names:
+                        poison = env[model_name]._nats_validate(actual_subject, payload)
+                        if poison:
+                            return False, poison
                     for model_name in model_names:
                         try:
                             env[model_name].handle_nats_event(actual_subject, payload)
@@ -615,22 +716,18 @@ class NatsService:
                 from odoo.fields import Datetime as OdooDatetime
                 with self._registry.cursor() as cr:
                     env = api.Environment(cr, SUPERUSER_ID, {})
-                    subs = env['nats.subscription'].sudo().search([
-                        ('subject', '=', stat_key),
-                        ('state', '=', 'active'),
-                    ])
-                    with self._stat_lock:
-                        st = self._stats.get(stat_key, {})
-                    for sub in subs:
-                        sub.write({
-                            'last_message_at': OdooDatetime.now(),
-                            'message_count':   st.get('count', sub.message_count),
-                        })
+                    # Ajout (et non écrasement) : chaque worker apporte ses messages.
+                    cr.execute(
+                        "UPDATE nats_subscription SET message_count = COALESCE(message_count, 0) + %s, "
+                        "last_message_at = %s WHERE subject = %s AND state = 'active'",
+                        (delta, OdooDatetime.now(), stat_key))
                     cr.commit()
-            except Exception as exc:
-                _logger.debug(f"NATS stat sync skipped (concurrent update): {exc}")
+            except _PG_RETRY_ERRORS:   # biodoo: except-ok statistiques : on les rajoute au prochain envoi
+                with self._stat_lock:
+                    self._stat_delta[stat_key] = self._stat_delta.get(stat_key, 0) + delta
+                _logger.debug("NATS : statistiques reportées (accès concurrent) pour %s", stat_key)
 
-        return success
+        return success, None
 
     async def _publish(self, subject: str, data: bytes) -> None:
         if self._nc and not self._nc.is_closed:
@@ -654,7 +751,7 @@ class NatsService:
         if self._nc and not self._nc.is_closed:
             try:
                 await self._nc.drain()
-            except Exception:
+            except Exception:   # biodoo: except-ok fermeture de connexion au mieux pendant l'arrêt
                 pass
 
     async def _fetch_streams(self) -> list[dict]:
@@ -667,7 +764,7 @@ class NatsService:
             if data.get("error"):
                 return []
             names = data.get("streams", [])
-        except Exception as e:
+        except Exception as e:   # biodoo: except-ok écran des flux : vide si NATS indisponible, journalisé
             _logger.debug(f"NATS stream list failed: {e}")
             return []
 
@@ -687,7 +784,7 @@ class NatsService:
                     "bytes":     state.get("bytes", 0),
                     "consumers": state.get("consumer_count", 0),
                 })
-            except Exception as e:
+            except Exception as e:   # biodoo: except-ok un flux illisible n'empêche pas d'afficher les autres, journalisé
                 _logger.debug(f"NATS stream info '{name}': {e}")
         return streams
 
@@ -778,7 +875,7 @@ class NatsService:
                 return
             except _PG_RETRY_ERRORS:
                 time.sleep(0.1 * (attempt + 1) + random.uniform(0, 0.05))
-            except Exception as exc:
+            except Exception as exc:   # biodoo: except-ok état du serveur sur l'écran : au mieux, journalisé, sans bloquer le bus
                 _logger.debug(f"_db_set_server_state: {exc}")
                 return
         _logger.warning(
@@ -804,5 +901,5 @@ class NatsService:
                     ('subject', '=', subject)
                 ]).write({'state': state, 'is_jetstream': jetstream})
                 cr.commit()
-        except Exception as exc:
+        except Exception as exc:   # biodoo: except-ok état d'un abonnement sur l'écran : au mieux, journalisé
             _logger.debug(f"_db_set_subscription_state: {exc}")

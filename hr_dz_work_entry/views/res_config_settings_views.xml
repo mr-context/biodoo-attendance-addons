@@ -1,20 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <record id="res_config_settings_view_hr_late_sanction" model="ir.ui.view">
-        <field name="name">res.config.settings.hr.late.sanction</field>
+        <field name="name">res.config.settings.hr.attendance.policy</field>
         <field name="model">res.config.settings</field>
         <field name="inherit_id" ref="hr.res_config_settings_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//block[@name='work_organization_setting_container']" position="after">
-                <block title="Gestion des retards" name="late_sanction_setting_container">
-                    <setting id="late_sanction_setting"
-                             help="Tout retard au-delà de la tolérance entraîne une déduction sur la fiche de paie selon le mode choisi.">
-                        <field name="late_sanction_enabled"/>
-                        <div class="content-group mt-2" invisible="not late_sanction_enabled">
-                            <div class="row">
-                                <label for="late_sanction_mode" class="col-lg-4 o_light_label"/>
-                                <field name="late_sanction_mode" class="col-lg-8"/>
-                            </div>
+                <block title="Pointage : absences, retards, départs" name="late_sanction_setting_container">
+                    <setting id="attendance_policy_setting"
+                             help="Délai avant absence, sortie oubliée, tolérances, arrondis et retenues (à chaque retard ou « 3 retards = 1 jour »), automatiques ou validées par les RH. Les heures supplémentaires suivent les règles d'heures supplémentaires des Présences.">
+                        <field name="attendance_policy_id" options="{'no_create': True}"/>
+                        <div class="mt-2">
+                            <button name="%(hr_attendance_policy_action)d" type="action"
+                                    string="Gérer les politiques" icon="oi-arrow-right"
+                                    class="btn-link"/>
                         </div>
                     </setting>
                 </block>

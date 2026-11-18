@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- File unique « À corriger » : tout pointage qui demande une action RH.
+         Correction en masse : sélectionner plusieurs lignes et modifier
+         l'heure (multi_edit), ou « Marquer comme vu ». -->
+    <record id="hr_attendance_view_list_to_fix" model="ir.ui.view">
+        <field name="name">hr.attendance.list.to.fix</field>
+        <field name="model">hr.attendance</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <list string="À corriger" editable="bottom" multi_edit="1" create="0"
+                  decoration-danger="checkout_only or not check_out">
+                <header>
+                    <button name="action_mark_reviewed" type="object" string="Marquer comme vu"
+                            class="btn-secondary"/>
+                </header>
+                <field name="employee_id" readonly="1"/>
+                <field name="check_in"/>
+                <field name="check_out"/>
+                <field name="anomaly_ids" widget="many2many_tags" options="{'color_field': 'color'}"
+                       readonly="1"/>
+                <field name="checkout_only" column_invisible="1"/>
+                <field name="late_minutes" optional="show" readonly="1"/>
+                <field name="early_leave_minutes" optional="show" readonly="1"/>
+                <field name="deduction_status" widget="badge" optional="show" readonly="1"
+                       decoration-warning="deduction_status == 'to_validate'"/>
+                <button name="action_mark_reviewed" type="object" icon="fa-check"
+                        title="Marquer comme vu"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_attendance_to_fix" model="ir.actions.act_window">
+        <field name="name">À corriger</field>
+        <field name="res_model">hr.attendance</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="hr_attendance_view_list_to_fix"/>
+        <field name="domain">[('dz_reviewed', '=', False), '|', '|',
+            ('is_anomaly', '=', True), ('checkout_only', '=', True),
+            ('deduction_status', '=', 'to_validate')]</field>
+        <field name="context">{}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Rien à corriger</p>
+            <p>Ici arrivent les pointages qui demandent une action : sortie ou entrée
+               manquante, retard, départ anticipé, durée anormale, retenue à décider.
+               Corrigez l'heure directement dans la liste (plusieurs lignes à la fois),
+               ou « Marquer comme vu » si le pointage est juste.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_attendance_to_fix" name="À corriger"
+              parent="menu_anomaly_root" action="action_attendance_to_fix" sequence="1"/>
+</odoo>

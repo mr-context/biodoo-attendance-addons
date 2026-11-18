@@ -33,7 +33,7 @@
                     </group>
 
                     <!-- Device selection -->
-                    <group string="Devices cibles">
+                    <group string="Pointeuses cibles">
                         <field name="all_devices"/>
                         <field name="device_ids"
                                widget="many2many_tags"

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="hr_dz_gantt.RowHeader">
+        <t t-set="avatar" t-value="avatarUrl(row)"/>
+        <img t-if="avatar" t-att-src="avatar" class="o_dz_gantt_avatar rounded flex-shrink-0"
+             alt="" width="24" height="24" onerror="this.style.visibility='hidden'"/>
+        <t t-call="web_dz_gantt.GanttRowHeader"/>
+    </t>
+
+</templates>

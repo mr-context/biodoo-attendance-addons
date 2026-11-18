@@ -117,7 +117,7 @@
                                 <!-- Jauge devices -->
                                 <div class="mt-3">
                                     <div class="d-flex justify-content-between">
-                                        <span class="o_nats_stat_label">Devices utilisés</span>
+                                        <span class="o_nats_stat_label">Pointeuses utilisées</span>
                                         <span class="small text-muted">
                                             <t t-esc="state.bridge.device_count"/> / <t t-esc="state.bridge.max_devices"/>
                                             <span t-if="state.bridge.devices_held" class="badge text-bg-warning ms-1">

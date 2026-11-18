@@ -11,7 +11,7 @@ class HrEmployee(models.Model):
         string='Présences ce mois', compute='_compute_attendance_month_count')
 
     def _compute_attendance_month_count(self):
-        month_start = date.today().replace(day=1)
+        month_start = fields.Date.context_today(self).replace(day=1)
         for employee in self:
             employee.attendance_month_count = self.env['hr.attendance'].search_count([
                 ('employee_id', '=', employee.id),

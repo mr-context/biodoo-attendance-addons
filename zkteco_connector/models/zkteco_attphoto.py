@@ -25,7 +25,8 @@ class ZktecoAttPhoto(models.Model):
         ondelete='set null',
         index=True,
     )
-    device_sn = fields.Char(string='Device S/N', readonly=True, index=True)
+    company_id = fields.Many2one(related='attendance_id.employee_id.company_id', store=True, index=True, string='Société')
+    device_sn = fields.Char(string='N° de série de la pointeuse', readonly=True, index=True)
     employee_pin = fields.Char(string='PIN', readonly=True)
     file_name = fields.Char(string='Fichier', readonly=True)
     captured_at = fields.Datetime(string='Heure capture', readonly=True)
@@ -107,7 +108,8 @@ class ZktecoAttPhoto(models.Model):
         )
         try:
             return pytz.timezone(tzname)
-        except Exception:  # noqa: BLE001 — nom de fuseau invalide → UTC sûr
+        except pytz.UnknownTimeZoneError:
+            _logger.warning("Fuseau des pointeuses invalide (%s) : UTC utilisé", tzname)
             return pytz.UTC
 
     def _parse_filename_ts(self, file_name: str):

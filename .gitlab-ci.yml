@@ -1,0 +1,28 @@
+# Intégration continue biodoo (modules Odoo).
+# 1. contrôles de code (règles de CONTRIBUTING.md) ;
+# 2. tests Odoo des modules biodoo sur une base neuve (PostgreSQL de service).
+stages: [controles, tests]
+
+controles_code:
+  stage: controles
+  image: python:3.12-slim
+  script:
+    - mkdir -p /tmp/odoo19 && cp -r . /tmp/odoo19/biodoo_attendance
+    - mkdir -p /tmp/odoo19/biodoo_payroll_dz
+    - python3 /tmp/odoo19/biodoo_attendance/outils/verifier_code.py
+
+tests_odoo:
+  stage: tests
+  image: odoo:19.0
+  services:
+    - name: postgres:16
+      alias: db
+  variables:
+    POSTGRES_USER: odoo
+    POSTGRES_PASSWORD: odoo
+    POSTGRES_DB: postgres
+  script:
+    - MODULES=$(ls -d */ | while read d; do m=${d%/}; [ -d "$m/tests" ] && [ -f "$m/__manifest__.py" ] && printf "%s," "$m"; done)
+    - odoo --db_host db --db_user odoo --db_password odoo -d ci_biodoo
+        --addons-path=/usr/lib/python3/dist-packages/odoo/addons,$CI_PROJECT_DIR
+        -i "${MODULES%,}" --test-enable --stop-after-init --log-level=test

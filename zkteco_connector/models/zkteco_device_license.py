@@ -12,6 +12,8 @@ import logging
 
 from odoo import api, fields, models
 
+from .license_states import SLOT_STATES
+
 _logger = logging.getLogger(__name__)
 
 
@@ -64,23 +66,28 @@ class ZktecoDeviceLicense(models.Model):
     def unlink(self):
         # Free the slot before the record disappears, so a held device can be
         # promoted in its place (the BioTime "delete to free a slot" model).
+        # An offline device still owns its slot (see license_states).
         for d in self:
-            if d.state in ('approved', 'held'):
+            if d.state in SLOT_STATES:
                 d._license_release()
         return super().unlink()
 
     @api.model
     def _license_reconcile_all(self):
-        """Re-assert every approved/held device to the bridge, then publish the
-        FULL approved-MAC list as a declarative `sync` intent (event-driven, on
-        bridge.online):
+        """Re-assert every device owning or awaiting a slot to the bridge, then
+        publish the FULL list of their MACs as a declarative `sync` intent
+        (event-driven, on bridge.online, and every 15 minutes):
         - migrates existing approved devices on first deployment;
         - self-heals after a NATS/bridge outage;
         - the `sync` makes the bridge release any slot Odoo doesn't know about
           (ghost slots from release intents lost while NATS was down).
-        The bridge is idempotent and caps the count, so this is always safe."""
+        The bridge is idempotent and caps the count, so this is always safe.
+
+        Offline devices are part of the list: the bridge releases every slot
+        whose MAC is missing from it, so leaving them out took the slot away
+        from a device that merely lost power or network."""
         devices = self.search([
-            ('state', 'in', ('approved', 'held')),
+            ('state', 'in', SLOT_STATES),
             ('mac_address', '!=', False),
         ])
         for d in devices:

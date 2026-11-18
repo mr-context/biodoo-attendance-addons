@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Barre d'actions des jours sélectionnés. -->
+    <t t-name="hr_dz_work_entry_gantt.SelectionBar">
+        <div class="o_dz_gantt_selection_bar d-flex flex-wrap align-items-center gap-2 px-3 py-2">
+            <span class="fw-medium me-1" title="Le type choisi remplace toutes les prestations de ces journées">
+                <t t-esc="selectionSummary"/> — remplacer la journée par :
+            </span>
+            <button t-foreach="quickTypes" t-as="type" t-key="type.id"
+                    class="btn btn-sm o_dz_gantt_apply_type"
+                    t-att-class="'o_dz_gantt_color_' + (type.color or 0)"
+                    t-att-data-type-id="type.id"
+                    t-on-click="() => this.onApplyType(type)"
+                    t-esc="type.display_name"/>
+            <Dropdown>
+                <button class="btn btn-sm btn-secondary">Autre type <i class="fa fa-caret-down ms-1"/></button>
+                <t t-set-slot="content">
+                    <DropdownItem t-foreach="workEntryTypes" t-as="type" t-key="type.id"
+                                  onSelected="() => this.onApplyType(type)">
+                        <t t-esc="type.display_name"/>
+                    </DropdownItem>
+                </t>
+            </Dropdown>
+            <label t-if="selectionHasOffDays" class="form-check-label d-flex align-items-center gap-1 small ms-1"
+                   title="Par défaut, les jours de repos ou fériés de la sélection ne sont pas modifiés">
+                <input type="checkbox" class="form-check-input mt-0" t-model="options.includeOffDays"/>
+                Inclure les jours non travaillés
+            </label>
+            <span class="vr mx-1"/>
+            <button class="btn btn-sm btn-light o_dz_gantt_reset" t-on-click="onReset"
+                    title="Retirer les saisies RH de ces jours et recalculer depuis les pointages">
+                <i class="fa fa-refresh me-1"/>Calcul automatique
+            </button>
+            <button class="btn btn-sm btn-link text-muted" t-on-click="cancelInteractions"
+                    aria-label="Annuler" title="Annuler (Échap)">
+                <i class="fa fa-times"/>
+            </button>
+        </div>
+    </t>
+
+</templates>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Prestations en Gantt : une ligne par employé, un jour par colonne. -->
+    <record id="hr_work_entry_view_gantt" model="ir.ui.view">
+        <field name="name">hr.work.entry.gantt.dz</field>
+        <field name="model">hr.work.entry</field>
+        <field name="arch" type="xml">
+            <gantt js_class="dz_work_entries_gantt"
+                   string="Prestations"
+                   date_start="date"
+                   date_stop="date"
+                   color="color"
+                   legend_field="work_entry_type_id"
+                   default_group_by="employee_id"
+                   week_start="7"
+                   scales="week,month"
+                   default_scale="month"
+                   display_unavailability="1"
+                   total_row="1"
+                   consolidation="duration"
+                   create="0"
+                   disable_drag_drop="1"
+                   decoration-warning="state == 'conflict'"
+                   decoration-muted="state == 'cancelled'">
+                <field name="code" invisible="1"/>
+                <field name="work_entry_type_id"/>
+                <field name="duration" widget="float_time"/>
+                <field name="dz_origin"/>
+                <field name="state"/>
+                <field name="name" string="Libellé"/>
+            </gantt>
+        </field>
+    </record>
+
+    <!-- Le Gantt choisit lui-même la période affichée (précédent / suivant) :
+         le filtre « mois en cours » par défaut le bloquerait sur ce mois. -->
+    <record id="hr_dz_work_entry.hr_work_entry_action_payroll" model="ir.actions.act_window">
+        <field name="context">{}</field>
+    </record>
+
+    <!-- Le Gantt devient la première vue des prestations (une vue d'action
+         passe avant le view_mode de l'action). -->
+    <record id="hr_work_entry_action_payroll_view_gantt" model="ir.actions.act_window.view">
+        <field name="sequence" eval="0"/>
+        <field name="view_mode">gantt</field>
+        <field name="view_id" ref="hr_work_entry_view_gantt"/>
+        <field name="act_window_id" ref="hr_dz_work_entry.hr_work_entry_action_payroll"/>
+    </record>
+
+</odoo>

@@ -2,15 +2,21 @@
 <odoo>
 
     <menuitem id="menu_nats_root"
-              name="NATS"
+              name="Bus des pointeuses (NATS)"
               parent="base.menu_administration"
               sequence="100"
               groups="base.group_system"/>
 
     <menuitem id="menu_nats_server"
-              name="Servers"
+              name="Serveur"
               parent="menu_nats_root"
               action="action_nats_server"
               sequence="10"/>
+
+    <menuitem id="menu_nats_dead_letter"
+              name="Messages en échec"
+              parent="menu_nats_root"
+              action="nats_dead_letter_action"
+              sequence="20"/>
 
 </odoo>

@@ -14,6 +14,7 @@
     'data': [
         'security/ir.model.access.csv',
         'views/nats_server_views.xml',
+        'views/nats_dead_letter_views.xml',
         'views/menus.xml',
         'views/nats_dashboard_action.xml',  # after menus.xml — needs menu_nats_root
     ],

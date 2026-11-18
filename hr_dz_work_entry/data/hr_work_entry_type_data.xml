@@ -104,7 +104,8 @@
             <field name="name">Congé sans solde</field>
             <field name="code">CSS</field>
             <field name="display_code">CSS</field>
-            <field name="color">1</field>
+            <!-- 6 et non 1 : distinct du rouge de l'absence non justifiée -->
+            <field name="color">6</field>
             <field name="is_leave">True</field>
             <field name="is_deductible">True</field>
             <field name="sequence">62</field>
@@ -164,6 +165,21 @@
             <field name="is_leave">False</field>
             <field name="overtime_rate">1.75</field>
             <field name="sequence">31</field>
+        </record>
+
+        <!-- Récupérations : rôle de chaque type (voir hr.dz.recovery) -->
+        <record id="work_entry_type_recovery" model="hr.work.entry.type">
+            <field name="dz_recovery_role">taken</field>
+        </record>
+        <record id="work_entry_type_recovery_banked" model="hr.work.entry.type">
+            <field name="name">Heures mises en récupération</field>
+            <field name="code">RECACQ</field>
+            <field name="display_code">R+</field>
+            <field name="color">8</field>
+            <field name="is_leave">False</field>
+            <field name="overtime_rate">1.0</field>
+            <field name="dz_recovery_role">banked</field>
+            <field name="sequence">64</field>
         </record>
 
     </data>

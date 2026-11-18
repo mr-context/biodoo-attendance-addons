@@ -88,7 +88,7 @@ class NatsTelemetryHandler(logging.Handler):
                 "where": f"{record.module}.{record.funcName}:{record.lineno}",
             }
             svc.publish(TELEMETRY_SUBJECT_ERROR, payload)
-        except Exception:
+        except Exception:   # biodoo: except-ok télémétrie au mieux : ne doit jamais faire échouer une opération
             # la télémétrie ne doit jamais faire tomber l'application
             pass
         finally:

@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Récupérations : les repos gagnés, ce qui en a été pris, et les
+         échéances à décider (payer, prolonger, annuler). -->
+
+    <record id="hr_dz_recovery_view_list" model="ir.ui.view">
+        <field name="name">hr.dz.recovery.list</field>
+        <field name="model">hr.dz.recovery</field>
+        <field name="arch" type="xml">
+            <list create="0"
+                  decoration-warning="state == 'to_decide' or needs_review"
+                  decoration-muted="state in ('used', 'lost', 'cancelled')"
+                  decoration-success="state == 'paid'">
+                <field name="date"/>
+                <field name="employee_id" widget="many2one_avatar_employee"/>
+                <field name="department_id" optional="hide"/>
+                <field name="kind" widget="badge"/>
+                <field name="treatment" optional="show"/>
+                <field name="worked_hours" widget="float_time" sum="Total"/>
+                <field name="hours" widget="float_time" sum="Total"/>
+                <field name="taken_hours" widget="float_time" sum="Total"/>
+                <field name="remaining_hours" widget="float_time" sum="Total"/>
+                <field name="expiry_date"/>
+                <field name="state" widget="badge"
+                       decoration-info="state == 'active'"
+                       decoration-warning="state == 'to_decide'"
+                       decoration-success="state in ('paid', 'used')"/>
+                <field name="needs_review" optional="hide"/>
+                <button name="action_pay" type="object" string="Payer" icon="fa-money"
+                        invisible="state not in ('active', 'to_decide')"
+                        groups="hr.group_hr_user"/>
+                <button name="action_extend" type="object" string="Prolonger" icon="fa-calendar-plus-o"
+                        invisible="state not in ('active', 'to_decide')"
+                        groups="hr.group_hr_user"/>
+                <button name="action_lose" type="object" string="Annuler" icon="fa-times"
+                        invisible="state not in ('active', 'to_decide')"
+                        groups="hr.group_hr_user"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="hr_dz_recovery_view_form" model="ir.ui.view">
+        <field name="name">hr.dz.recovery.form</field>
+        <field name="model">hr.dz.recovery</field>
+        <field name="arch" type="xml">
+            <form create="0">
+                <header>
+                    <button name="action_pay" type="object" string="Payer le repos non pris"
+                            class="btn-primary" invisible="state != 'to_decide'"/>
+                    <button name="action_pay" type="object" string="Payer le repos non pris"
+                            invisible="state != 'active'"/>
+                    <button name="action_extend" type="object" string="Prolonger"
+                            invisible="state not in ('active', 'to_decide')"/>
+                    <button name="action_lose" type="object" string="Annuler le repos"
+                            invisible="state not in ('active', 'to_decide')"/>
+                    <button name="action_mark_reviewed" type="object" string="Régularisé"
+                            invisible="not needs_review"/>
+                    <field name="state" widget="statusbar" statusbar_visible="active,used,paid"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_allocation" type="object" class="oe_stat_button"
+                                icon="fa-calendar" invisible="not allocation_id" string="Attribution"/>
+                    </div>
+                    <div class="alert alert-warning" role="alert" invisible="not needs_review">
+                        Le droit a diminué (pointage ou heures sup. corrigés) alors que le
+                        repos est déjà pris. Régularisez avec l'employé, puis cliquez sur
+                        « Régularisé ».
+                    </div>
+                    <group>
+                        <group string="Origine">
+                            <field name="employee_id" readonly="1"/>
+                            <field name="date" readonly="1"/>
+                            <field name="kind" readonly="1"/>
+                            <field name="treatment" readonly="1"/>
+                            <field name="rate" readonly="1" widget="percentage"
+                                   options="{'digits': [0, 0]}"/>
+                            <field name="worked_hours" widget="float_time" readonly="1"/>
+                        </group>
+                        <group string="Repos">
+                            <field name="hours" widget="float_time" readonly="1"/>
+                            <field name="days" readonly="1"/>
+                            <field name="taken_hours" widget="float_time"/>
+                            <field name="remaining_hours" widget="float_time"/>
+                            <field name="expiry_date" readonly="state not in ('active', 'to_decide')"/>
+                            <field name="settled_hours" widget="float_time"
+                                   invisible="state not in ('paid', 'lost')"/>
+                            <field name="settled_date" invisible="state not in ('paid', 'lost')"/>
+                            <field name="allocation_id" invisible="1"/>
+                            <field name="needs_review" invisible="1"/>
+                        </group>
+                    </group>
+                    <field name="note" placeholder="Note" invisible="not note"/>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="hr_dz_recovery_view_search" model="ir.ui.view">
+        <field name="name">hr.dz.recovery.search</field>
+        <field name="model">hr.dz.recovery</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="employee_id"/>
+                <field name="department_id"/>
+                <filter name="open" string="En cours"
+                        domain="[('state', 'in', ('active', 'to_decide'))]"/>
+                <filter name="to_decide" string="Échues : à décider"
+                        domain="['|', ('state', '=', 'to_decide'), ('needs_review', '=', True)]"/>
+                <filter name="expiring" string="Échéance sous 7 jours"
+                        domain="[('state', '=', 'active'), ('expiry_date', '!=', False),
+                                 ('expiry_date', '&lt;=', (context_today() + relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter name="date" string="Jour travaillé" date="date"/>
+                <group>
+                    <filter name="g_employee" string="Employé" context="{'group_by': 'employee_id'}"/>
+                    <filter name="g_state" string="État" context="{'group_by': 'state'}"/>
+                    <filter name="g_month" string="Mois" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="hr_dz_recovery_action" model="ir.actions.act_window">
+        <field name="name">Récupérations</field>
+        <field name="res_model">hr.dz.recovery</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_open': 1, 'search_default_g_employee': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aucune récupération en cours</p>
+            <p>Si la politique de présence accorde des récupérations, chaque jour de repos
+               (ou férié, ou heure sup.) travaillé ouvre ici un droit à repos, avec sa date
+               limite. L'employé le prend comme un congé « Récupération ». À l'échéance,
+               un repos non pris se paie, se prolonge ou s'annule.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_hr_dz_recovery"
+              name="Récupérations"
+              parent="hr_attendance.menu_hr_attendance_root"
+              action="hr_dz_recovery_action"
+              sequence="8"
+              groups="hr.group_hr_user,hr_holidays.group_hr_holidays_user"/>
+
+</odoo>

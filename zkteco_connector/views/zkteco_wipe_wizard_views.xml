@@ -13,7 +13,7 @@
                     Les empreintes, visages et cartes enregistrés seront effacés.
                 </div>
 
-                <group string="Device cible">
+                <group string="Pointeuse cible">
                     <field name="device_id"     readonly="1" invisible="1"/>
                     <field name="device_name"   readonly="1" string="Modèle"
                            invisible="not device_name"/>

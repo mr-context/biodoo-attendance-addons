@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Présences en Gantt : une ligne par employé, ses pointages dans le temps. -->
+    <record id="hr_attendance_view_gantt" model="ir.ui.view">
+        <field name="name">hr.attendance.gantt.dz</field>
+        <field name="model">hr.attendance</field>
+        <field name="arch" type="xml">
+            <gantt js_class="dz_attendance_gantt"
+                   string="Présences"
+                   date_start="check_in"
+                   date_stop="check_out"
+                   color="color"
+                   default_group_by="employee_id"
+                   week_start="7"
+                   scales="day,week,month"
+                   default_scale="week"
+                   display_unavailability="1"
+                   total_row="1"
+                   consolidation="worked_hours"
+                   create="0"
+                   delete="0"
+                   disable_drag_drop="1"
+                   decoration-danger="not check_out">
+                <!-- Lus pour la barre et la bulle (mise en forme par le JS). -->
+                <field name="check_in" invisible="1"/>
+                <field name="check_out" invisible="1"/>
+                <field name="worked_hours" invisible="1"/>
+                <field name="overtime_hours" invisible="1"/>
+                <field name="in_mode" invisible="1"/>
+                <field name="out_mode" invisible="1"/>
+            </gantt>
+        </field>
+    </record>
+
+    <!-- La liste reste la vue d'ouverture ; le Gantt vient ensuite dans le
+         sélecteur de vues (une vue d'action passe avant le view_mode, d'où
+         la liste déclarée ici aussi). -->
+    <record id="hr_attendance_action_view_list" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">list</field>
+        <field name="act_window_id" ref="hr_attendance.hr_attendance_action"/>
+    </record>
+
+    <record id="hr_attendance_action_view_gantt" model="ir.actions.act_window.view">
+        <field name="sequence" eval="5"/>
+        <field name="view_mode">gantt</field>
+        <field name="view_id" ref="hr_attendance_view_gantt"/>
+        <field name="act_window_id" ref="hr_attendance.hr_attendance_action"/>
+    </record>
+
+</odoo>

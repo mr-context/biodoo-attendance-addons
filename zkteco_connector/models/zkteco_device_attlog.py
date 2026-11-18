@@ -26,12 +26,19 @@ class ZktecoDeviceAttlog(models.Model):
     # Un geste physique = un pointage par (device, PIN, seconde). Le dispatch NATS
     # concurrent (run_in_executor) pouvait double-insérer le même punch (le dédup
     # par SELECT n'est pas atomique) ; la contrainte le garantit au niveau DB.
-    _sql_constraints = [
-        ('attlog_uniq_punch', 'unique(device_id, pin, timestamp)',
-         'Un pointage identique (device, PIN, horodatage) existe déjà.'),
-    ]
+    _attlog_uniq_punch = models.Constraint(
+        'unique(device_id, pin, timestamp)',
+        'Un pointage identique (pointeuse, PIN, horodatage) existe déjà.')
+    # Pointage du portail (sans pointeuse) : un par employé et par seconde.
+    _attlog_uniq_portal = models.UniqueIndex(
+        "(employee_id, timestamp) WHERE source = 'portal'",
+        'Ce pointage du portail existe déjà.')
 
-    device_id   = fields.Many2one('zkteco.device', required=True, ondelete='cascade', index=True)
+    # Pointeuse d'origine ; vide pour un pointage du portail (visage), qui
+    # passe par le même sas et la même résolution que les pointeuses.
+    device_id   = fields.Many2one('zkteco.device', ondelete='cascade', index=True)
+    company_id = fields.Many2one('res.company', string='Société', compute='_compute_company_id',
+                                 store=True, index=True)
     employee_id = fields.Many2one('hr.employee', index=True, ondelete='set null',
                                   help="Employé résolu via le PIN (vide tant que le PIN n'est pas mappé).")
     pin         = fields.Char(required=True, index=True)
@@ -51,7 +58,7 @@ class ZktecoDeviceAttlog(models.Model):
     verify_mode = fields.Char()
 
     source = fields.Selection(
-        [('device', 'Pointeuse'), ('manual', 'Manuel')],
+        [('device', 'Pointeuse'), ('manual', 'Manuel'), ('portal', 'Portail (visage)')],
         default='device', readonly=True, index=True, string='Source')
     is_corrected = fields.Boolean(string='Corrigé', compute='_compute_is_corrected',
                                   store=True)
@@ -63,15 +70,27 @@ class ZktecoDeviceAttlog(models.Model):
         ('imported',  'Importé'),       # intégré dans un hr.attendance
         ('ignored',   'Ignoré'),        # écarté (anti-rebond / décision admin)
         ('duplicate', 'Doublon'),       # déjà reçu
-        ('anomaly',   'Anomalie'),      # pointage non appariable (oubli, orphelin)
+        ('anomaly',   'Rejeté'),        # pointage non appariable (oubli, orphelin)
     ], default='pending', index=True)
 
     attendance_id = fields.Many2one('hr.attendance', string='Pointage créé', readonly=True)
+
+    # Pointage du portail : position et scores, reportés sur la présence
+    # (entrée et sortie séparément : la sortie n'écrase plus l'entrée).
+    latitude = fields.Float(digits=(10, 7), readonly=True)
+    longitude = fields.Float(digits=(10, 7), readonly=True)
+    face_confidence = fields.Float(string='Confiance faciale', digits=(5, 4), readonly=True)
+    liveness_score = fields.Float(string='Score de vivacité', digits=(5, 4), readonly=True)
 
     _STATUS_LABELS = {
         0: 'Entrée', 1: 'Sortie', 2: 'Pause (sortie)', 3: 'Pause (retour)',
         4: 'Heures sup (entrée)', 5: 'Heures sup (sortie)', 255: 'Sans touche',
     }
+
+    @api.depends('device_id.company_id', 'employee_id.company_id')
+    def _compute_company_id(self):
+        for log in self:
+            log.company_id = log.device_id.company_id or log.employee_id.company_id
 
     @api.model
     def _selection_touche(self):
@@ -258,6 +277,30 @@ class ZktecoDeviceAttlog(models.Model):
                 existing.employee_id = employee.id
             return existing
 
+    @api.model
+    def _stage_portal(self, employee, timestamp, latitude=0.0, longitude=0.0,
+                      face_confidence=0.0, liveness_score=0.0):
+        """Pointage du portail (visage) : il entre dans le MÊME sas que ceux des
+        pointeuses puis la journée est résolue par la même règle (anti-rafale,
+        appariement, anomalies, respect des corrections RH). Sens déduit par
+        alternance (pas de touche). Retourne le pointage brut."""
+        log = self.sudo().create({
+            'employee_id': employee.id,
+            'pin': employee.zkteco_pin or 'portail',
+            'timestamp': timestamp,
+            'status': 255,
+            'original_status': 255,
+            'source': 'portal',
+            'verify_mode': 'face',
+            'state': 'pending',
+            'latitude': latitude or 0.0,
+            'longitude': longitude or 0.0,
+            'face_confidence': face_confidence or 0.0,
+            'liveness_score': liveness_score or 0.0,
+        })
+        log._resolve_days_for_logs()
+        return log
+
     def _import_to_attendance(self, employee):
         """Appelé au mapping d'un PIN : rattache les bruts en quarantaine à
         l'employé puis résout les journées concernées."""
@@ -275,18 +318,50 @@ class ZktecoDeviceAttlog(models.Model):
         for log in self:
             if not log.employee_id:
                 continue
-            tz = self._employee_tz(log.employee_id)
-            day = pytz.utc.localize(log.timestamp).astimezone(tz).date()
-            to_resolve.add((log.employee_id.id, day))
+            to_resolve.add((log.employee_id.id, self._work_day_of(log.employee_id, log.timestamp)))
         Employee = self.env['hr.employee'].sudo()
         for emp_id, day in to_resolve:
             self._resolve_one_day(Employee.browse(emp_id), day)
 
     @api.model
-    def _resolve_one_day(self, employee, day):
-        """Reconstruit les hr.attendance d'un employé pour une journée locale."""
+    def _day_offset_hours(self, employee):
+        """Début de la « journée de travail » en heures après minuit.
+
+        0 pour un horaire de jour. Pour un poste de nuit (un créneau qui finit
+        après minuit, ex. 22 h-6 h), la journée commence 6 h avant la prise de
+        poste (22 h → 16 h) : entrée et sortie tombent dans la MÊME journée et
+        ne sont plus coupées en deux à minuit."""
+        cal = employee.resource_calendar_id
+        if not cal:
+            return 0.0
+        night_starts = [line.hour_from for line in cal.attendance_ids
+                        if line.day_period != 'lunch'
+                        and (line.hour_to > 24 or line.hour_to <= line.hour_from)]
+        if not night_starts:
+            return 0.0
+        return max(0.0, min(night_starts) - 6.0)
+
+    @api.model
+    def _work_day_of(self, employee, timestamp):
+        """Journée de travail d'un horodatage UTC (voir _day_offset_hours)."""
         tz = self._employee_tz(employee)
-        start_local = tz.localize(datetime.combine(day, datetime.min.time()))
+        local = pytz.utc.localize(timestamp).astimezone(tz).replace(tzinfo=None)
+        return (local - timedelta(hours=self._day_offset_hours(employee))).date()
+
+    @api.model
+    def _lock_day(self, employee_id, day):
+        """Verrou transactionnel par (employé, journée) : la résolution des
+        pointages (consommateur NATS, cron, portail) et le recalcul des
+        prestations ne travaillent jamais à deux sur le même jour."""
+        self.env.cr.execute('SELECT pg_advisory_xact_lock(%s, %s)', (int(employee_id), day.toordinal()))
+
+    @api.model
+    def _resolve_one_day(self, employee, day):
+        """Reconstruit les hr.attendance d'un employé pour une journée de travail."""
+        self._lock_day(employee.id, day)
+        tz = self._employee_tz(employee)
+        start_local = tz.localize(datetime.combine(day, datetime.min.time())
+                                  + timedelta(hours=self._day_offset_hours(employee)))
         start_utc = start_local.astimezone(pytz.utc).replace(tzinfo=None)
         end_utc = (start_local + timedelta(days=1)).astimezone(pytz.utc).replace(tzinfo=None)
 
@@ -418,7 +493,8 @@ class ZktecoDeviceAttlog(models.Model):
                 scalar = ('check_out', 'in_mode', 'out_mode',
                           'zkteco_verify_mode', 'zkteco_out_verify_mode',
                           'zkteco_in_operation', 'zkteco_out_operation',
-                          'zkteco_device_sn')
+                          'zkteco_device_sn', 'in_latitude', 'in_longitude',
+                          'out_latitude', 'out_longitude')
                 changed = {k: vals.get(k, False)
                            for k in scalar if att[k] != vals.get(k, False)}
                 for k in ('zkteco_device_id', 'zkteco_out_device_id'):
@@ -552,26 +628,36 @@ class ZktecoDeviceAttlog(models.Model):
 
     # ── helpers ───────────────────────────────────────────────────────
 
+    def _mode_of(self, log):
+        """Mode de pointage Odoo du pointage brut."""
+        if log.source == 'portal':
+            modes = dict(self.env['hr.attendance']._fields['in_mode'].selection)
+            return 'face' if 'face' in modes else 'manual'
+        return 'zkteco'
+
     def _att_vals(self, in_log, out_log=None):
-        Att = self.env['hr.attendance'].sudo()
-        sn = in_log.device_id.serial_number
+        sn = in_log.device_id.serial_number or 'PORTAIL'
         vals = {
             'employee_id': in_log.employee_id.id,
             'check_in': in_log.timestamp,
-            'zkteco_device_id': in_log.device_id.id,
-            'zkteco_device_sn': sn,
+            'zkteco_device_id': in_log.device_id.id or False,
+            'zkteco_device_sn': in_log.device_id.serial_number or False,
             'zkteco_transaction_id': f"{sn}_{in_log.timestamp.isoformat()}_{in_log.pin}",
             'zkteco_verify_mode': in_log.verify_mode or False,
             'zkteco_in_operation': self._STATUS_LABELS.get(in_log.status, f'Code {in_log.status}'),
-            'in_mode': 'zkteco',
+            'in_mode': self._mode_of(in_log),
         }
+        if in_log.source == 'portal':
+            vals.update(in_latitude=in_log.latitude, in_longitude=in_log.longitude)
         if out_log:
             vals['check_out'] = out_log.timestamp
-            vals['out_mode'] = 'zkteco'
-            vals['zkteco_out_device_id'] = out_log.device_id.id
+            vals['out_mode'] = self._mode_of(out_log)
+            vals['zkteco_out_device_id'] = out_log.device_id.id or False
             vals['zkteco_out_verify_mode'] = out_log.verify_mode or False
             vals['zkteco_out_operation'] = self._STATUS_LABELS.get(
                 out_log.status, f'Code {out_log.status}')
+            if out_log.source == 'portal':
+                vals.update(out_latitude=out_log.latitude, out_longitude=out_log.longitude)
         return vals
 
     @staticmethod

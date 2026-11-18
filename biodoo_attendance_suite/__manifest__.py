@@ -1,6 +1,6 @@
 {
     "name": "BioDoo Attendance Suite",
-    "version": "19.0.1.3.2",
+    "version": "19.0.1.4.0",
     "category": "Human Resources/Attendances",
     "summary": "Méta-module : installe le produit Présence/Pointage ZKTeco (sans paie)",
     "description": """

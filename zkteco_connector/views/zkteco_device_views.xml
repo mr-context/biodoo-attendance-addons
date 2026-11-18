@@ -89,7 +89,7 @@
                   decoration-success="is_online"
                   decoration-muted="state in ('offline','rejected')">
                 <field name="is_online"      column_invisible="1"/>
-                <field name="display_name"   string="Device"/>
+                <field name="display_name"   string="Pointeuse"/>
                 <field name="serial_number"  string="N° Série"/>
                 <field name="ip_address"     string="IP"/>
                 <field name="platform"       optional="show"/>
@@ -152,7 +152,7 @@
                                 type="object"
                                 class="oe_stat_button"
                                 icon="fa-users">
-                            <field name="device_user_count" widget="statinfo" string="Users device"/>
+                            <field name="device_user_count" widget="statinfo" string="Utilisateurs des pointeuses"/>
                         </button>
                         <button name="action_view_pending_users"
                                 type="object"
@@ -231,7 +231,7 @@
                                     <field name="firmware_version" readonly="1"/>
                                     <field name="multi_bio_version" readonly="1" string="Algo biométrique" invisible="not multi_bio_version"/>
                                     <field name="product_time"  readonly="1" invisible="not product_time"/>
-                                    <field name="device_id_raw" readonly="1" string="Device ID" invisible="not device_id_raw"/>
+                                    <field name="device_id_raw" readonly="1" string="Identifiant de la pointeuse" invisible="not device_id_raw"/>
                                     <field name="language_code" readonly="1" string="Code langue" invisible="not language_code"/>
                                 </group>
                                 <group string="Réseau">
@@ -355,7 +355,7 @@
                                         <button name="action_query_attlog"
                                                 type="object"
                                                 class="btn btn-secondary btn-sm">
-                                            <i class="fa fa-clock-o me-1"/> Récupérer pointages (30j)
+                                            <i class="fa fa-clock-o me-1"/> Récupérer pointages (30 j)
                                         </button>
                                         <button name="action_enroll_all_employees"
                                                 type="object"
@@ -382,6 +382,7 @@
 
                     </notebook>
                 </sheet>
+                <chatter/>
             </form>
         </field>
     </record>
@@ -402,13 +403,13 @@
 
     <!-- ── ACTIONS ───────────────────────────────────────────────── -->
     <record id="action_zkteco_device" model="ir.actions.act_window">
-        <field name="name">Devices ZKTeco</field>
+        <field name="name">Pointeuses</field>
         <field name="res_model">zkteco.device</field>
         <field name="view_mode">kanban,list,map,form</field>
     </record>
 
     <record id="action_zkteco_device_pending" model="ir.actions.act_window">
-        <field name="name">Devices en attente</field>
+        <field name="name">Pointeuses à approuver</field>
         <field name="res_model">zkteco.device</field>
         <field name="view_mode">kanban,list,form</field>
         <field name="domain">[('state', '=', 'pending')]</field>

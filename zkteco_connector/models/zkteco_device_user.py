@@ -14,8 +14,9 @@ class ZktecoDeviceUser(models.Model):
     _rec_name = 'name_on_device'
 
     device_id      = fields.Many2one('zkteco.device', required=True, ondelete='cascade', index=True)
-    pin            = fields.Char(required=True, string='PIN device', readonly=True)
-    name_on_device = fields.Char(string='Nom sur le device', readonly=True)
+    company_id = fields.Many2one(related='device_id.company_id', store=True, index=True, string='Société')
+    pin            = fields.Char(required=True, string='N° sur la pointeuse (PIN)', readonly=True)
+    name_on_device = fields.Char(string='Nom sur la pointeuse', readonly=True)
     privilege      = fields.Integer(string='Privilège', readonly=True)
     card           = fields.Char(string='Carte', readonly=True)
 

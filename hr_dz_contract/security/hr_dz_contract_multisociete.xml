@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Multi-société : chacun ne voit que les enregistrements des sociétés
+         qu'il a sélectionnées ; sans société = partagé entre toutes. -->
+    <record id="rule_hr_contract_article_company" model="ir.rule">
+        <field name="name">Articles de contrat : sociétés de l'utilisateur</field>
+        <field name="model_id" ref="model_hr_contract_article"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_hr_contract_modele_company" model="ir.rule">
+        <field name="name">Modèles de contrat : sociétés de l'utilisateur</field>
+        <field name="model_id" ref="model_hr_contract_modele"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_hr_contract_avenant_company" model="ir.rule">
+        <field name="name">Avenants : sociétés de l'utilisateur</field>
+        <field name="model_id" ref="model_hr_contract_avenant"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+</odoo>

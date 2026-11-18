@@ -108,14 +108,23 @@ class FaceService:
 
     # ── Détection de vivacité ────────────────────────────────────────────────
 
+    @property
+    def liveness_available(self):
+        """Le contrôle anti-fraude peut-il tourner ? (modèle chargé)"""
+        return self.antispoof is not None
+
     def check_liveness(self, img_bytes, bbox):
         """Évalue la vivacité du visage via MiniFASNet.
 
         Retourne (is_live: bool, score: float 0-1).
-        Si le modèle n'est pas disponible, retourne (True, 1.0) — confiance implicite.
+
+        FERMÉ PAR DÉFAUT : modèle absent, image illisible, visage hors cadre ou
+        erreur du modèle → (False, 0.0). Un contrôle anti-fraude qui ne peut pas
+        s'exécuter refuse le pointage ; il ne l'accepte jamais « par confiance ».
         """
         if self.antispoof is None:
-            return True, 1.0
+            _logger.warning('Vivacité : modèle antispoof.onnx absent — pointage refusé.')
+            return False, 0.0
 
         np = self.np
         cv2 = self.cv2
@@ -123,7 +132,7 @@ class FaceService:
         nparr = np.frombuffer(img_bytes, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if img is None:
-            return True, 1.0
+            return False, 0.0
 
         # Rogner et redimensionner le visage pour MiniFASNet (entrée 128×128)
         x1, y1, x2, y2 = [int(v) for v in bbox]
@@ -138,7 +147,7 @@ class FaceService:
 
         face_crop = img[y1:y2, x1:x2]
         if face_crop.size == 0:
-            return True, 1.0
+            return False, 0.0
 
         # OpenCV charge en BGR, MiniFASNet attend RGB
         face_crop_rgb = cv2.cvtColor(face_crop, cv2.COLOR_BGR2RGB)
@@ -154,9 +163,9 @@ class FaceService:
             _logger.info('MiniFASNet liveness: real=%.3f spoof=%.3f → %s',
                          real_score, float(probs[1]),
                          'LIVE' if real_score >= 0.5 else 'SPOOF')
-        except Exception as e:
-            _logger.warning('Liveness check error: %s', e)
-            return True, 1.0
+        except Exception:   # biodoo: except-ok erreur du modèle = refus (fermé par défaut), journalisée
+            _logger.exception('Vivacité : erreur du modèle — pointage refusé.')
+            return False, 0.0
 
         return True, real_score  # le contrôleur gère les seuils
 

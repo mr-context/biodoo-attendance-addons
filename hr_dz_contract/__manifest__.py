@@ -33,6 +33,7 @@ Conforme à:
     'data': [
         # Security
         'security/ir.model.access.csv',
+        'security/hr_dz_contract_multisociete.xml',
         # Data
         'data/ir_sequence_data.xml',
         'data/hr_contract_type_data.xml',

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import base64
+import binascii
 import logging
 
 from psycopg2 import IntegrityError
@@ -23,6 +24,7 @@ class ZktecoDeviceBiodata(models.Model):
     _description = 'ZKTeco Template biométrique'
     _order = 'bio_type, finger_id'
 
+    company_id = fields.Many2one(related='device_user_id.company_id', store=True, index=True, string='Société')
     device_user_id = fields.Many2one('zkteco.device.user', required=True,
                                      ondelete='cascade', index=True)
     employee_id    = fields.Many2one('hr.employee',
@@ -96,7 +98,8 @@ class ZktecoDeviceBiodata(models.Model):
             else:
                 try:
                     raw = base64.b64decode(template_b64)
-                except Exception:
+                except (binascii.Error, ValueError):
+                    # Certains firmwares envoient le gabarit en clair.
                     raw = str(template_b64).encode()
 
         vals = {
@@ -152,6 +155,7 @@ class ZktecoDeviceBiophoto(models.Model):
     _name = 'zkteco.device.biophoto'
     _description = 'ZKTeco Photo visage (enrôlement)'
 
+    company_id = fields.Many2one(related='device_user_id.company_id', store=True, index=True, string='Société')
     device_user_id = fields.Many2one('zkteco.device.user', required=True,
                                      ondelete='cascade', index=True)
     employee_id    = fields.Many2one('hr.employee',
@@ -178,7 +182,8 @@ class ZktecoDeviceBiophoto(models.Model):
 
         try:
             photo_bytes = base64.b64decode(content_b64) if content_b64 else b''
-        except Exception:
+        except (binascii.Error, ValueError):
+            _logger.warning("Photo biométrique illisible (PIN %s, %s) : ignorée", pin, serial_number)
             photo_bytes = b''
 
         if not photo_bytes:

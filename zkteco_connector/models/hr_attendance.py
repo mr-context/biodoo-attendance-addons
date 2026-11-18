@@ -50,7 +50,7 @@ class HrAttendance(models.Model):
         help='Deduplication key: SerialNumber + Timestamp + UserID.',
     )
     zkteco_device_sn = fields.Char(
-        string='Device S/N',
+        string='N° de série de la pointeuse',
         readonly=True,
         copy=False,
         index=True,

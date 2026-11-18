@@ -6,6 +6,7 @@ POST /my/attendance/checkin → pipeline facial (liveness + verify + géofence +
 """
 
 import base64
+import binascii
 import json
 import logging
 import math
@@ -16,6 +17,9 @@ from odoo.http import request
 from odoo.addons.portal.controllers.portal import CustomerPortal
 
 _logger = logging.getLogger(__name__)
+
+# Score de vivacité sous lequel la fraude est certaine (photo, écran).
+SPOOF_HARD_LIMIT = 0.05
 
 
 def haversine_distance(lat1, lon1, lat2, lon2):
@@ -57,7 +61,7 @@ class FaceAttendancePortal(CustomerPortal):
             return request.render('hr_face_attendance.portal_not_authorized', {})
 
         # Historique semaine
-        today = fields.Date.today()
+        today = fields.Date.context_today(request.env.user)
         week_start = today - timedelta(days=today.weekday())
         week_attendances = request.env['hr.attendance'].sudo().search([
             ('employee_id', '=', employee.id),
@@ -86,173 +90,113 @@ class FaceAttendancePortal(CustomerPortal):
 
     @http.route('/my/attendance/checkin', type='jsonrpc', auth='user', methods=['POST'])
     def face_checkin(self, image_data, latitude=None, longitude=None, **kw):
-        """Pipeline complet : liveness → verify → géofence → write attendance.
+        """Pointage facial depuis le portail.
 
-        Codes d'erreur possibles :
-          not_enrolled    pas d'embedding enregistré
-          no_face         aucun visage détecté dans l'image
-          spoof_detected  score vivacité trop bas
-          face_mismatch   l'identité ne correspond pas
-          out_of_range    hors périmètre GPS
-          gps_required    GPS non fourni alors qu'il est obligatoire
-          service_error   erreur interne du service IA
+        Contrôles, tous côté serveur et dans cet ordre : autorisation, nombre
+        d'essais, image, visage, vivacité (FERMÉE par défaut : si le contrôle ne
+        peut pas tourner, le pointage est refusé), identité, périmètre (règle
+        unique employé → site → société). Chaque essai est tracé
+        (hr.face.attempt). Le pointage accepté entre dans le MÊME sas que ceux
+        des pointeuses (zkteco.device.attlog, source « portail ») : mêmes règles
+        d'appariement, d'anomalies et de corrections RH.
+
+        Aucune erreur technique n'est renvoyée au navigateur : un code stable
+        (voir hr_face_attempt.RESULTS) et, au besoin, distance et site.
         """
         employee = request.env['hr.employee'].sudo().search(
-            [('user_id', '=', request.env.user.id)], limit=1
-        )
+            [('user_id', '=', request.env.user.id)], limit=1)
         if not employee:
             return {'success': False, 'error': 'no_employee'}
-
         if not employee.face_portal_enabled:
             return {'success': False, 'error': 'not_authorized'}
-
         if not employee.face_enrolled:
             return {'success': False, 'error': 'not_enrolled'}
 
-        # Décoder l'image
+        Attempt = request.env['hr.face.attempt'].sudo()
+        lat = float(latitude) if latitude not in (None, '') else 0.0
+        lng = float(longitude) if longitude not in (None, '') else 0.0
+
+        def refuse(code, **extra):
+            Attempt._log(employee, code, latitude=lat, longitude=lng,
+                         liveness_score=extra.get('liveness_score', 0.0),
+                         confidence=extra.get('confidence', 0.0),
+                         distance_m=extra.get('distance', 0),
+                         perimeter=extra.get('site', ''))
+            return dict({'success': False, 'error': code}, **extra)
+
+        if Attempt._is_blocked(employee):
+            return refuse('too_many_attempts')
+
         try:
             if image_data and ',' in image_data:
                 image_data = image_data.split(',', 1)[1]
-            img_bytes = base64.b64decode(image_data)
-        except Exception:
-            return {'success': False, 'error': 'invalid_image'}
+            img_bytes = base64.b64decode(image_data, validate=True)
+        except (ValueError, TypeError, binascii.Error):
+            return refuse('invalid_image')
 
         company = employee.company_id
-
-        # Charger le service IA
         try:
             from ..services.face_service import FaceService
             svc = FaceService.get_instance()
-        except Exception as e:
-            _logger.error('FaceService load error: %s', e)
-            return {'success': False, 'error': 'service_error', 'details': str(e)}
-
-        # 1. Extraction embedding
-        try:
             embedding, bbox = svc.get_embedding(img_bytes)
-        except Exception as e:
-            return {'success': False, 'error': 'service_error', 'details': str(e)}
-
+        except Exception:   # biodoo: except-ok panne du service : journalisée, refus tracé, message stable
+            _logger.exception('Pointage facial : service de reconnaissance en erreur (employé %s)', employee.id)
+            return refuse('service_error')
         if embedding is None:
-            return {'success': False, 'error': 'no_face'}
+            return refuse('no_face')
 
-        # 2. Détection de vivacité
-        try:
-            is_live, liveness_score = svc.check_liveness(img_bytes, bbox)
-        except Exception:
-            is_live, liveness_score = True, 1.0
-
-        SPOOF_HARD_LIMIT = 0.05  # en dessous → vraie fraude, erreur affichée
+        # Vivacité — fermée par défaut (voir FaceService.check_liveness).
+        if not svc.liveness_available:
+            return refuse('liveness_unavailable')
+        is_live, liveness_score = svc.check_liveness(img_bytes, bbox)
+        liveness_score = round(liveness_score, 4)
         if not is_live or liveness_score < SPOOF_HARD_LIMIT:
-            return {
-                'success': False,
-                'error': 'spoof_detected',
-                'liveness_score': round(liveness_score, 4),
-            }
+            return refuse('spoof_detected', liveness_score=liveness_score)
         if liveness_score < company.face_liveness_threshold:
-            # Zone grise (mauvais frame, mauvais éclairage) → réessayer silencieusement
-            return {'success': False, 'error': 'retry', 'liveness_score': round(liveness_score, 4)}
+            # Zone grise (mauvais cadrage, éclairage) : on redemande une image,
+            # sans compter un refus.
+            return {'success': False, 'error': 'retry', 'liveness_score': liveness_score}
 
-        # 3. Vérification d'identité
         stored_emb = employee._decode_embedding()
         if stored_emb is None:
             return {'success': False, 'error': 'not_enrolled'}
-
-        try:
-            verified, distance = svc.verify(embedding, stored_emb, company.face_attendance_threshold)
-        except Exception as e:
-            return {'success': False, 'error': 'service_error', 'details': str(e)}
-
+        verified, distance = svc.verify(embedding, stored_emb, company.face_attendance_threshold)
         confidence = round(1.0 - distance, 4)
-
         if not verified:
-            return {
-                'success': False,
-                'error': 'face_mismatch',
-                'confidence': confidence,
-            }
+            return refuse('face_mismatch', confidence=confidence, liveness_score=liveness_score)
 
-        # 4. Géofencing — priorité au géofence par employé
-        if employee.geofence_enabled and employee.geofence_radius:
-            if not latitude or not longitude:
-                return {'success': False, 'error': 'gps_required'}
-            if employee.geofence_lat or employee.geofence_lng:
-                dist = haversine_distance(
-                    float(latitude), float(longitude),
-                    employee.geofence_lat, employee.geofence_lng,
-                )
-                if dist > employee.geofence_radius:
-                    return {
-                        'success': False,
-                        'error': 'out_of_range',
-                        'distance': int(dist),
-                        'max_distance': employee.geofence_radius,
-                    }
+        perimeter, refusal = employee._face_perimeter()
+        if refusal:
+            return refuse(refusal, confidence=confidence, liveness_score=liveness_score)
+        if perimeter:
+            if not (lat or lng):
+                return refuse('gps_required', confidence=confidence, liveness_score=liveness_score,
+                              site=perimeter['label'])
+            dist = int(haversine_distance(lat, lng, perimeter['lat'], perimeter['lng']))
+            if dist > perimeter['radius']:
+                return refuse('out_of_range', confidence=confidence, liveness_score=liveness_score,
+                              distance=dist, max_distance=perimeter['radius'], site=perimeter['label'])
 
-        # 5. Enregistrement de la présence — règle premier/dernier
-        # Une seule ligne par jour : premier scan = check_in, suivants = mise à jour check_out
         now = fields.Datetime.now()
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        log = request.env['zkteco.device.attlog'].sudo()._stage_portal(
+            employee, now, latitude=lat, longitude=lng,
+            face_confidence=confidence, liveness_score=liveness_score)
+        Attempt._log(employee, 'ok', latitude=lat, longitude=lng, liveness_score=liveness_score,
+                     confidence=confidence, perimeter=perimeter['label'] if perimeter else '')
+        attendance = log.attendance_id
+        action_label = 'check_out' if attendance and attendance.check_out == now else 'check_in'
 
-        Attendance = request.env['hr.attendance'].sudo()
-        # limit=1 : premier check_in du jour (règle premier/dernier)
-        # On ferme aussi tout record ouvert du jour précédent pour éviter les chevauchements
-        open_prev = Attendance.search([
-            ('employee_id', '=', employee.id),
-            ('check_in', '<', today_start),
-            ('check_out', '=', False),
-        ])
-        if open_prev:
-            open_prev.write({'check_out': today_start})
-
-        today_att = Attendance.search([
-            ('employee_id', '=', employee.id),
-            ('check_in', '>=', today_start),
-        ], order='check_in asc', limit=1)
-
-        vals_common = {
-            'face_confidence': confidence,
-            'face_liveness_score': round(liveness_score, 4),
-            'check_in_latitude': float(latitude) if latitude else 0.0,
-            'check_in_longitude': float(longitude) if longitude else 0.0,
-        }
-
-        try:
-            if not today_att:
-                # Premier pointage du jour → entrée
-                vals = dict(vals_common, **{
-                    'employee_id': employee.id,
-                    'check_in': now,
-                    'in_mode': 'face',
-                })
-                attendance = Attendance.create(vals)
-                action_label = 'check_in'
-            else:
-                # Pointage existant → mise à jour de la sortie (dernier scan)
-                vals = dict(vals_common, **{
-                    'check_out': now,
-                    'out_mode': 'face',
-                })
-                today_att.write(vals)
-                attendance = today_att
-                action_label = 'check_out'
-        except Exception as e:
-            _logger.error('write_error: %s', e, exc_info=True)
-            return {'success': False, 'error': 'write_error', 'details': str(e)}
-
-        # Calculer heures du jour
-        hours_today = sum(
-            (a.worked_hours or 0.0) for a in Attendance.search([
-                ('employee_id', '=', employee.id),
-                ('check_in', '>=', today_start),
-            ]) if a.check_out
-        )
-
+        day = request.env['zkteco.device.attlog'].sudo()._work_day_of(employee, now)
+        day_logs = request.env['hr.attendance'].sudo().search([
+            ('employee_id', '=', employee.id), ('check_out', '!=', False),
+            ('check_in', '>=', now - timedelta(hours=36))])
+        hours_today = sum(a.worked_hours for a in day_logs
+                          if request.env['zkteco.device.attlog'].sudo()._work_day_of(employee, a.check_in) == day)
         return {
             'success': True,
             'action': action_label,
             'employee_name': employee.name,
             'confidence': confidence,
-            'liveness_score': round(liveness_score, 4),
+            'liveness_score': liveness_score,
             'hours_today': round(hours_today, 2),
         }

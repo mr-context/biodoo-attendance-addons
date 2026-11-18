@@ -20,6 +20,7 @@ Fonctionnalités :
     'website': 'https://www.smoothtechnology.net',
     'license': 'LGPL-3',
     'depends': [
+        'zkteco_connector',   # le pointage portail passe par le sas des pointeuses
         'hr',
         'hr_attendance',
         'portal',
@@ -27,6 +28,8 @@ Fonctionnalités :
     ],
     'data': [
         'security/ir.model.access.csv',
+        'security/hr_face_security.xml',
+        'views/hr_face_attempt_views.xml',
         'views/res_company_views.xml',
         'views/hr_work_location_views.xml',
         'views/hr_checkpoint_views.xml',

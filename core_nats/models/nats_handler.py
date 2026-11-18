@@ -30,6 +30,27 @@ class NatsHandler(models.AbstractModel):
     # Override in subclasses: list of NATS subjects to subscribe to.
     _nats_subjects: list[str] = []
 
+    # Champs obligatoires par sujet : {motif de sujet: {champ: type ou tuple}}.
+    # Un message qui ne les a pas est mis à l'écart (« Messages en échec »)
+    # au lieu d'être rejoué indéfiniment.
+    _nats_schema: dict = {}
+
+    @api.model
+    def _nats_validate(self, subject: str, payload) -> str | None:
+        """→ None si le message est exploitable, sinon la raison du refus."""
+        if not isinstance(payload, dict):
+            return 'Message non structuré (objet JSON attendu)'
+        from odoo.addons.core_nats.services.nats_service import nats_subject_matches
+        for pattern, required in self._nats_schema.items():
+            if not nats_subject_matches(pattern, subject):
+                continue
+            for name, kind in required.items():
+                if name not in payload or payload[name] in (None, ''):
+                    return 'Champ obligatoire manquant : %s' % name
+                if not isinstance(payload[name], kind):
+                    return 'Champ %s de type inattendu (%s)' % (name, type(payload[name]).__name__)
+        return None
+
     @api.model
     def _register_hook(self):
         super()._register_hook()

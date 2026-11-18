@@ -84,6 +84,10 @@ function initDashboardState() {
         break_issue_count: 0,
         trial_alert_count: 0,
         cdd_alert_count: 0,
+        work_entry_error_count: 0,
+        rule_error_count: 0,
+        work_entry_error_ids: [],
+        rule_error_ids: [],
 
         present_attendance_ids: [],
         absent_employee_ids: [],
@@ -122,7 +126,7 @@ const STAT_CARDS = [
     { key: "open", icon: "fa-hourglass-half", color: "o_biodoo_c_teal", label: "Encore présents", valueKey: "open_count" },
     { key: "break_issue", icon: "fa-coffee", color: "o_biodoo_c_warning", label: "Pauses non conformes", valueKey: "break_issue_count" },
     { key: "leave", icon: "fa-plane", color: "o_biodoo_c_muted", label: "En congé", valueKey: "leave_count" },
-    { key: "deduction", icon: "fa-exclamation-triangle", color: "o_biodoo_c_muted", label: "Déductions à valider", valueKey: "pending_deductions" },
+    { key: "deduction", icon: "fa-exclamation-triangle", color: "o_biodoo_c_muted", label: "Retenues à décider", valueKey: "pending_deductions" },
 ];
 
 // Alertes contrats : toujours "à ce jour", indépendantes de la date choisie
@@ -130,6 +134,8 @@ const STAT_CARDS = [
 const ALERT_CARDS = [
     { key: "trial_alert", icon: "fa-user-circle-o", label: "Périodes d'essai à risque", valueKey: "trial_alert_count" },
     { key: "cdd_alert", icon: "fa-file-text-o", label: "Fins de CDD ≤ 30 jours", valueKey: "cdd_alert_count" },
+    { key: "work_entry_error", icon: "fa-exclamation-circle", label: "Prestations non recalculées", valueKey: "work_entry_error_count" },
+    { key: "rule_error", icon: "fa-bug", label: "Règles d'anomalie en erreur", valueKey: "rule_error_count" },
 ];
 
 const DRILL_DOWN = {
@@ -184,7 +190,7 @@ const DRILL_DOWN = {
     deduction: {
         resModel: "hr.attendance.deduction",
         idsKey: "deduction_ids",
-        name: "Déductions à valider",
+        name: "Retenues à décider",
         views: [[false, "list"], [false, "form"]],
     },
     trial_alert: {
@@ -198,6 +204,20 @@ const DRILL_DOWN = {
         resModel: "hr.version",
         idsKey: "cdd_alert_ids",
         name: "Fins de CDD à moins de 30 jours",
+        views: [[false, "list"], [false, "form"]],
+        dateScoped: false,
+    },
+    work_entry_error: {
+        resModel: "hr.employee",
+        idsKey: "work_entry_error_ids",
+        name: "Employés dont les prestations ne sont pas recalculées",
+        views: [[false, "list"], [false, "form"]],
+        dateScoped: false,
+    },
+    rule_error: {
+        resModel: "hr.attendance.anomaly.type",
+        idsKey: "rule_error_ids",
+        name: "Règles d'anomalie en erreur",
         views: [[false, "list"], [false, "form"]],
         dateScoped: false,
     },

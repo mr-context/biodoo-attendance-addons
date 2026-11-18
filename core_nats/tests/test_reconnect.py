@@ -45,10 +45,11 @@ class _FakeSub:
 
 
 class _FakeJS:
+    """JetStream simulé : consommateur durable en mode pull (comme le service)."""
     def __init__(self, nc):
         self._nc = nc
 
-    async def subscribe(self, subject, cb=None, durable=None, manual_ack=False, config=None):
+    async def pull_subscribe(self, subject, durable=None, stream=None, config=None):
         if not self._nc.js_ready or subject not in self._nc.stream_subjects:
             raise RuntimeError('no stream matches subject')
         if any(s.active and s.kind == 'js' and s.subject == subject for s in self._nc.subs):
@@ -56,9 +57,18 @@ class _FakeJS:
         return _FakeSub(self._nc.subs, subject, 'js')
 
     async def find_stream_name_by_subject(self, subject):
+        from nats.js.errors import NotFoundError
         if not self._nc.js_ready or subject not in self._nc.stream_subjects:
-            raise LookupError(subject)
+            raise NotFoundError()
         return 'TA_EVENTS'
+
+    async def consumer_info(self, stream, durable):
+        from nats.js.errors import NotFoundError
+        raise NotFoundError()
+
+    async def delete_consumer(self, stream, durable):
+        from nats.js.errors import NotFoundError
+        raise NotFoundError()
 
 
 class _FakeNC:
@@ -74,7 +84,7 @@ class _FakeNC:
     def jetstream(self):
         return _FakeJS(self)
 
-    async def subscribe(self, subject, cb=None):
+    async def subscribe(self, subject, cb=None, queue=''):
         return _FakeSub(self.subs, subject, 'core')
 
     def active(self, subject):
@@ -161,3 +171,33 @@ class TestNatsReconnect(BaseCase):
         self._run(svc._unsubscribe(JS_SUBJECT), svc._subscribe(JS_SUBJECT))
 
         self.assertEqual(nc.active(JS_SUBJECT), ['js'])
+
+
+class _LegacyJS(_FakeJS):
+    """Un ancien consommateur push existe, il avait acquitté jusqu'au message 41."""
+    configs = []
+
+    async def consumer_info(self, stream, durable):
+        from types import SimpleNamespace
+        return SimpleNamespace(ack_floor=SimpleNamespace(stream_seq=41))
+
+    async def delete_consumer(self, stream, durable):
+        return True
+
+    async def pull_subscribe(self, subject, durable=None, stream=None, config=None):
+        _LegacyJS.configs.append(config)
+        return await super().pull_subscribe(subject, durable=durable, stream=stream, config=config)
+
+
+@tagged('post_install', '-at_install')
+class TestLegacyConsumerHandover(BaseCase):
+
+    def test_new_consumer_resumes_after_legacy_ack_floor(self):
+        nc = _FakeNC(stream_subjects=[JS_SUBJECT])
+        svc = NatsService('nats://test', _NoDatabase())
+        svc._nc, svc._js, svc._connected = nc, _LegacyJS(nc), True
+        svc._handlers = {JS_SUBJECT: ['fake.model']}
+        _LegacyJS.configs.clear()
+        asyncio.run(svc._subscribe(JS_SUBJECT))
+        cfg = _LegacyJS.configs[0]
+        self.assertEqual(cfg.opt_start_seq, 42, "pas de rejeu de tout le flux")

@@ -11,6 +11,8 @@ import logging
 
 from odoo import api, models
 
+from .license_states import state_after_verdict
+
 _logger = logging.getLogger(__name__)
 
 
@@ -54,8 +56,9 @@ class ZktecoLicenseHandler(models.AbstractModel):
 
             granted = bool(payload.get('granted'))
             device.write({
-                # Authoritative: approved iff the bridge granted a slot, else held.
-                'state':          'approved' if granted else 'held',
+                # Authoritative: a slot iff the bridge granted one, else held.
+                # An offline device keeps showing offline (see license_states).
+                'state':          state_after_verdict(device.state, granted),
                 'license_reason': payload.get('reason') or '',
                 'license_used':   int(payload.get('used') or 0),
                 'license_max':    int(payload.get('max') or 0),

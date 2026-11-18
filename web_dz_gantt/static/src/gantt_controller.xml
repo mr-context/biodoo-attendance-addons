@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Barre d'outils : période, échelle, développer / réduire. -->
+    <t t-name="web_dz_gantt.GanttView.Buttons">
+        <div class="o_dz_gantt_buttons d-flex flex-wrap align-items-center gap-1">
+            <div class="btn-group" role="toolbar" aria-label="Période">
+                <button class="btn btn-secondary o_dz_gantt_prev" t-on-click="() => model.move(-1)"
+                        data-tooltip="Précédent" aria-label="Précédent">
+                    <i class="oi oi-arrow-left"/>
+                </button>
+                <button class="btn btn-secondary o_dz_gantt_today_button" t-on-click="() => model.move(0)">Aujourd'hui</button>
+                <button class="btn btn-secondary o_dz_gantt_next" t-on-click="() => model.move(1)"
+                        data-tooltip="Suivant" aria-label="Suivant">
+                    <i class="oi oi-arrow-right"/>
+                </button>
+            </div>
+            <Dropdown t-if="model.metaData.scales.length > 1">
+                <button class="btn btn-secondary o_dz_gantt_scale_toggler">
+                    <i class="fa fa-calendar me-1"/>
+                    <t t-esc="scaleLabels[model.metaData.scale]"/>
+                </button>
+                <t t-set-slot="content">
+                    <DropdownItem t-foreach="model.metaData.scales" t-as="scale" t-key="scale"
+                                  class="{ 'o_dz_gantt_scale': true, active: model.metaData.scale === scale }"
+                                  attrs="{ 'data-scale': scale }"
+                                  onSelected="() => model.setScale(scale)">
+                        <t t-esc="scaleLabels[scale]"/>
+                    </DropdownItem>
+                </t>
+            </Dropdown>
+            <div t-if="hasGroups" class="btn-group" role="toolbar" aria-label="Groupes">
+                <button class="btn btn-secondary" t-on-click="() => model.setAllRows(true)"
+                        data-tooltip="Tout développer" aria-label="Tout développer">
+                    <i class="fa fa-expand"/>
+                </button>
+                <button class="btn btn-secondary" t-on-click="() => model.setAllRows(false)"
+                        data-tooltip="Tout réduire" aria-label="Tout réduire">
+                    <i class="fa fa-compress"/>
+                </button>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="web_dz_gantt.GanttController">
+        <div t-att-class="props.className" t-ref="root">
+            <Layout className="model.useSampleModel ? 'o_view_sample_data' : ''" display="props.display">
+                <t t-set-slot="layout-buttons">
+                    <t t-call="{{ props.buttonTemplate }}"/>
+                </t>
+                <t t-set-slot="control-panel-additional-actions">
+                    <CogMenu/>
+                </t>
+                <t t-set-slot="layout-actions">
+                    <SearchBar toggler="searchBarToggler"/>
+                </t>
+                <t t-set-slot="control-panel-navigation-additional">
+                    <Pager t-if="pagerProps" t-props="pagerProps"/>
+                    <t t-component="searchBarToggler.component" t-props="searchBarToggler.props"/>
+                </t>
+                <t t-if="model.isReady and model.data">
+                    <ActionHelper t-if="showNoContentHelp and props.info.noContentHelp"
+                                  noContentHelp="props.info.noContentHelp" showRibbon="model.useSampleModel"/>
+                    <t t-component="props.Renderer" model="model" data="model.data"/>
+                </t>
+            </Layout>
+        </div>
+    </t>
+
+</templates>

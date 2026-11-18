@@ -99,6 +99,10 @@ class HrEmployee(models.Model):
         index=True,
         help='Matricule interne généré automatiquement'
     )
+    _unique_matricule = models.UniqueIndex(
+        '(matricule, company_id) WHERE matricule IS NOT NULL',
+        'Ce matricule est déjà attribué dans cette société.',
+    )
     matricule_old = fields.Char(
         string='Ancien matricule',
         help='Matricule précédent (migration)'
@@ -134,12 +138,6 @@ class HrEmployee(models.Model):
                 if prenom:
                     vals['prenom'] = prenom
         return vals
-
-    @api.model_create_multi
-    def create(self, vals_list):
-        for vals in vals_list:
-            self._apply_name_split(vals)
-        return super().create(vals_list)
 
     def write(self, vals):
         self._apply_name_split(vals)
@@ -293,7 +291,9 @@ class HrEmployee(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        # Un seul create : découpage nom/prénom puis matricule.
         for vals in vals_list:
+            self._apply_name_split(vals)
             if not vals.get('matricule'):
                 vals['matricule'] = self._generate_matricule(vals)
         return super().create(vals_list)
@@ -326,7 +326,7 @@ class HrEmployee(models.Model):
         elif pattern == 'year_seq':
             # Format: Année/Séquence (ex: 2024/00001)
             from datetime import date
-            year = date.today().year
+            year = fields.Date.context_today(self).year
             return f"{year}{separator}{sequence}"
         else:
             # Custom ou fallback

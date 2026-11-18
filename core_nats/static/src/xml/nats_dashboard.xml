@@ -14,7 +14,7 @@
                 <div class="o_nats_header d-flex align-items-center justify-content-between px-4 py-3 border-bottom">
                     <div class="d-flex align-items-center gap-2">
                         <span t-att-class="'o_nats_dot ' + (state.connected ? 'connected' : 'disconnected')"/>
-                        <strong t-esc="state.connected ? 'Connected' : 'Disconnected'"/>
+                        <strong t-esc="state.connected ? 'Connecté' : 'Déconnecté'"/>
                         <code class="text-muted small" t-esc="state.url"/>
                     </div>
                     <small class="text-muted">
@@ -35,7 +35,7 @@
                         <div class="card text-center o_nats_stat_card">
                             <div class="card-body py-3">
                                 <div class="o_nats_stat_value" t-esc="state.subs.length"/>
-                                <div class="o_nats_stat_label">Subscriptions</div>
+                                <div class="o_nats_stat_label">Abonnements</div>
                             </div>
                         </div>
                     </div>
@@ -43,7 +43,7 @@
                         <div class="card text-center o_nats_stat_card">
                             <div class="card-body py-3">
                                 <div class="o_nats_stat_value" t-esc="state.total.toLocaleString()"/>
-                                <div class="o_nats_stat_label">Messages processed</div>
+                                <div class="o_nats_stat_label">Messages traités</div>
                             </div>
                         </div>
                     </div>
@@ -54,7 +54,7 @@
                                     <t t-esc="state.rate"/>
                                     <small class="o_nats_stat_unit"> /min</small>
                                 </div>
-                                <div class="o_nats_stat_label">Message rate</div>
+                                <div class="o_nats_stat_label">Débit</div>
                             </div>
                         </div>
                     </div>
@@ -73,9 +73,9 @@
                                 <table class="table table-sm table-hover mb-0">
                                     <thead class="table-light">
                                         <tr>
-                                            <th>Subject</th>
+                                            <th>Sujet</th>
                                             <th class="text-center">Type</th>
-                                            <th class="text-end">Msgs</th>
+                                            <th class="text-end">Messages</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -86,7 +86,7 @@
                                             </td>
                                             <td class="text-center">
                                                 <span t-if="sub.is_js" class="badge bg-primary">JS</span>
-                                                <span t-else="" class="badge bg-secondary">Core</span>
+                                                <span t-else="" class="badge bg-secondary">Direct</span>
                                             </td>
                                             <td class="text-end text-monospace" t-esc="(sub.count || 0).toLocaleString()"/>
                                         </tr>
@@ -108,7 +108,7 @@
                                 <span class="fw-semibold">
                                     <i class="fa fa-bolt me-2 text-warning"/>Live Feed
                                 </span>
-                                <small class="text-muted">last 50 events · 2 s refresh</small>
+                                <small class="text-muted">50 derniers messages · actualisé toutes les 2 s</small>
                             </div>
                             <div class="card-body p-0 o_nats_feed_container">
                                 <div t-if="state.feed.length === 0"

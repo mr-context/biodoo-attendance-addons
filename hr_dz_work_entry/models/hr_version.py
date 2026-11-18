@@ -1,23 +1,60 @@
 """
 Extension native de hr.version pour ajouter la source 'attendance'.
 
-Suit le pattern Odoo 19 pour l'extension de work_entry_source.
+Une version en source « Présences » ne passe plus par la génération
+d'Odoo (qui suppose l'employé présent selon son planning) : elle est confiée
+au moteur unique `hr.dz.work.entry.engine`, qui compare le planning aux
+pointages et crée aussi les absences. La tâche planifiée d'Odoo « Generate
+Missing Work Entries » sert ainsi de calcul quotidien.
 """
 
-from datetime import datetime, timedelta, time, date
-from collections import defaultdict
+from datetime import datetime, timedelta
 
-from odoo import models, fields, api, _
+import pytz
+
+from odoo import models, fields, _
 
 
 class HrVersion(models.Model):
     _inherit = 'hr.version'
 
-    # Étendre la sélection work_entry_source de façon native
+    # biodoo est un logiciel de pointage : les nouveaux contrats sont calculés
+    # depuis les pointages. « Horaire de travail » reste disponible pour le
+    # personnel dispensé de pointage (présumé présent selon son planning).
     work_entry_source = fields.Selection(
         selection_add=[('attendance', 'Présences (Pointage)')],
         ondelete={'attendance': 'set default'},
+        default='attendance',
     )
+
+    # Heures supplémentaires : jeu de règles algérien par défaut (majorées),
+    # au lieu du jeu par défaut d'Odoo (taux 1).
+    ruleset_id = fields.Many2one(default=lambda self: self._dz_default_overtime_ruleset())
+
+    def _dz_default_overtime_ruleset(self):
+        return (self.env.ref('hr_dz_work_entry.overtime_ruleset_dz', raise_if_not_found=False)
+                or self.env.ref('hr_attendance.hr_attendance_default_ruleset', raise_if_not_found=False))
+
+    def _dz_adopt_dz_overtime_ruleset(self):
+        """Contrats restés sur le jeu par défaut d'Odoo (ou sans jeu) → jeu algérien.
+        Un jeu choisi par le client n'est jamais remplacé."""
+        dz = self.env.ref('hr_dz_work_entry.overtime_ruleset_dz', raise_if_not_found=False)
+        odoo_default = self.env.ref('hr_attendance.hr_attendance_default_ruleset', raise_if_not_found=False)
+        if not dz:
+            return
+        versions = self.sudo().with_context(active_test=False).search([
+            '|', ('ruleset_id', '=', False), ('ruleset_id', '=', odoo_default.id if odoo_default else 0)])
+        if not versions:
+            return
+        versions.write({'ruleset_id': dz.id})
+        # Odoo ne recalcule pas les heures sup. déjà enregistrées quand le jeu
+        # change : on le fait pour le mois en cours et le précédent (une paie
+        # plus ancienne est close ; ses prestations validées ne bougent plus).
+        since = (fields.Date.today().replace(day=1) - timedelta(days=1)).replace(day=1)
+        self.env['hr.attendance'].sudo().search([
+            ('employee_id', 'in', versions.employee_id.ids),
+            ('check_in', '>=', since),
+        ])._update_overtime()
 
     def _is_work_entry_source_attendance(self):
         """Retourne True si la source de CETTE version est 'attendance'."""
@@ -25,184 +62,53 @@ class HrVersion(models.Model):
         return self.work_entry_source == 'attendance'
 
     def _get_work_entries_values(self, date_start, date_stop):
-        """
-        Override pour générer les work entries depuis les présences
-        quand work_entry_source == 'attendance'.
+        """Les versions « Présences » ne produisent rien par la voie d'Odoo :
+        leurs prestations sont calculées par le moteur (voir _generate_work_entries).
 
-        Odoo 19 appelle cette méthode sur un LOT de versions
-        (`versions._get_work_entries_values(...)` dans `_generate_work_entries`).
-        L'ancienne version lisait `self.work_entry_source` comme sur une seule
-        fiche : dès que deux employés étaient en source « Présences », le cron
-        « Generate Missing Work Entries » plantait (« too many values to unpack »)
-        et aucune prestation n'était générée — 570 échecs relevés sur la démo le
-        2026-09-22. On répartit donc le lot : les versions pointage une à une,
-        les autres à Odoo, en une seule fois.
+        Odoo 19 appelle cette méthode sur un LOT de versions ; on ne transmet à
+        Odoo que les autres.
         """
+        autres = self.filtered(lambda v: v.work_entry_source != 'attendance')
+        if not autres:
+            return []
+        return super(HrVersion, autres)._get_work_entries_values(date_start, date_stop)
+
+    def _generate_work_entries(self, date_start, date_stop, force=False):
+        """Bornes UTC naïves (convention Odoo) → jours locaux, puis moteur."""
         par_pointage = self.filtered(lambda v: v.work_entry_source == 'attendance')
         autres = self - par_pointage
-        vals_list = []
+        result = self.env['hr.work.entry']
         if autres:
-            vals_list += super(HrVersion, autres)._get_work_entries_values(date_start, date_stop)
+            result |= super(HrVersion, autres)._generate_work_entries(date_start, date_stop, force=force)
+        if not par_pointage:
+            return result
+
+        par_pointage.write({'last_generation_date': fields.Date.today()})
+        engine = self.env['hr.dz.work.entry.engine']
         for version in par_pointage:
-            vals_list += version._get_work_entries_values_from_attendance(date_start, date_stop)
-        return vals_list
-
-    def _get_work_entries_values_from_attendance(self, date_start, date_stop):
-        """
-        Génère les valeurs de work entries depuis hr.attendance + calendar leaves.
-
-        Détecte dynamiquement:
-        - Présences → type par défaut (Attendance)
-        - Heures sup validées → type overtime
-        - Jours spéciaux (fériés, etc.) → type configuré sur le calendar leave
-        """
-        self.ensure_one()
-        vals_list = []
-
-        Attendance = self.env['hr.attendance']
-
-        # Types de work entry
-        default_type_id = self._get_default_work_entry_type_id()
-        overtime_type = self.env['hr.work.entry.type'].search(
-            [('code', '=', 'OVERTIME')], limit=1)
-        overtime_type_id = overtime_type.id if overtime_type else default_type_id
-
-        # Convertir les dates en datetime si nécessaire
-        if isinstance(date_start, date) and not isinstance(date_start, datetime):
-            date_start = datetime.combine(date_start, time.min)
-        if isinstance(date_stop, date) and not isinstance(date_stop, datetime):
-            date_stop = datetime.combine(date_stop, time.max)
-
-        # Récupérer les présences pour cet employé dans la période
-        attendances = Attendance.search([
-            ('employee_id', '=', self.employee_id.id),
-            ('check_in', '>=', date_start),
-            ('check_in', '<=', date_stop),
-            ('check_out', '!=', False),
-        ], order='check_in')
-
-        # Grouper les présences par jour
-        attendance_by_date = defaultdict(list)
-        for att in attendances:
-            work_date = att.check_in.date()
-            attendance_by_date[work_date].append(att)
-
-        # ── 1. Prestations de présence ────────────────────────────
-        for work_date, day_attendances in attendance_by_date.items():
-            total_hours = sum(att.worked_hours for att in day_attendances)
-            overtime_hours = sum(
-                att.validated_overtime_hours for att in day_attendances)
-            normal_hours = total_hours - overtime_hours
-
-            if normal_hours > 0:
-                vals_list.append({
-                    'name': _('Présence %s') % work_date.strftime('%d/%m/%Y'),
-                    'date': work_date,
-                    'duration': normal_hours,
-                    'work_entry_type_id': default_type_id,
-                    'employee_id': self.employee_id.id,
-                    'version_id': self.id,
-                    'company_id': self.company_id.id,
-                })
-
-            if overtime_hours > 0:
-                vals_list.append({
-                    'name': _('Heures sup. %s') % work_date.strftime('%d/%m/%Y'),
-                    'date': work_date,
-                    'duration': overtime_hours,
-                    'work_entry_type_id': overtime_type_id,
-                    'employee_id': self.employee_id.id,
-                    'version_id': self.id,
-                    'company_id': self.company_id.id,
-                })
-
-        # ── 2. Jours spéciaux (fériés, etc.) ─────────────────────
-        calendar_leaves = self.env['resource.calendar.leaves'].search([
-            ('resource_id', '=', False),
-            ('date_from', '<=', date_stop),
-            ('date_to', '>=', date_start),
-            ('work_entry_type_id', '!=', False),
-        ])
-
-        if calendar_leaves and attendance_by_date:
-            employee = self.employee_id
-            calendar = employee.resource_id.calendar_id
-            working_days = set(
-                int(att.dayofweek) for att in calendar.attendance_ids
-            ) if calendar else {0, 1, 2, 3, 6}
-
-            for leave in calendar_leaves:
-                # Vérifier calendrier
-                if leave.calendar_id and calendar \
-                        and leave.calendar_id.id != calendar.id:
-                    continue
-
-                leave_start = max(leave.date_from.date(), date_start.date())
-                leave_end = min(leave.date_to.date(), date_stop.date())
-                current = leave_start
-                while current <= leave_end:
-                    is_working_day = current.weekday() in working_days
-                    has_attendance = current in attendance_by_date
-
-                    # Weekend + pas présent → rien
-                    if not is_working_day and not has_attendance:
-                        current += timedelta(days=1)
-                        continue
-
-                    # Jour ouvrable sans présence → férié payé
-                    # Weekend avec présence → férié (200%)
-                    day_str = str(current.weekday())
-                    day_lines = calendar.attendance_ids.filtered(
-                        lambda a, d=day_str: a.dayofweek == d
-                    ) if calendar else False
-                    duration = sum(
-                        l.hour_to - l.hour_from for l in day_lines
-                    ) if day_lines else 8.0
-
-                    vals_list.append({
-                        'name': '%s %s' % (
-                            leave.name, current.strftime('%d/%m/%Y')),
-                        'date': current,
-                        'duration': duration,
-                        'work_entry_type_id': leave.work_entry_type_id.id,
-                        'employee_id': employee.id,
-                        'version_id': self.id,
-                        'company_id': self.company_id.id,
-                    })
-
-                    current += timedelta(days=1)
-
-        return vals_list
-
-    def _get_attendance_work_entry_type(self, attendance):
-        """
-        Retourne le type de work entry pour une présence.
-        Peut être surchargé pour des règles plus complexes (HS, nuit, etc.)
-        """
-        return self.env.ref('hr_work_entry.work_entry_type_attendance', raise_if_not_found=False)
+            tz = engine._tz(version.employee_id, version)
+            day_from = pytz.utc.localize(date_start).astimezone(tz).date()
+            day_to = pytz.utc.localize(date_stop).astimezone(tz).date()
+            # Pas de calcul dans le futur : seules les présences du jour
+            # peuvent exister, et aucune absence n'est déduite avant la fin
+            # de la journée.
+            day_to = min(day_to, datetime.now(tz).date())
+            if day_from <= day_to:
+                result |= engine.sync(version.employee_id, day_from, day_to)
+        return result
 
 
 class HrEmployee(models.Model):
     _inherit = 'hr.employee'
 
     def generate_work_entries_from_attendance(self, date_from, date_to):
-        """
-        Méthode publique pour générer les work entries depuis les présences.
-        Utilise le mécanisme natif d'Odoo.
-        """
-        for employee in self:
-            version = employee.current_version_id
-            if version and version.work_entry_source == 'attendance':
-                version.generate_work_entries(date_from, date_to, force=True)
-
+        """Calcule les prestations depuis les pointages (moteur unique)."""
+        self.env['hr.dz.work.entry.engine'].sync(self, date_from, date_to)
         return True
 
     def action_generate_work_entries_attendance(self):
         """Action pour générer les work entries depuis l'interface employé"""
         today = fields.Date.today()
-        date_from = today.replace(day=1)
-        date_to = today
-
         return {
             'type': 'ir.actions.act_window',
             'name': _('Générer les prestations'),
@@ -210,8 +116,8 @@ class HrEmployee(models.Model):
             'view_mode': 'form',
             'target': 'new',
             'context': {
-                'default_date_from': date_from,
-                'default_date_to': date_to,
+                'default_date_from': today.replace(day=1),
+                'default_date_to': today,
                 'default_employee_ids': self.ids,
             },
         }

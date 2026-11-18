@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tentatives de pointage facial : les refus sont à regarder par les RH
+         (photo présentée à la caméra, visage d'un collègue, hors du site…). -->
+    <record id="hr_face_attempt_view_list" model="ir.ui.view">
+        <field name="name">hr.face.attempt.list</field>
+        <field name="model">hr.face.attempt</field>
+        <field name="arch" type="xml">
+            <list create="0" decoration-danger="result in ('spoof_detected', 'face_mismatch')"
+                  decoration-warning="result in ('out_of_range', 'too_many_attempts', 'site_forbidden')"
+                  decoration-muted="reviewed">
+                <field name="create_date" string="Le"/>
+                <field name="employee_id" widget="many2one_avatar_employee"/>
+                <field name="result" widget="badge"/>
+                <field name="distance_m" optional="show"/>
+                <field name="perimeter" optional="show"/>
+                <field name="liveness_score" optional="hide"/>
+                <field name="confidence" optional="hide"/>
+                <field name="reviewed" optional="show"/>
+                <button name="action_mark_reviewed" type="object" string="Vu" icon="fa-check"
+                        invisible="reviewed"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="hr_face_attempt_view_search" model="ir.ui.view">
+        <field name="name">hr.face.attempt.search</field>
+        <field name="model">hr.face.attempt</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="employee_id"/>
+                <filter name="refused" string="Refusés" domain="[('success', '=', False)]"/>
+                <filter name="to_review" string="À regarder" domain="[('success', '=', False), ('reviewed', '=', False)]"/>
+                <separator/>
+                <filter name="fraud" string="Fraude présumée" domain="[('result', '=', 'spoof_detected')]"/>
+                <group>
+                    <filter name="g_employee" string="Employé" context="{'group_by': 'employee_id'}"/>
+                    <filter name="g_result" string="Résultat" context="{'group_by': 'result'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="hr_face_attempt_action" model="ir.actions.act_window">
+        <field name="name">Pointages faciaux refusés</field>
+        <field name="res_model">hr.face.attempt</field>
+        <field name="view_mode">list</field>
+        <field name="context">{'search_default_to_review': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aucun pointage facial refusé à regarder</p>
+            <p>Chaque essai de pointage par le visage depuis le portail est noté ici :
+               fraude présumée (photo ou écran), visage d'une autre personne, hors du
+               site, trop d'essais… Marquez « Vu » une fois l'employé contacté.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_hr_face_attempt" name="Pointages faciaux refusés"
+              parent="hr_attendance.menu_hr_attendance_view_attendances_management"
+              action="hr_face_attempt_action" sequence="60" groups="hr.group_hr_user"/>
+</odoo>

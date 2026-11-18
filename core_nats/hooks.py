@@ -49,5 +49,5 @@ def uninstall_hook(env):
             svc.stop()
             set_service(None)
             _logger.info("[core_nats] NATS service stopped on uninstall")
-    except Exception as exc:
+    except Exception as exc:   # biodoo: except-ok désinstallation : l'arrêt du service est au mieux, journalisé
         _logger.warning(f"[core_nats] uninstall_hook: {exc}")

@@ -19,7 +19,7 @@ class ZktecoEnrollFaceWizard(models.TransientModel):
         'zkteco.device',
         'zkteco_enroll_face_wiz_device_rel',
         'wizard_id', 'device_id',
-        string='Devices cibles',
+        string='Pointeuses cibles',
         domain=[('state', '=', 'approved')],
     )
     photo_b64   = fields.Char(string='Photo')
@@ -131,8 +131,9 @@ class ZktecoEnrollFaceWizard(models.TransientModel):
                     f"[zkteco] enroll face: PIN={pin} → {device.serial_number} "
                     f"size={size}B (+ENROLL_USER +QUERY_BIODATA)"
                 )
-            except Exception as e:
-                errors.append(f"{device.display_name} : {e}")
+            except Exception as e:  # biodoo: except-ok l'échec de chaque pointeuse est rapporté à l'utilisateur
+                _logger.exception("Enrôlement facial vers %s", device.display_name)
+                errors.append(f"{device.display_name} : {e.args[0] if isinstance(e, UserError) else type(e).__name__}")
 
         if errors:
             raise UserError(

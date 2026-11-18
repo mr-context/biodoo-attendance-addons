@@ -6,7 +6,7 @@ class ResourceCalendar(models.Model):
     _inherit = 'resource.calendar'
 
     zkteco_use_punch_state = fields.Boolean(
-        string='Punch state du device obligatoire',
+        string='Type de pointage (entrée/sortie) obligatoire',
         default=True,
         help="ON  : on fait confiance à la touche choisie sur la pointeuse "
              "(entrée / sortie / pause). Si la pointeuse n'a pas de touche "

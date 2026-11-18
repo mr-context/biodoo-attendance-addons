@@ -1,26 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
+    <!-- « Retenues à décider » : la seule file de décisions RH sur la présence
+         (retards, départs anticipés, absences en mode manuel, sorties non
+         pointées si la politique les confie aux RH). -->
+
     <record id="view_deduction_list" model="ir.ui.view">
         <field name="name">hr.attendance.deduction.list</field>
         <field name="model">hr.attendance.deduction</field>
         <field name="arch" type="xml">
-            <list decoration-muted="status == 'refused'"
-                  decoration-success="status == 'validated'">
-                <field name="date"/>
-                <field name="employee_id"/>
-                <field name="deduction_type"/>
-                <field name="duration" widget="float_time" string="Durée"/>
-                <field name="status" widget="badge"
+            <list editable="bottom" create="0"
+                  decoration-muted="status == 'refused'"
+                  decoration-success="status == 'justified'"
+                  decoration-danger="status == 'validated'">
+                <field name="date" readonly="1"/>
+                <field name="employee_id" widget="many2one_avatar_employee" readonly="1"/>
+                <field name="deduction_type" readonly="1" widget="badge"
+                       decoration-warning="deduction_type == 'late'"
+                       decoration-info="deduction_type == 'early'"
+                       decoration-danger="deduction_type in ('absence', 'missing')"/>
+                <field name="duration" widget="float_time" string="Durée" readonly="1"/>
+                <field name="status" widget="badge" readonly="1"
                        decoration-warning="status == 'to_validate'"
-                       decoration-success="status == 'validated'"
-                       decoration-danger="status == 'refused'"/>
-                <field name="work_entry_id" optional="hide"/>
+                       decoration-danger="status == 'validated'"
+                       decoration-success="status == 'justified'"/>
+                <field name="justification_type_id" options="{'no_create': True}"
+                       readonly="status != 'to_validate'"
+                       placeholder="Motif si justifiée"/>
+                <field name="retained_hours" widget="float_time" optional="show"/>
+                <field name="note" optional="hide"/>
                 <field name="is_manager" column_invisible="1"/>
-                <button name="action_validate" type="object" string="Valider"
-                        icon="fa-check text-success" invisible="status != 'to_validate' or not is_manager"/>
-                <button name="action_refuse" type="object" string="Refuser"
-                        icon="fa-times text-danger" invisible="status != 'to_validate' or not is_manager"/>
+                <button name="action_validate" type="object" string="Retenir"
+                        icon="fa-minus-circle text-danger"
+                        invisible="status != 'to_validate' or not is_manager"/>
+                <button name="action_refuse" type="object" string="Tolérer"
+                        icon="fa-check text-muted"
+                        invisible="status != 'to_validate' or not is_manager"/>
+                <button name="action_justify" type="object" string="Justifier"
+                        icon="fa-file-text-o text-success"
+                        invisible="status != 'to_validate' or not is_manager or not justification_type_id"/>
+                <button name="action_reset" type="object" string="Revenir sur la décision"
+                        icon="fa-undo" invisible="status == 'to_validate' or not is_manager"/>
             </list>
         </field>
     </record>
@@ -29,31 +49,41 @@
         <field name="name">hr.attendance.deduction.form</field>
         <field name="model">hr.attendance.deduction</field>
         <field name="arch" type="xml">
-            <form>
+            <form create="0">
                 <header>
-                    <button name="action_validate" type="object" string="Valider"
+                    <button name="action_validate" type="object" string="Retenir"
                             class="btn-primary" invisible="status != 'to_validate'"/>
-                    <button name="action_refuse" type="object" string="Refuser"
+                    <button name="action_refuse" type="object" string="Tolérer"
                             invisible="status != 'to_validate'"/>
+                    <button name="action_justify" type="object" string="Justifier"
+                            invisible="status != 'to_validate'"/>
+                    <button name="action_reset" type="object" string="Revenir sur la décision"
+                            invisible="status == 'to_validate'"/>
                     <field name="status" widget="statusbar"
-                           statusbar_visible="to_validate,validated"/>
+                           statusbar_visible="to_validate,validated,refused,justified"/>
                 </header>
                 <sheet>
                     <group>
                         <group>
-                            <field name="employee_id"/>
-                            <field name="date"/>
-                            <field name="deduction_type"/>
+                            <field name="employee_id" readonly="1"/>
+                            <field name="date" readonly="1"/>
+                            <field name="deduction_type" readonly="1"/>
+                            <field name="duration" widget="float_time" readonly="1"/>
                         </group>
                         <group>
-                            <field name="duration" widget="float_time"/>
-                            <field name="attendance_id"/>
-                            <field name="work_entry_id" readonly="1"/>
+                            <field name="justification_type_id" options="{'no_create': True}"
+                                   readonly="status != 'to_validate'"/>
+                            <field name="retained_hours" widget="float_time"/>
+                            <field name="attendance_id" readonly="1" invisible="not attendance_id"/>
+                            <field name="work_entry_id" readonly="1" invisible="not work_entry_id"/>
+                            <field name="cumul_work_entry_id" readonly="1" invisible="not cumul_work_entry_id"/>
                         </group>
                     </group>
-                    <group string="Validation" invisible="status == 'to_validate'">
+                    <group string="Décision" invisible="status == 'to_validate'">
                         <field name="validated_by"/>
                         <field name="validated_date"/>
+                        <field name="policy_id" invisible="not policy_id"/>
+                        <field name="note"/>
                     </group>
                 </sheet>
             </form>
@@ -66,18 +96,24 @@
         <field name="arch" type="xml">
             <search>
                 <field name="employee_id"/>
-                <filter name="to_validate" string="À valider"
+                <field name="date"/>
+                <filter name="to_validate" string="À traiter"
                         domain="[('status', '=', 'to_validate')]"/>
-                <filter name="validated" string="Validées"
-                        domain="[('status', '=', 'validated')]"/>
+                <filter name="decided" string="Traitées"
+                        domain="[('status', '!=', 'to_validate')]"/>
+                <separator/>
+                <filter name="absence" string="Absences"
+                        domain="[('deduction_type', '=', 'absence')]"/>
                 <filter name="late" string="Retards"
                         domain="[('deduction_type', '=', 'late')]"/>
                 <filter name="early" string="Départs anticipés"
                         domain="[('deduction_type', '=', 'early')]"/>
+                <filter name="missing" string="Sorties non pointées"
+                        domain="[('deduction_type', '=', 'missing')]"/>
                 <group>
                     <filter name="g_employee" string="Employé"
                             context="{'group_by': 'employee_id'}"/>
-                    <filter name="g_status" string="État"
+                    <filter name="g_status" string="Décision"
                             context="{'group_by': 'status'}"/>
                     <filter name="g_type" string="Type"
                             context="{'group_by': 'deduction_type'}"/>
@@ -87,10 +123,19 @@
     </record>
 
     <record id="action_deduction" model="ir.actions.act_window">
-        <field name="name">Déductions (retard / départ)</field>
+        <field name="name">Retenues à décider</field>
         <field name="res_model">hr.attendance.deduction</field>
         <field name="view_mode">list,form</field>
         <field name="context">{'search_default_to_validate': 1, 'search_default_g_employee': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Rien à traiter</p>
+            <p>Retards, départs anticipés et, si la politique de présence le demande,
+               absences et sorties non pointées apparaissent ici. Pour chacun :
+               <b>Retenir</b> sur la paie, <b>Tolérer</b>, ou <b>Justifier</b> avec un
+               motif (congé, maladie, mission…).</p>
+            <p>Sortie non pointée : <b>Tolérer</b> compte la journée comme faite,
+               <b>Retenir</b> déduit les heures manquantes.</p>
+        </field>
     </record>
 
 </odoo>

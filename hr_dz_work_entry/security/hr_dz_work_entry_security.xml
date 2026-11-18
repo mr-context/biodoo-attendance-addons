@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
-    <!-- Règle multi-société pour les anomalies -->
-    <record id="ir_rule_hr_work_entry_anomaly_multi_company" model="ir.rule">
-        <field name="name">Anomalies: Multi-société</field>
-        <field name="model_id" ref="model_hr_work_entry_anomaly"/>
+    <!-- Règle multi-société pour les politiques de présence -->
+    <record id="ir_rule_hr_attendance_policy_multi_company" model="ir.rule">
+        <field name="name">Politiques de présence : multi-société</field>
+        <field name="model_id" ref="model_hr_attendance_policy"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="ir_rule_hr_dz_recovery_multi_company" model="ir.rule">
+        <field name="name">Récupérations : multi-société</field>
+        <field name="model_id" ref="model_hr_dz_recovery"/>
         <field name="domain_force">[('company_id', 'in', company_ids)]</field>
     </record>
 </odoo>

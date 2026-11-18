@@ -10,14 +10,14 @@
                 <field name="name_on_device" string="Nom"/>
                 <field name="pin"            string="PIN"/>
                 <field name="employee_id"    string="Employé"/>
-                <field name="device_id"      string="Device"/>
+                <field name="device_id"      string="Pointeuse"/>
                 <separator/>
                 <filter name="new"     string="À mapper"   domain="[('state','=','new')]"/>
                 <filter name="mapped"  string="Mappés"     domain="[('state','=','mapped')]"/>
                 <filter name="ignored" string="Ignorés"    domain="[('state','=','ignored')]"/>
                 <filter name="deleted" string="Supprimés"  domain="[('state','=','deleted')]"/>
                 <group>
-                    <filter name="group_device" string="Device"   context="{'group_by':'device_id'}"/>
+                    <filter name="group_device" string="Pointeuse"   context="{'group_by':'device_id'}"/>
                     <filter name="group_state"  string="État"     context="{'group_by':'state'}"/>
                 </group>
             </search>
@@ -33,7 +33,7 @@
                   decoration-success="state=='mapped'"
                   decoration-muted="state in ('ignored','deleted')"
                   multi_edit="1">
-                <field name="device_id"           string="Device"            optional="show"/>
+                <field name="device_id"           string="Pointeuse"            optional="show"/>
                 <field name="pin"                 string="PIN"               width="60px"/>
                 <field name="name_on_device"      string="Nom sur le device"/>
                 <field name="employee_id"         string="Employé Odoo"/>
@@ -136,7 +136,7 @@
 
                     <group>
                         <group string="Identité device">
-                            <field name="device_id"  readonly="1" string="Device"/>
+                            <field name="device_id"  readonly="1" string="Pointeuse"/>
                             <field name="privilege"  readonly="1"
                                    string="Privilège"
                                    help="0 = utilisateur standard · 14 = administrateur"/>
@@ -254,7 +254,7 @@
 
     <!-- ── ACTIONS ───────────────────────────────────────────────── -->
     <record id="action_zkteco_device_user" model="ir.actions.act_window">
-        <field name="name">Users device (sas)</field>
+        <field name="name">Utilisateurs des pointeuses</field>
         <field name="res_model">zkteco.device.user</field>
         <field name="view_mode">list,form</field>
         <field name="search_view_id" ref="view_zkteco_device_user_search"/>
@@ -272,7 +272,7 @@
     </record>
 
     <record id="action_zkteco_device_user_pending" model="ir.actions.act_window">
-        <field name="name">Users à mapper</field>
+        <field name="name">À rattacher à un employé</field>
         <field name="res_model">zkteco.device.user</field>
         <field name="view_mode">list,form</field>
         <field name="domain">[('state', '=', 'new')]</field>

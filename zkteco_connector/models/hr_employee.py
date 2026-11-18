@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import base64
+import binascii
 import logging
 from odoo import models, fields, api
 
@@ -381,8 +382,9 @@ class HrEmployee(models.Model):
                 if not photo_b64:
                     continue
                 try:
-                    photo_size = len(base64.b64decode(photo_b64))
-                except Exception:
+                    photo_size = len(base64.b64decode(photo_b64, validate=True))
+                except (binascii.Error, ValueError):
+                    _logger.warning("Photo biométrique illisible pour %s : non envoyée", self.name)
                     continue
                 cmd = (
                     f'SYNC_BIOPHOTO PIN={self.zkteco_pin} TYPE={bio_type} '

@@ -24,18 +24,14 @@ class HrEmployee(models.Model):
 
         for employee in employees:
             if not employee.current_version_id:
-                try:
-                    version = self.env['hr.version'].sudo().create({
-                        'employee_id': employee.id,
-                        'company_id': employee.company_id.id or self.env.company.id,
-                        'date_version': fields.Date.today(),
-                    })
-                    employee.sudo().write({'current_version_id': version.id})
-                except Exception as e:
-                    _logger.warning(
-                        "Impossible de créer la version contractuelle pour %s : %s",
-                        employee.name, e,
-                    )
+                # Sans version, l'employé n'a ni contrat ni paie : une erreur
+                # ici doit empêcher la création, pas être ignorée.
+                version = self.env['hr.version'].sudo().create({
+                    'employee_id': employee.id,
+                    'company_id': employee.company_id.id or self.env.company.id,
+                    'date_version': fields.Date.context_today(self),
+                })
+                employee.sudo().write({'current_version_id': version.id})
 
         return employees
 
@@ -86,33 +82,6 @@ class HrEmployee(models.Model):
                 employee.current_version_id = version.id
 
         return len(employees_without_version)
-
-    @api.model
-    def _fix_employee_public_view(self):
-        """
-        Corrige la vue hr_employee_public pour utiliser LEFT JOIN au lieu de JOIN.
-        Cela permet aux employes sans contrat d'exister sans erreur.
-        """
-        # Recuperer la definition actuelle de la vue
-        self.env.cr.execute("""
-            SELECT pg_get_viewdef('hr_employee_public'::regclass, true)
-        """)
-        view_def = self.env.cr.fetchone()[0]
-
-        # Verifier si c'est un JOIN (pas LEFT JOIN)
-        if ' JOIN hr_version v ON' in view_def and 'LEFT JOIN hr_version' not in view_def:
-            # Remplacer JOIN par LEFT JOIN
-            new_view_def = view_def.replace(
-                'JOIN hr_version v ON',
-                'LEFT JOIN hr_version v ON'
-            )
-
-            # Recreer la vue
-            self.env.cr.execute("DROP VIEW IF EXISTS hr_employee_public CASCADE")
-            self.env.cr.execute(f"CREATE OR REPLACE VIEW hr_employee_public AS {new_view_def}")
-
-            return True
-        return False
 
     # Related fields from current_version_id (hr.version)
     contract_reference = fields.Char(

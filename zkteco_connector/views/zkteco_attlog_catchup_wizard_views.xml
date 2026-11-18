@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="zkteco_attlog_catchup_wizard_form" model="ir.ui.view">
+        <field name="name">zkteco.attlog.catchup.wizard.form</field>
+        <field name="model">zkteco.attlog.catchup.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Récupérer les pointages d'une période">
+                <p class="text-muted">
+                    Les pointeuses renvoient leurs pointages de la période ; ceux déjà
+                    reçus sont écartés automatiquement. À utiliser après une longue
+                    coupure ou le remplacement d'une pointeuse.
+                </p>
+                <group>
+                    <field name="device_ids" widget="many2many_tags"/>
+                    <field name="date_from"/>
+                    <field name="date_to"/>
+                </group>
+                <footer>
+                    <button name="action_request" type="object" string="Demander les pointages"
+                            class="btn-primary"/>
+                    <button special="cancel" string="Annuler"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_zkteco_attlog_catchup" model="ir.actions.act_window">
+        <field name="name">Récupérer les pointages d'une période</field>
+        <field name="res_model">zkteco.attlog.catchup.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="model_zkteco_device"/>
+        <field name="binding_view_types">list,form</field>
+    </record>
+
+</odoo>

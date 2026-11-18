@@ -11,8 +11,16 @@
             <field name="name">SMIG 2024</field>
             <field name="code">smig</field>
             <field name="value">20000</field>
-            <field name="date_from">2024-01-01</field>
-            <field name="notes">Salaire Minimum Interprofessionnel Garanti</field>
+            <field name="date_from">2020-06-01</field>
+            <field name="date_to">2025-12-31</field>
+            <field name="notes">Salaire national minimum garanti (décret présidentiel 21-137)</field>
+        </record>
+        <record id="param_smig_2026" model="hr.legal.parameter">
+            <field name="name">SNMG 2026</field>
+            <field name="code">smig</field>
+            <field name="value">24000</field>
+            <field name="date_from">2026-01-01</field>
+            <field name="notes">Décret présidentiel n° 26-01 du 7 janvier 2026 (JO n° 1 du 14 janvier 2026), effet au 1er janvier 2026.</field>
         </record>
 
         <!-- Taux CNAS -->
@@ -56,7 +64,7 @@
             <field name="code">psu_montant</field>
             <field name="value">200</field>
             <field name="date_from">2024-01-01</field>
-            <field name="notes">Décret 25-168. Versée au salarié marié dont le conjoint ne travaille pas. Configurable.</field>
+            <field name="notes">Prestation familiale. Versée au salarié marié dont le conjoint ne travaille pas. Configurable.</field>
         </record>
 
         <!-- ══ Règle plafond transport/panier (Instruction CNAS n°02/2011) ══════ -->
@@ -91,13 +99,13 @@
             <field name="notes">DA/jour travaillé exonéré CNAS pour panier repas. Défaut : 250 DA (soit 500 DA global avec transport). Peut être porté à 500 DA si appliqué séparément. Instruction n°02 DG CNAS 15/05/2011.</field>
         </record>
 
-        <!-- Allocations Familiales — taux et seuil (Décret 25-168) -->
+        <!-- Allocations familiales — taux et seuil -->
         <record id="param_af_rate_low" model="hr.legal.parameter">
             <field name="name">AF — taux bas revenu (DA/enfant)</field>
             <field name="code">af_rate_low</field>
             <field name="value">600</field>
             <field name="date_from">2024-01-01</field>
-            <field name="notes">Taux AF par enfant si brut cotisable ≤ seuil AF (Décret 25-168).</field>
+            <field name="notes">Taux AF par enfant si brut cotisable ≤ seuil AF.</field>
         </record>
 
         <record id="param_af_rate_high" model="hr.legal.parameter">
@@ -105,7 +113,7 @@
             <field name="code">af_rate_high</field>
             <field name="value">300</field>
             <field name="date_from">2024-01-01</field>
-            <field name="notes">Taux AF par enfant si brut cotisable > seuil AF (Décret 25-168).</field>
+            <field name="notes">Taux AF par enfant si brut cotisable > seuil AF.</field>
         </record>
 
         <record id="param_af_threshold" model="hr.legal.parameter">
@@ -113,7 +121,7 @@
             <field name="code">af_threshold</field>
             <field name="value">15000</field>
             <field name="date_from">2024-01-01</field>
-            <field name="notes">Seuil de brut cotisable pour déterminer le taux AF (Décret 25-168).</field>
+            <field name="notes">Seuil de brut cotisable pour déterminer le taux AF.</field>
         </record>
 
         <!-- Prime de Scolarité (Décret 25-168) -->
@@ -122,7 +130,7 @@
             <field name="code">scolarite_montant</field>
             <field name="value">3000</field>
             <field name="date_from">2024-01-01</field>
-            <field name="notes">Montant par enfant scolarisé, versé en septembre uniquement (Décret 25-168).</field>
+            <field name="notes">Montant par enfant scolarisé, versé en septembre uniquement.</field>
         </record>
 
     </data>

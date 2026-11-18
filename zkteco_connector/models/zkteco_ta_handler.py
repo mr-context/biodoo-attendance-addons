@@ -41,6 +41,15 @@ class ZktecoTaHandler(models.AbstractModel):
     _inherit = 'nats.handler'
     _description = 'ZKTeco T&A NATS Handler'
 
+    # Champs sans lesquels un message ne peut pas être traité : mis à l'écart
+    # (« Messages en échec ») au lieu d'être rejoué indéfiniment.
+    _nats_schema = {
+        'zkteco.ta.attendance.>': {'SerialNumber': str, 'UserID': (str, int), 'Timestamp': str},
+        'zkteco.ta.device.>': {'SerialNumber': str},
+        'zkteco.ta.userinfo.>': {'SerialNumber': str},
+        'zkteco.ta.attphoto.>': {'SerialNumber': str},
+    }
+
     _nats_subjects = [
         'zkteco.ta.attendance.>',
         'zkteco.ta.device.>',

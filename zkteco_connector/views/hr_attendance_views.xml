@@ -9,7 +9,7 @@
         <field name="arch" type="xml">
             <xpath expr="//list" position="inside">
                 <field name="zkteco_device_id"  optional="hide" string="Pointeuse"/>
-                <field name="zkteco_device_sn"  optional="hide" string="Device S/N"/>
+                <field name="zkteco_device_sn"  optional="hide" string="N° de série de la pointeuse"/>
                 <field name="zkteco_verify_label" optional="hide" string="Mode vérif."/>
                 <field name="zkteco_imported"    optional="hide" string="ZKTeco"/>
                 <field name="attphoto_count"     optional="hide" string="Photos"/>
@@ -128,7 +128,7 @@
                         <list create="false" delete="false">
                             <field name="captured_at"  string="Heure capture"/>
                             <field name="employee_pin" string="PIN"/>
-                            <field name="device_sn"    string="Device"/>
+                            <field name="device_sn"    string="Pointeuse"/>
                             <field name="file_name"    string="Fichier"/>
                             <field name="file_size"    string="Taille (o)"/>
                             <field name="photo"        widget="image"
@@ -150,7 +150,7 @@
             <list create="false">
                 <field name="captured_at"   string="Heure capture"/>
                 <field name="employee_pin"  string="PIN"/>
-                <field name="device_sn"     string="Device"/>
+                <field name="device_sn"     string="Pointeuse"/>
                 <field name="file_name"     string="Fichier"/>
                 <field name="file_size"     string="Taille (o)"/>
                 <field name="attendance_id" string="Pointage lié"/>
@@ -174,7 +174,7 @@
                         <group string="Métadonnées">
                             <field name="captured_at"   readonly="1"/>
                             <field name="employee_pin"  readonly="1" string="PIN employé"/>
-                            <field name="device_sn"     readonly="1" string="Device S/N"/>
+                            <field name="device_sn"     readonly="1" string="N° de série de la pointeuse"/>
                             <field name="file_size"     readonly="1" string="Taille (octets)"/>
                             <field name="attendance_id" readonly="1" string="Pointage lié"/>
                         </group>

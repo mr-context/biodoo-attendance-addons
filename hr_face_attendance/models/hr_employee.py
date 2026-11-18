@@ -11,10 +11,14 @@ _logger = logging.getLogger(__name__)
 class HrEmployee(models.Model):
     _inherit = 'hr.employee'
 
+    # Donnée biométrique : seuls les gestionnaires RH la lisent ou la
+    # remplacent (sinon un agent pourrait mettre son visage à la place de
+    # celui d'un collègue). Le portail la lit côté serveur, en sudo.
     face_embedding = fields.Binary(
         string='Embedding facial',
         attachment=False,
         copy=False,
+        groups='hr.group_hr_manager',
         help='Vecteur ArcFace 512d encodé en base64 (float32). Généré via le wizard d\'enrollment.',
     )
     face_enrolled_date = fields.Datetime(
@@ -194,3 +198,48 @@ class HrEmployee(models.Model):
             'face_enrolled_date': False,
             'face_enrolled_by': False,
         })
+
+
+class HrEmployeeFacePerimeter(models.Model):
+    """Règle UNIQUE de périmètre du pointage facial, appliquée côté serveur.
+
+    Ordre : périmètre de l'employé, sinon celui de son site de travail, sinon
+    la règle de la société. Le navigateur n'est jamais cru sur parole.
+    """
+    _inherit = 'hr.employee'
+
+    def _face_perimeter(self):
+        """→ (périmètre, refus) ; périmètre = dict(lat, lng, radius, label) ou
+        None si aucun contrôle de position n'est demandé ; refus = code ou None."""
+        self.ensure_one()
+        location = self.work_location_id
+        if location and not location.face_attendance_ok:
+            return None, 'site_forbidden'
+        if self.geofence_enabled:
+            if not (self.geofence_lat or self.geofence_lng) or not self.geofence_radius:
+                return None, 'no_perimeter'
+            return {'lat': self.geofence_lat, 'lng': self.geofence_lng,
+                    'radius': self.geofence_radius, 'label': 'employé'}, None
+        if self.company_id.face_geofence_enabled:
+            if not location or not (location.latitude or location.longitude) or not location.geofence_radius:
+                return None, 'no_perimeter'
+            return {'lat': location.latitude, 'lng': location.longitude,
+                    'radius': location.geofence_radius, 'label': location.name}, None
+        return None, None
+
+    @api.constrains('face_portal_enabled')
+    def _check_face_portal_needs_antifraud(self):
+        """Pas de pointage facial sans contrôle anti-fraude disponible."""
+        if not self.filtered('face_portal_enabled'):
+            return
+        from ..services.face_service import FaceService
+        try:
+            available = FaceService.get_instance().liveness_available
+        except Exception:   # biodoo: except-ok service absent = indisponible, message clair ci-dessous
+            _logger.warning('Pointage facial : service de reconnaissance indisponible.', exc_info=True)
+            available = False
+        if not available:
+            from odoo.exceptions import ValidationError
+            raise ValidationError(
+                "Le pointage facial ne peut pas être activé : le contrôle anti-fraude "
+                "(modèle antispoof.onnx) n'est pas installé sur ce serveur.")

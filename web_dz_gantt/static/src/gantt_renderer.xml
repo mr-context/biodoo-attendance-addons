@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- En-tête d'une ligne : nom, flèche des groupes, barre de progression. -->
+    <t t-name="web_dz_gantt.GanttRowHeader">
+        <span class="o_dz_gantt_row_name text-truncate" t-att-title="row.name" t-esc="row.name"/>
+    </t>
+
+    <t t-name="web_dz_gantt.GanttRenderer">
+        <!-- La sélection en cours, calculée une fois par rendu. -->
+        <t t-set="selection" t-value="getSelection()"/>
+        <div class="o_dz_gantt" t-att-style="gridStyle"
+             t-att-class="'o_dz_gantt_scale_' + metaData.scale + ' ' + rootClass">
+            <div class="o_dz_gantt_scroll">
+            <div class="o_dz_gantt_grid">
+                <!-- En-tête des colonnes -->
+                <div class="o_dz_gantt_header">
+                    <div class="o_dz_gantt_title_cell o_dz_gantt_corner">
+                        <span class="text-truncate" t-esc="metaData.string"/>
+                    </div>
+                    <div class="o_dz_gantt_header_main">
+                        <div class="o_dz_gantt_range_title text-capitalize" t-esc="metaData.title"/>
+                        <div class="o_dz_gantt_columns">
+                            <div t-foreach="metaData.columns" t-as="column" t-key="column.index"
+                                 class="o_dz_gantt_column_header"
+                                 t-att-class="{ o_dz_gantt_today: column.isToday }"
+                                 t-att-title="column.isToday ? todayTitle : ''">
+                                <span class="o_dz_gantt_column_label" t-esc="column.label"/>
+                                <small t-if="column.sublabel" class="o_dz_gantt_column_sublabel"
+                                       t-esc="column.sublabel"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lignes -->
+                <t t-foreach="visibleRows" t-as="row" t-key="row.id">
+                    <div class="o_dz_gantt_row" t-att-class="rowClass(row)" t-att-data-row-id="row.id">
+                        <div class="o_dz_gantt_title_cell"
+                             t-att-style="'padding-left: ' + (0.5 + row.level * 1.25) + 'rem'"
+                             t-att-title="row.isGroup ? groupTitle : ''"
+                             t-on-click="() => row.isGroup and model.toggleRow(row.id)">
+                            <i t-if="row.isGroup" class="fa fa-fw me-1"
+                               t-att-class="isClosed(row) ? 'fa-caret-right' : 'fa-caret-down'"/>
+                            <t t-call="{{ rowHeaderTemplate }}"/>
+                            <span t-if="getRowTotalLabel(row)" class="o_dz_gantt_row_total_badge ms-auto"
+                                  t-att-title="rowTotalTitle" t-esc="getRowTotalLabel(row)"/>
+                            <div t-if="row.progressBar" class="o_dz_gantt_progress ms-auto"
+                                 t-att-title="row.progressBar.label or ''">
+                                <div class="progress" role="progressbar"
+                                     t-att-aria-valuenow="progressPercent(row)" aria-valuemin="0" aria-valuemax="100">
+                                    <div class="progress-bar"
+                                         t-att-class="{ 'bg-danger': row.progressBar.value > row.progressBar.max_value }"
+                                         t-att-style="'width: ' + progressPercent(row) + '%'"/>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="o_dz_gantt_cells"
+                             t-att-style="'--dz-gantt-levels: ' + (row.isGroup ? 1 : row.levels)"
+                             t-on-pointerdown="(ev) => this.onCellsPointerDown(ev, row)">
+                            <div t-foreach="metaData.columns" t-as="column" t-key="column.index"
+                                 class="o_dz_gantt_cell" t-att-class="cellClass(row, column, selection)"
+                                 t-att-title="cellTitle(row, column)"
+                                 t-att-style="'grid-column: ' + (column.index + 1)"/>
+                            <t t-if="row.isGroup">
+                                <div t-foreach="row.aggregates" t-as="segment" t-key="segment_index"
+                                     class="o_dz_gantt_aggregate" t-att-style="segmentStyle(segment)"
+                                     t-att-title="aggregateTitle(segment)">
+                                    <span class="o_dz_gantt_aggregate_value" t-esc="getAggregateLabel(segment.value)"/>
+                                    <span class="o_dz_gantt_aggregate_line"/>
+                                </div>
+                            </t>
+                            <t t-else="">
+                                <div t-foreach="row.pills" t-as="pill" t-key="pill.id"
+                                     class="o_dz_gantt_pill" t-att-class="pillClass(pill)"
+                                     t-att-style="pillStyle(pill)" t-att-title="getPillTitle(pill)"
+                                     t-att-data-id="pill.id"
+                                     t-on-pointerdown="(ev) => this.onPillPointerDown(ev, pill, row)"
+                                     t-on-click="(ev) => this.onPillClick(ev, pill)">
+                                    <span class="o_dz_gantt_pill_label text-truncate" t-esc="getPillLabel(pill)"/>
+                                    <span t-if="canResize" class="o_dz_gantt_resize_handle"
+                                          t-on-pointerdown="(ev) => this.onResizePointerDown(ev, pill, row)"
+                                          t-on-click.stop="() => {}"/>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                </t>
+
+                <!-- Total -->
+                <div t-if="model.data.total" class="o_dz_gantt_row o_dz_gantt_row_total">
+                    <div class="o_dz_gantt_title_cell justify-content-end fw-bold" t-att-title="totalTitle">Total</div>
+                    <div class="o_dz_gantt_cells" style="--dz-gantt-levels: 1">
+                        <div t-foreach="metaData.columns" t-as="column" t-key="column.index"
+                             class="o_dz_gantt_cell" t-att-class="{ o_dz_gantt_today: column.isToday }"
+                             t-att-style="'grid-column: ' + (column.index + 1)"/>
+                        <t t-set="totalMax" t-value="maxValue(model.data.total)"/>
+                        <div t-foreach="model.data.total" t-as="segment" t-key="segment_index"
+                             class="o_dz_gantt_total_bar_wrapper" t-att-style="segmentStyle(segment)"
+                             t-att-title="totalCellTitle(segment)">
+                            <div class="o_dz_gantt_total_bar"
+                                 t-att-style="'height: ' + Math.max(8, Math.round(100 * segment.value / totalMax)) + '%'"/>
+                            <span class="o_dz_gantt_total_value" t-esc="getAggregateLabel(segment.value)"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+
+            <!-- Pied : barre d'actions de la sélection, sinon la légende (qui
+                 suit la période et les filtres). Hors de la zone qui défile :
+                 il ne cache jamais la grille. -->
+            <div class="o_dz_gantt_footer" t-if="hasSelectionBar or model.data.legend.length or staticLegend.length or legendHint or metaData.displayUnavailability">
+                <t t-if="hasSelectionBar" t-call="{{ selectionBarTemplate }}"/>
+                <div t-else="" class="o_dz_gantt_legend">
+                    <span class="o_dz_gantt_legend_title">Légende</span>
+                    <button t-foreach="model.data.legend" t-as="entry" t-key="entry_index"
+                            class="o_dz_gantt_legend_item"
+                            t-att-class="{ active: legendState.focus === entry.key, o_dz_gantt_legend_dimmed: legendState.focus !== null and legendState.focus !== entry.key }"
+                            t-att-title="legendState.focus === entry.key ? 'Cliquer pour tout réafficher' : 'Cliquer pour mettre ce type en avant'"
+                            t-on-click="() => this.toggleLegend(entry)">
+                        <span class="o_dz_gantt_legend_swatch" t-att-class="'o_dz_gantt_color_' + entry.colorIndex"/>
+                        <span class="o_dz_gantt_legend_label" t-esc="entry.label"/>
+                        <span class="o_dz_gantt_legend_count text-muted" t-esc="getLegendCountLabel(entry)"/>
+                    </button>
+                    <span t-foreach="staticLegend" t-as="entry" t-key="entry_index" class="o_dz_gantt_legend_item o_dz_gantt_legend_static">
+                        <span t-if="entry.corner" class="o_dz_gantt_legend_swatch o_dz_gantt_legend_corner"
+                              t-att-class="'o_dz_gantt_legend_corner_' + entry.corner"/>
+                        <span t-else="" class="o_dz_gantt_legend_swatch" t-att-class="'o_dz_gantt_color_' + entry.colorIndex"/>
+                        <span class="o_dz_gantt_legend_label" t-esc="entry.label"/>
+                    </span>
+                    <span t-if="metaData.displayUnavailability" class="o_dz_gantt_legend_item o_dz_gantt_legend_static">
+                        <span class="o_dz_gantt_legend_swatch o_dz_gantt_legend_swatch_off"/>
+                        <span class="o_dz_gantt_legend_label">Hors planning</span>
+                    </span>
+                    <span t-if="legendHint" class="o_dz_gantt_legend_hint text-muted ms-auto">
+                        <i class="fa fa-lightbulb-o me-1"/><t t-esc="legendHint"/>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </t>
+
+</templates>

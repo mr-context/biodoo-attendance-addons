@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Multi-société : chacun ne voit que les enregistrements des sociétés
+         qu'il a sélectionnées ; sans société = partagé entre toutes. -->
+    <record id="rule_hr_dz_work_entry_change_company" model="ir.rule">
+        <field name="name">Journal des prestations modifiées : sociétés de l'utilisateur</field>
+        <field name="model_id" ref="model_hr_dz_work_entry_change"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+</odoo>

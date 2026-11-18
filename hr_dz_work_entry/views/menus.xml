@@ -9,14 +9,14 @@
         sequence="7"
         groups="hr.group_hr_user"/>
 
-    <!-- Menu Anomalies séparé -->
+    <!-- Politiques de présence dans Configuration -->
     <menuitem
-        id="menu_hr_work_entry_anomalies"
-        name="Anomalies prestations"
-        parent="hr_attendance.menu_hr_attendance_root"
-        action="hr_work_entry_anomaly_action"
-        sequence="8"
-        groups="hr.group_hr_user"/>
+        id="menu_attendance_policy"
+        name="Politiques de présence"
+        parent="hr_attendance.menu_hr_attendance_configuration"
+        action="hr_attendance_policy_action"
+        sequence="25"
+        groups="hr.group_hr_manager,hr_attendance.group_hr_attendance_manager"/>
 
     <!-- Types de prestations dans Configuration -->
     <menuitem

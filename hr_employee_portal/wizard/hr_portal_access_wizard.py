@@ -3,7 +3,7 @@ import string
 import unicodedata
 
 from odoo import models, fields, api, _
-from odoo.exceptions import UserError
+from odoo.exceptions import AccessError, UserError
 
 
 class HrPortalAccessWizard(models.TransientModel):
@@ -34,10 +34,9 @@ class HrPortalAccessWizard(models.TransientModel):
         employee_id = res.get('employee_id') or self.env.context.get('default_employee_id')
         if employee_id:
             emp = self.env['hr.employee'].browse(employee_id)
+            # Seul le compte LIÉ à l'employé est concerné : jamais un compte
+            # trouvé par e-mail (il pourrait appartenir à quelqu'un d'autre).
             existing_user = emp.user_id or False
-            if not existing_user and emp.work_email:
-                existing_user = self.env['res.users'].sudo().search(
-                    [('email', '=', emp.work_email), ('active', '=', True)], limit=1)
             if existing_user and existing_user.share:
                 # Compte portail existant → réinitialisation
                 res['mode'] = 'reset'
@@ -100,6 +99,26 @@ class HrPortalAccessWizard(models.TransientModel):
         return ''.join(pwd)
 
     # -------------------------------------------------------------------------
+    # Sécurité : le compte visé est TOUJOURS recalculé côté serveur
+    # -------------------------------------------------------------------------
+
+    def _target_user(self, portal_only=True):
+        """Compte de l'employé, recalculé ici : le champ `existing_user` du
+        wizard est ignoré (il pourrait avoir été forgé pour viser un autre
+        compte, administrateur compris). Un compte interne n'est jamais
+        modifié par ce wizard, sauf `portal_only=False` (accès minimal)."""
+        self.ensure_one()
+        self.employee_id.check_access('write')
+        user = self.employee_id.sudo().user_id
+        if not user:
+            return self.env['res.users']
+        if portal_only and not user.share:
+            raise AccessError(_(
+                "Le compte de %s est un compte interne : il ne se gère pas depuis "
+                "l'accès portail.", self.employee_id.name))
+        return user
+
+    # -------------------------------------------------------------------------
     # Actions
     # -------------------------------------------------------------------------
 
@@ -122,9 +141,13 @@ class HrPortalAccessWizard(models.TransientModel):
     def action_set_minimal_access(self):
         """Retire tous les groupes applicatifs — garde uniquement base.group_user et ses implied."""
         self.ensure_one()
-        user = self.existing_user
+        if not self.env.user.has_group('hr.group_hr_manager'):
+            raise AccessError(_("Seul un gestionnaire RH peut réduire les droits d'un compte."))
+        user = self._target_user(portal_only=False)
         if not user:
             raise UserError(_("Aucun utilisateur trouvé."))
+        if user == self.env.user or user._is_superuser() or user.has_group('base.group_system'):
+            raise AccessError(_("Les droits d'un administrateur, ou les vôtres, ne se réduisent pas ici."))
         group_user = self.env.ref('base.group_user')
 
         # Calcul récursif des groupes à conserver (group_user + tout ce qu'il implique)
@@ -139,9 +162,9 @@ class HrPortalAccessWizard(models.TransientModel):
             return seen
 
         keep_ids = collect_implied(group_user)
-        to_remove = user.groups_id.filtered(lambda g: g.id not in keep_ids)
+        to_remove = user.group_ids.filtered(lambda g: g.id not in keep_ids)
         if to_remove:
-            user.sudo().write({'groups_id': [(3, g.id) for g in to_remove]})
+            user.sudo().write({'group_ids': [(3, g.id) for g in to_remove]})
         return {'type': 'ir.actions.act_window_close'}
 
     def action_revoke(self):
@@ -155,6 +178,9 @@ class HrPortalAccessWizard(models.TransientModel):
 
     def _create_portal_user(self):
         employee = self.employee_id
+        employee.check_access('write')
+        if employee.sudo().user_id:
+            raise UserError(_("%s a déjà un compte utilisateur.", employee.name))
         if not self.login:
             raise UserError(_("L'identifiant est requis."))
         if not self.password:
@@ -182,7 +208,7 @@ class HrPortalAccessWizard(models.TransientModel):
             'hr_employee_portal.action_report_portal_access').report_action(self)
 
     def _reset_password(self):
-        user = self.existing_user
+        user = self._target_user()
         if not user:
             raise UserError(_("Aucun utilisateur portail trouvé pour cet employé."))
         if not self.password:
@@ -192,7 +218,7 @@ class HrPortalAccessWizard(models.TransientModel):
             'hr_employee_portal.action_report_portal_access').report_action(self)
 
     def _revoke_access(self):
-        user = self.existing_user or self.employee_id.user_id
+        user = self._target_user()
         if not user:
             raise UserError(_("Aucun utilisateur portail trouvé pour cet employé."))
         user.sudo().write({'active': False})

@@ -4,6 +4,7 @@ Seuls les membres du groupe hr.group_hr_manager peuvent accéder à cet endpoint
 """
 
 import base64
+import binascii
 import json
 import logging
 
@@ -40,8 +41,8 @@ class FaceEnrollmentController(http.Controller):
         try:
             if ',' in image_data:
                 image_data = image_data.split(',', 1)[1]
-            img_bytes = base64.b64decode(image_data)
-        except Exception:
+            img_bytes = base64.b64decode(image_data, validate=True)
+        except (ValueError, TypeError, binascii.Error):
             return {'success': False, 'error': 'invalid_image'}
 
         # Extraire l'embedding via FaceService
@@ -49,9 +50,9 @@ class FaceEnrollmentController(http.Controller):
             from ..services.face_service import FaceService
             svc = FaceService.get_instance()
             embedding, bbox = svc.get_embedding(img_bytes)
-        except Exception as e:
-            _logger.error('FaceService error during enrollment: %s', e)
-            return {'success': False, 'error': 'service_error', 'details': str(e)}
+        except Exception:   # biodoo: except-ok panne du service : journalisée, message stable à l'écran
+            _logger.exception("Enrôlement facial : service de reconnaissance en erreur")
+            return {'success': False, 'error': 'service_error'}
 
         if embedding is None:
             return {'success': False, 'error': 'no_face'}

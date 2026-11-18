@@ -2,8 +2,9 @@ from datetime import date, datetime, timedelta
 import calendar
 from babel.dates import format_date
 
-from odoo import http
+from odoo import http, fields
 from odoo.http import request
+from odoo.addons.hr_dz_base.tools import dztime
 from odoo.addons.portal.controllers.portal import CustomerPortal, pager as portal_pager
 
 
@@ -55,7 +56,7 @@ class HrEmployeePortal(CustomerPortal):
             return request.redirect('/my')
 
         # --- Calcul du mois affiché ---
-        today = date.today()
+        today = fields.Date.context_today(request.env.user)
         if month:
             try:
                 current = datetime.strptime(month, '%Y-%m').date().replace(day=1)
@@ -65,8 +66,9 @@ class HrEmployeePortal(CustomerPortal):
             current = today.replace(day=1)
 
         last_day = calendar.monthrange(current.year, current.month)[1]
-        month_start = datetime(current.year, current.month, 1, 0, 0, 0)
-        month_end   = datetime(current.year, current.month, last_day, 23, 59, 59)
+        # Bornes du mois en heure LOCALE de l'employé, converties en UTC.
+        month_start, month_end = dztime.utc_bounds(
+            current, current.replace(day=last_day), dztime.tz_of(employee))
 
         # --- Navigation mois précédent / suivant ---
         prev_date = (current - timedelta(days=1)).replace(day=1)
@@ -79,7 +81,7 @@ class HrEmployeePortal(CustomerPortal):
         attendances = request.env['hr.attendance'].sudo().search([
             ('employee_id', '=', employee.id),
             ('check_in',    '>=', month_start),
-            ('check_in',    '<=', month_end),
+            ('check_in',    '<', month_end),
         ], order='check_in asc')
 
         # --- Total heures du mois ---

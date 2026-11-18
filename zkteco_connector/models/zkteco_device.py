@@ -6,7 +6,9 @@ from datetime import timedelta
 
 import pytz
 
-from odoo import models, fields, api
+from psycopg2 import IntegrityError
+
+from odoo import _, api, fields, models
 
 _logger = logging.getLogger(__name__)
 
@@ -29,10 +31,12 @@ def _device_image_map():
         with open(os.path.join(_DEVICE_IMG_DIR, 'models.json'), encoding='utf-8') as f:
             raw = json.load(f)
         return {k.strip().lower(): v for k, v in raw.items() if not k.startswith('_')}
-    except Exception:  # noqa: BLE001 — fichier absent/invalide → pas d'illustration custom
+    except (OSError, ValueError):  # fichier absent ou JSON invalide → pas d'illustration
         return {}
 
 OFFLINE_THRESHOLD_MINUTES = 2
+# Au-delà, une alerte persistante (activité) est créée pour les gestionnaires.
+OFFLINE_ALERT_MINUTES = 30
 
 # A device polls every few seconds; a bare heartbeat that only bumps last_seen
 # is debounced to at most one write per this window. This kills the FK-lock
@@ -86,6 +90,7 @@ _INFO_MAP = {
 
 class ZktecoDevice(models.Model):
     _name = 'zkteco.device'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
     _description = 'ZKTeco Device'
     _rec_name = 'display_name'
     _order = 'last_seen desc'
@@ -100,9 +105,13 @@ class ZktecoDevice(models.Model):
     device_name   = fields.Char(string='Modèle',           readonly=True)
     oem_vendor    = fields.Char(string='Fabricant',        readonly=True)
     product_time  = fields.Char(string='Date fabrication', readonly=True)
-    device_id_raw = fields.Char(string='Device ID',        readonly=True)
+    device_id_raw = fields.Char(string='Identifiant de la pointeuse',        readonly=True)
     language_code = fields.Char(string='Code langue',      readonly=True)
 
+    # Société propriétaire de la pointeuse : tout ce qui en vient (pointages
+    # bruts, utilisateurs, photos…) en hérite, pour les règles multi-société.
+    company_id = fields.Many2one('res.company', string='Société', required=True, index=True,
+                                 default=lambda self: self.env.company)
     display_name = fields.Char(compute='_compute_display_name', store=True, string='Nom')
     # Illustration du modèle : mappée via models.json, sinon mockup par défaut.
     device_image_url = fields.Char(compute='_compute_device_image_url', string='Illustration')
@@ -183,7 +192,7 @@ class ZktecoDevice(models.Model):
     approved_date = fields.Datetime(string='Date approbation',            readonly=True, copy=False)
 
     attendance_count     = fields.Integer(compute='_compute_counts', string='Pointages')
-    device_user_count    = fields.Integer(compute='_compute_counts', string='Users device')
+    device_user_count    = fields.Integer(compute='_compute_counts', string='Utilisateurs des pointeuses')
     pending_user_count   = fields.Integer(compute='_compute_counts', string='En attente')
     pending_attlog_count = fields.Integer(compute='_compute_counts', string='Quarantaine')
     raw_attlog_count     = fields.Integer(compute='_compute_counts', string='Pointages bruts')
@@ -414,8 +423,11 @@ class ZktecoDevice(models.Model):
     def action_query_attlog(self):
         """QUERY_ATTLOG — demande au device de renvoyer ses pointages sur les 30 derniers jours."""
         self.ensure_one()
-        from datetime import datetime, timedelta
-        now = datetime.now()
+        from datetime import timedelta
+        # La pointeuse raisonne en heure locale : la plage est exprimée dans
+        # son fuseau, pas dans celui du serveur.
+        tz = pytz.timezone(self.device_timezone or 'UTC')
+        now = pytz.utc.localize(fields.Datetime.now()).astimezone(tz).replace(tzinfo=None)
         start = (now - timedelta(days=30)).strftime('%Y-%m-%dT%H:%M:%S')
         end   = now.strftime('%Y-%m-%dT%H:%M:%S')
         self._send_command(f'QUERY_ATTLOG START={start} END={end}')
@@ -438,8 +450,8 @@ class ZktecoDevice(models.Model):
                 try:
                     local = utc_now.astimezone(pytz.timezone(d.device_timezone))
                     d.device_time_preview = local.strftime('%H:%M — %d/%m/%Y (%Z, UTC%z)')
-                except Exception:  # noqa: BLE001 — fuseau invalide
-                    d.device_time_preview = ''
+                except pytz.UnknownTimeZoneError:
+                    d.device_time_preview = _('Fuseau inconnu : %s', d.device_timezone)
             else:
                 d.device_time_preview = ''
 
@@ -748,6 +760,7 @@ class ZktecoDevice(models.Model):
             device.write(vals)
             if back_online:
                 device._notify_status_change()  # A — offline→online : push live
+                device._close_offline_alert()
             return device
 
         # New device — create under a savepoint, re-locking on a concurrent insert.
@@ -760,22 +773,23 @@ class ZktecoDevice(models.Model):
                     **vals,
                 })
             _logger.info(f"[zkteco] new device: {serial_number} — awaiting approval")
-        except Exception:
+        except IntegrityError:
+            # Insertion concurrente du même numéro de série (deux workers) :
+            # on reprend la fiche créée par l'autre, sous verrou.
             self.env.cr.execute(
                 'SELECT id FROM zkteco_device WHERE serial_number = %s FOR UPDATE',
                 (serial_number,)
             )
             row = self.env.cr.fetchone()
-            device = Device
-            if row:
-                device = Device.browse(row[0])
-                device.write(vals)
+            if not row:
+                raise
+            device = Device.browse(row[0])
+            device.write(vals)
 
         return device
 
     # ── offline cron ──────────────────────────────────────────────
 
-    @api.model
     @api.model
     def _cron_cache_bridge_license(self):
         """Rafraîchit le cache de l'expiration de la licence biodoo (ICP
@@ -810,6 +824,35 @@ class ZktecoDevice(models.Model):
             # les vues ouvertes pour qu'elles rechargent (l'indicateur bascule sans
             # rechargement manuel).
             stale._notify_status_change()
+        self._alert_long_offline()
+
+    def _alert_long_offline(self):
+        """Alerte PERSISTANTE (activité) quand une pointeuse est hors ligne depuis
+        plus de OFFLINE_ALERT_MINUTES : un coup d'œil au tableau de bord ne
+        suffit pas, quelqu'un doit la remettre en route. Une seule alerte par
+        panne ; elle est close automatiquement au retour en ligne."""
+        limit = fields.Datetime.now() - timedelta(minutes=OFFLINE_ALERT_MINUTES)
+        summary = _('Pointeuse hors ligne')
+        manager_group = self.env.ref('zkteco_connector.group_zkteco_manager', raise_if_not_found=False)
+        for device in self.sudo().search([('state', '=', 'offline'), ('last_seen', '<', limit)]):
+            if device.activity_ids.filtered(lambda a: a.summary == summary):
+                continue
+            users = manager_group.all_user_ids.filtered(
+                lambda u: not u.share and u.active and not u._is_superuser()
+                and device.company_id in u.company_ids) if manager_group else self.env['res.users']
+            user = users[:1] or self.env.ref('base.user_admin')
+            device.activity_schedule(
+                'mail.mail_activity_data_todo', summary=summary, user_id=user.id,
+                note=_('%(name)s ne communique plus depuis le %(when)s. Les pointages '
+                       'restent dans la pointeuse et arriveront à son retour ; vérifiez '
+                       'l\'alimentation, le câble réseau et l\'adresse du serveur.',
+                       name=device.display_name, when=fields.Datetime.to_string(device.last_seen)))
+
+    def _close_offline_alert(self):
+        summary = _('Pointeuse hors ligne')
+        for device in self.sudo():
+            device.activity_ids.filtered(lambda a: a.summary == summary).action_feedback(
+                feedback=_('De nouveau en ligne.'))
 
     # ── indicateur en ligne / hors ligne — push live (A) ──────────
 

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Journal des modifications faites depuis le Gantt des prestations. -->
+    <record id="hr_dz_work_entry_change_view_list" model="ir.ui.view">
+        <field name="name">hr.dz.work.entry.change.list</field>
+        <field name="model">hr.dz.work.entry.change</field>
+        <field name="arch" type="xml">
+            <list create="0" edit="0" decoration-muted="undone">
+                <field name="create_date" string="Le"/>
+                <field name="create_uid" string="Par" widget="many2one_avatar_user"/>
+                <field name="action"/>
+                <field name="work_entry_type_id"/>
+                <field name="day_count"/>
+                <field name="employee_ids" widget="many2many_tags"/>
+                <field name="undone"/>
+                <button name="action_undo" type="object" string="Annuler" icon="fa-undo"
+                        invisible="undone" confirm="Annuler cette modification ? Les prestations d'avant sont recréées."/>
+            </list>
+        </field>
+    </record>
+
+    <record id="hr_dz_work_entry_change_action" model="ir.actions.act_window">
+        <field name="name">Journal des prestations modifiées</field>
+        <field name="res_model">hr.dz.work.entry.change</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aucune modification</p>
+            <p>Chaque remplacement de journées fait depuis le planning des
+               prestations est noté ici : qui, quand, quoi. Il peut être annulé
+               tant que la paie de ces jours n'est pas validée.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_hr_dz_work_entry_change"
+              name="Journal des prestations modifiées"
+              parent="hr_attendance.menu_hr_attendance_reporting"
+              action="hr_dz_work_entry_change_action"
+              sequence="90"
+              groups="hr.group_hr_user"/>
+
+</odoo>

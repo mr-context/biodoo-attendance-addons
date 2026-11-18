@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Rôles du connecteur de pointeuses (voir docs/securite.md).
+         - Consultation : lire les pointages bruts et les photos de vérification
+           (contrôle RH) ;
+         - Gestionnaire pointeuses : en plus, rattacher les utilisateurs des
+           pointeuses aux employés, corriger les pointages, approuver une
+           pointeuse — sans être administrateur d'Odoo ;
+         - Administrateur (base.group_system) : effacement d'une pointeuse,
+           enrôlement, commandes à risque. -->
+    <record id="res_groups_privilege_zkteco" model="res.groups.privilege">
+        <field name="name">Pointeuses</field>
+        <field name="category_id" ref="base.module_category_human_resources"/>
+    </record>
+
+    <record id="group_zkteco_user" model="res.groups">
+        <field name="name">Consultation</field>
+        <field name="sequence">10</field>
+        <field name="privilege_id" ref="res_groups_privilege_zkteco"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+
+    <record id="group_zkteco_manager" model="res.groups">
+        <field name="name">Gestionnaire pointeuses</field>
+        <field name="sequence">20</field>
+        <field name="privilege_id" ref="res_groups_privilege_zkteco"/>
+        <field name="implied_ids" eval="[(4, ref('group_zkteco_user')),
+                                         (4, ref('hr_attendance.group_hr_attendance_officer'))]"/>
+    </record>
+
+    <!-- L'administrateur garde tout. -->
+    <record id="base.group_system" model="res.groups">
+        <field name="implied_ids" eval="[(4, ref('group_zkteco_manager'))]"/>
+    </record>
+
+    <!-- Multi-société : chacun ne voit que les pointeuses (et ce qui en vient)
+         des sociétés qu'il a sélectionnées. -->
+    <record id="rule_zkteco_device_company" model="ir.rule">
+        <field name="name">Pointeuses : sociétés de l'utilisateur</field>
+        <field name="model_id" ref="model_zkteco_device"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_zkteco_attlog_company" model="ir.rule">
+        <field name="name">Pointages bruts : sociétés de l'utilisateur</field>
+        <field name="model_id" ref="model_zkteco_device_attlog"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_zkteco_device_user_company" model="ir.rule">
+        <field name="name">Utilisateurs de pointeuse : sociétés de l'utilisateur</field>
+        <field name="model_id" ref="model_zkteco_device_user"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_zkteco_cmd_log_company" model="ir.rule">
+        <field name="name">Commandes pointeuse : sociétés de l'utilisateur</field>
+        <field name="model_id" ref="model_zkteco_device_cmd_log"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_zkteco_attphoto_company" model="ir.rule">
+        <field name="name">Photos de vérification : sociétés de l'utilisateur</field>
+        <field name="model_id" ref="model_zkteco_attphoto"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_zkteco_break_company" model="ir.rule">
+        <field name="name">Pauses : sociétés de l'utilisateur</field>
+        <field name="model_id" ref="model_zkteco_attendance_break"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_zkteco_biodata_company" model="ir.rule">
+        <field name="name">Empreintes : sociétés de l'utilisateur</field>
+        <field name="model_id" ref="model_zkteco_device_biodata"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_zkteco_biophoto_company" model="ir.rule">
+        <field name="name">Photos biométriques : sociétés de l'utilisateur</field>
+        <field name="model_id" ref="model_zkteco_device_biophoto"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+
+</odoo>

@@ -8,7 +8,8 @@ class ZktecoDeviceCmdLog(models.Model):
     _order = 'create_date desc'
     _rec_name = 'cmd'
 
-    device_id     = fields.Many2one('zkteco.device', string='Device', index=True, ondelete='cascade')
+    device_id     = fields.Many2one('zkteco.device', string='Pointeuse', index=True, ondelete='cascade')
+    company_id = fields.Many2one(related='device_id.company_id', store=True, index=True, string='Société')
     cmd           = fields.Char(string='Commande sémantique', readonly=True)
     wire_cmd      = fields.Char(string='Commande ADMS', readonly=True,
                                 help='Commande brute retournée par le device dans cmdresult')

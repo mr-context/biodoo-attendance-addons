@@ -10,8 +10,8 @@ class NatsStream(models.Model):
 
     server_id    = fields.Many2one('nats.server', ondelete='cascade', required=True, index=True)
     name         = fields.Char(readonly=True)
-    subjects     = fields.Char(string='Subjects', readonly=True)
+    subjects     = fields.Char(string='Sujets', readonly=True)
     messages     = fields.Integer(string='Messages', readonly=True)
-    bytes_stored = fields.Char(string='Size', readonly=True)
-    consumers    = fields.Integer(string='Consumers', readonly=True)
-    last_refresh = fields.Datetime(string='Last Refresh', readonly=True)
+    bytes_stored = fields.Char(string='Taille', readonly=True)
+    consumers    = fields.Integer(string='Consommateurs', readonly=True)
+    last_refresh = fields.Datetime(string='Dernière mise à jour', readonly=True)

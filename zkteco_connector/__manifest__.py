@@ -15,6 +15,7 @@
         'python': ['cv2', 'numpy'],
     },
     'data': [
+        'security/zkteco_security.xml',
         'security/ir.model.access.csv',
         'data/ir_cron.xml',
         'data/zkteco_license_cron.xml',
@@ -27,6 +28,7 @@
         'views/zkteco_enroll_wizard_views.xml',
         'views/zkteco_wipe_wizard_views.xml',
         'views/zkteco_enroll_face_wizard_views.xml',
+        'views/zkteco_attlog_catchup_wizard_views.xml',
         'views/hr_employee_views.xml',
         'views/hr_attendance_views.xml',
         'views/zkteco_attlog_views.xml',

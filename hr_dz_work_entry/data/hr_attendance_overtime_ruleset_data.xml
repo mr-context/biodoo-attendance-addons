@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Heures supplémentaires — Algérie (point de départ, modifiable par le client).
+
+        Loi 90-11, art. 32 : majoration d'au moins 50 %. Par défaut, le jour de
+        repos travaillé est aussi à 150 % ; chaque entreprise met son propre taux.
+        Tout se règle dans Présences → Configuration → Règles d'heures
+        supplémentaires (seuils, taux, horaires de nuit, tolérances) ; la
+        validation par un responsable se règle dans les paramètres des Présences.
+    -->
+    <data noupdate="1">
+        <record id="overtime_ruleset_dz" model="hr.attendance.overtime.ruleset">
+            <field name="name">Algérie — heures supplémentaires</field>
+            <field name="country_id" ref="base.dz"/>
+            <field name="company_id" eval="False"/>
+            <field name="rate_combination_mode">max</field>
+        </record>
+
+        <record id="overtime_rule_dz_beyond_schedule" model="hr.attendance.overtime.rule">
+            <field name="name">Au-delà de l'horaire du jour (50 %)</field>
+            <field name="base_off">quantity</field>
+            <field name="timing_type">schedule</field>
+            <field name="expected_hours_from_contract" eval="True"/>
+            <field name="quantity_period">day</field>
+            <field name="paid" eval="True"/>
+            <field name="amount_rate">1.5</field>
+            <field name="ruleset_id" ref="overtime_ruleset_dz"/>
+        </record>
+
+        <record id="overtime_rule_dz_rest_days" model="hr.attendance.overtime.rule">
+            <field name="name">Jour de repos travaillé (50 %)</field>
+            <field name="base_off">timing</field>
+            <field name="timing_type">non_work_days</field>
+            <field name="timing_start" eval="0.0"/>
+            <field name="timing_stop" eval="24.0"/>
+            <field name="paid" eval="True"/>
+            <field name="amount_rate">1.5</field>
+            <field name="ruleset_id" ref="overtime_ruleset_dz"/>
+        </record>
+    </data>
+</odoo>

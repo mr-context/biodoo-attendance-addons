@@ -12,7 +12,7 @@
 
     <!-- Menu parent sous Présences -->
     <menuitem id="menu_anomaly_root"
-              name="Anomalies &amp; Absences"
+              name="Contrôle des pointages"
               parent="hr_attendance.menu_hr_attendance_root"
               sequence="50"/>
 
@@ -35,10 +35,10 @@
               sequence="30"/>
 
     <menuitem id="menu_deduction"
-              name="Déductions"
+              name="Retenues à décider"
               parent="menu_anomaly_root"
               action="action_deduction"
-              sequence="40"/>
+              sequence="5"/>
 
     <menuitem id="menu_anomaly_type"
               name="Types d'anomalies"

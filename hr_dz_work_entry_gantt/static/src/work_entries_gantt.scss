@@ -1,0 +1,53 @@
+.o_dz_gantt .o_dz_gantt_selection_bar {
+    // Dans le pied de la vue, à la place de la légende : rien n'est caché.
+    background-color: rgba($o-brand-primary, .06);
+
+    // Couleur 0 : même bleu-vert que les barres sans couleur.
+    .o_dz_gantt_apply_type.o_dz_gantt_color_0 {
+        background-color: mix(#3f9a9c, white, 60%);
+        color: color-contrast(mix(#3f9a9c, white, 60%));
+    }
+
+    @for $index from 2 through length($o-colors-complete) {
+        .o_dz_gantt_apply_type.o_dz_gantt_color_#{$index - 1} {
+            $soft: mix(nth($o-colors-complete, $index), white, 60%);
+            background-color: $soft;
+            color: color-contrast($soft);
+
+            &:hover {
+                background-color: nth($o-colors-complete, $index);
+                color: color-contrast(nth($o-colors-complete, $index));
+            }
+        }
+    }
+}
+
+// Lecture d'un mois de paie : la présence normale s'efface, les écarts
+// (heures sup., congés, absences, retards…) ressortent en couleur franche.
+.o_dz_gantt.o_dz_work_entries_gantt {
+    .o_dz_gantt_pill.o_dz_gantt_pill_normal {
+        background-color: #e6f0f0;
+        color: $o-gray-600;
+        box-shadow: inset 0 0 0 1px rgba(#3f9a9c, .25);
+
+        &:hover {
+            background-color: mix(#3f9a9c, white, 45%);
+            color: color-contrast(mix(#3f9a9c, white, 45%));
+        }
+    }
+
+    @for $index from 2 through length($o-colors-complete) {
+        $color: nth($o-colors-complete, $index);
+        $strong: mix($color, white, 85%);
+
+        .o_dz_gantt_pill.o_dz_gantt_pill_exception.o_dz_gantt_color_#{$index - 1} {
+            background-color: $strong;
+            color: color-contrast($strong);
+            font-weight: 500;
+        }
+
+        .o_dz_gantt_legend_swatch.o_dz_gantt_color_#{$index - 1} {
+            background-color: $strong;
+        }
+    }
+}

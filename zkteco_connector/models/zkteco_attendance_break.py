@@ -26,6 +26,7 @@ class ZktecoAttendanceBreak(models.Model):
     attendance_id = fields.Many2one(
         'hr.attendance', string='Présence', ondelete='cascade', index=True,
         help="Présence à laquelle la pause manuelle est rattachée.")
+    company_id = fields.Many2one(related='employee_id.company_id', store=True, index=True, string='Société')
     device_id = fields.Many2one(
         'zkteco.device', string='Pointeuse', readonly=True,
         help="Pointeuse où la pause a été démarrée.")

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Messages en échec : malformés, ou refusés après plusieurs essais.
+         Rien ne se perd en silence : on voit pourquoi, on corrige, on relance. -->
+    <record id="nats_dead_letter_view_list" model="ir.ui.view">
+        <field name="name">nats.dead.letter.list</field>
+        <field name="model">nats.dead.letter</field>
+        <field name="arch" type="xml">
+            <list create="0" decoration-muted="state != 'new'">
+                <field name="create_date" string="Reçu le"/>
+                <field name="subject"/>
+                <field name="reason"/>
+                <field name="deliveries"/>
+                <field name="state" widget="badge" decoration-warning="state == 'new'"
+                       decoration-success="state == 'replayed'"/>
+                <field name="last_error" optional="show"/>
+                <button name="action_replay" type="object" string="Relancer" icon="fa-repeat"
+                        invisible="state != 'new'"/>
+                <button name="action_ignore" type="object" string="Ignorer" icon="fa-times"
+                        invisible="state != 'new'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="nats_dead_letter_view_form" model="ir.ui.view">
+        <field name="name">nats.dead.letter.form</field>
+        <field name="model">nats.dead.letter</field>
+        <field name="arch" type="xml">
+            <form create="0">
+                <header>
+                    <button name="action_replay" type="object" string="Relancer" class="btn-primary"
+                            invisible="state != 'new'"/>
+                    <button name="action_ignore" type="object" string="Ignorer" invisible="state != 'new'"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="subject"/>
+                        <field name="reason"/>
+                        <field name="deliveries"/>
+                        <field name="last_error" invisible="not last_error"/>
+                    </group>
+                    <field name="payload" widget="ace" options="{'mode': 'json'}"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="nats_dead_letter_action" model="ir.actions.act_window">
+        <field name="name">Messages en échec</field>
+        <field name="res_model">nats.dead.letter</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[]</field>
+        <field name="context">{'search_default_state': 'new'}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aucun message en échec</p>
+            <p>Un message reçu des pointeuses (par le bus NATS) qui ne peut pas être
+               traité — contenu incomplet, pointeuse ou employé inconnus — est rangé
+               ici au lieu d'être perdu ou rejoué sans fin. Corrigez la cause, puis
+               « Relancer ».</p>
+        </field>
+    </record>
+</odoo>

@@ -72,7 +72,7 @@ class HrLegalParameter(models.Model):
         :return: Valeur du paramètre ou 0.0 si non trouvé
         """
         if ref_date is None:
-            ref_date = date.today()
+            ref_date = fields.Date.context_today(self)
         if company is None:
             company = self.env.company
 
@@ -100,7 +100,7 @@ class HrLegalParameter(models.Model):
         Utile pour afficher le libellé ou les notes.
         """
         if ref_date is None:
-            ref_date = date.today()
+            ref_date = fields.Date.context_today(self)
         if company is None:
             company = self.env.company
 

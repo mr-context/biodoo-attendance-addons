@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """Rapport d'anomalies de présence par période pour UN employé.
-Révèle absences, retards et départs anticipés par rapport au planning officiel."""
+Révèle absences, retards et départs anticipés par rapport au planning officiel.
 
-import pytz
+Les journées viennent du moteur de prestations (day_facts) : même planning,
+mêmes fériés et même constat d'absence que la paie."""
+
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date
 
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
@@ -60,11 +62,11 @@ class AttendanceAnomalyReport(models.TransientModel):
     )
     date_from = fields.Date(
         string='Du', required=True,
-        default=lambda self: date.today().replace(day=1),
+        default=lambda self: fields.Date.context_today(self).replace(day=1),
     )
     date_to = fields.Date(
         string='Au', required=True,
-        default=lambda self: date.today(),
+        default=lambda self: fields.Date.context_today(self),
     )
 
     state = fields.Selection([
@@ -122,83 +124,41 @@ class AttendanceAnomalyReport(models.TransientModel):
             raise UserError(
                 _("L'employé '%s' n'a pas de calendrier de travail défini.") % employee.name)
 
-        calendar = employee.resource_id.calendar_id
-        tz = pytz.timezone(calendar.tz or 'Africa/Algiers')
         self.line_ids.unlink()
 
-        period_start_utc = (tz.localize(datetime(
-            self.date_from.year, self.date_from.month, self.date_from.day, 0, 0, 0))
-            .astimezone(pytz.UTC).replace(tzinfo=None))
-        period_end_utc = (tz.localize(datetime(
-            self.date_to.year, self.date_to.month, self.date_to.day, 23, 59, 59))
-            .astimezone(pytz.UTC).replace(tzinfo=None))
-
-        public_leaves = self.env['resource.calendar.leaves'].search([
-            ('date_from', '<=', fields.Datetime.to_string(period_end_utc)),
-            ('date_to', '>=', fields.Datetime.to_string(period_start_utc)),
-            '|', ('calendar_id', '=', calendar.id), ('calendar_id', '=', False),
-            '|', ('resource_id', '=', employee.resource_id.id), ('resource_id', '=', False),
-        ])
-
-        def _is_public_holiday(day_dt_start, day_dt_end):
-            for leave in public_leaves:
-                leave_from = fields.Datetime.from_string(leave.date_from)
-                leave_to = fields.Datetime.from_string(leave.date_to)
-                if leave_from <= day_dt_end and leave_to >= day_dt_start:
-                    return True, leave.name or 'Jour férié'
-            return False, None
-
         lines_vals = []
-        current = self.date_from
-        while current <= self.date_to:
-            dayofweek = str(current.weekday())
-            day_cal_lines = calendar.attendance_ids.filtered(
-                lambda l, d=dayofweek: l.dayofweek == d)
-            if not day_cal_lines:
-                current += timedelta(days=1)
+        for fact in self.env['hr.dz.work.entry.engine'].day_facts(
+                employee, self.date_from, self.date_to):
+            status, day = fact['status'], fact['day']
+            if status in ('off', 'pending') and not fact['attendances']:
                 continue
-
-            first_line = min(day_cal_lines, key=lambda l: l.hour_from)
-            last_line = max(day_cal_lines, key=lambda l: l.hour_to)
-            scheduled_hours = last_line.hour_to - first_line.hour_from
-
-            day_start_utc = (tz.localize(datetime(
-                current.year, current.month, current.day, 0, 0, 0))
-                .astimezone(pytz.UTC).replace(tzinfo=None))
-            day_end_utc = (tz.localize(datetime(
-                current.year, current.month, current.day, 23, 59, 59))
-                .astimezone(pytz.UTC).replace(tzinfo=None))
-
-            is_holiday, holiday_name = _is_public_holiday(day_start_utc, day_end_utc)
             line_vals = {
                 'wizard_id': self.id,
-                'date': current,
-                'dayofweek_label': DAYS_FR[current.weekday()],
-                'scheduled_hours': scheduled_hours,
+                'date': day,
+                'dayofweek_label': DAYS_FR[day.weekday()],
+                'scheduled_hours': fact['planned'],
             }
-            if is_holiday:
-                line_vals.update({'status': 'holiday', 'holiday_name': holiday_name})
+            attendances = fact['attendances']
+            if status == 'holiday' and not attendances:
+                line_vals.update({'status': 'holiday', 'holiday_name': fact['holiday'].name})
+            elif status == 'leave':
+                line_vals.update({'status': 'holiday',
+                                  'holiday_name': fact['leave'].holiday_status_id.name})
+            elif attendances:
+                first, last = attendances[0], attendances[-1]
+                line_vals.update({
+                    'status': 'anomaly' if any(attendances.mapped('is_anomaly')) else 'present',
+                    'check_in': first.check_in,
+                    'check_out': last.check_out,
+                    'worked_hours': sum(attendances.mapped('worked_hours')),
+                    'late_minutes': first.late_minutes,
+                    'early_leave_minutes': last.early_leave_minutes,
+                    'anomaly_ids': [(6, 0, attendances.anomaly_ids.ids)],
+                    'attendance_id': first.id,
+                })
             else:
-                attendance = self.env['hr.attendance'].search([
-                    ('employee_id', '=', employee.id),
-                    ('check_in', '>=', day_start_utc),
-                    ('check_in', '<=', day_end_utc),
-                ], order='check_in asc', limit=1)
-                if attendance:
-                    line_vals.update({
-                        'status': 'anomaly' if attendance.is_anomaly else 'present',
-                        'check_in': attendance.check_in,
-                        'check_out': attendance.check_out,
-                        'worked_hours': attendance.worked_hours,
-                        'late_minutes': attendance.late_minutes,
-                        'early_leave_minutes': attendance.early_leave_minutes,
-                        'anomaly_ids': [(6, 0, attendance.anomaly_ids.ids)],
-                        'attendance_id': attendance.id,
-                    })
-                else:
-                    line_vals['status'] = 'absent'
+                line_vals['status'] = 'absent'
             lines_vals.append(line_vals)
-            current += timedelta(days=1)
 
         if not lines_vals:
             raise UserError(_(
