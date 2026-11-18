@@ -76,7 +76,7 @@
                                         <div class="fw-semibold">
                                             <t t-esc="lic.title"/>
                                             <small t-if="lic.since" class="fw-normal text-muted ms-2">
-                                                depuis le <t t-esc="lic.since"/>
+                                                <t t-if="lic.key === 'warning'">échéance le</t><t t-else="">depuis le</t> <t t-esc="lic.since"/>
                                             </small>
                                         </div>
                                         <div t-esc="lic.message"/>

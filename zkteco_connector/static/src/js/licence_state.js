@@ -19,6 +19,8 @@
 //                     "expired"     date d'expiration dépassée
 //                     "grace_expired" serveur injoignable au-delà de la grâce
 //                     "unrecognized" le serveur ne reconnaît plus la licence
+//                     "payroll_unlicensed" paie installée sans l'option (retenue)
+//   warning, warning_deadline   avertissement de conformité (licence active)
 //                     "none"        jamais activée
 // (source : internal/license/inactive.go du bridge — mêmes codes, même sens)
 //   inactive_message  texte du serveur, affiché tel quel en complément
@@ -90,6 +92,17 @@ const STATES = {
             "pointages est en pause. Les pointeuses conservent leurs pointages.",
         action: "Vérifiez l'accès Internet de ce serveur ; tout reprend dès le premier contact.",
     },
+    payroll_unlicensed: {
+        label: "Licence retenue (paie)",
+        level: "danger",
+        icon: "fa-lock",
+        title: "Pointages suspendus : paie installée sans l'option",
+        message:
+            "La paie est installée dans Odoo alors que la licence ne comprend pas l'option paie. " +
+            "L'admission des pointages est suspendue ; les pointeuses conservent leurs pointages " +
+            "et les transmettront dès la régularisation.",
+        action: "Demandez l'option paie à votre revendeur, ou désinstallez la paie.",
+    },
     none: {
         label: "Sans licence",
         level: "secondary",
@@ -120,6 +133,20 @@ export function licenceState(status) {
         return null;
     }
     if (status.active) {
+        if (status.warning) {
+            // Avertissement de conformité : licence encore active, échéance affichée.
+            return {
+                key: "warning",
+                label: "Actif — avertissement",
+                level: "warning",
+                icon: "fa-exclamation-triangle",
+                title: "Licence : régularisation demandée",
+                message: status.warning,
+                action: "Demandez l'option paie à votre revendeur, ou désinstallez la paie.",
+                since: formatSince(status.warning_deadline),
+                detail: "",
+            };
+        }
         return { key: "active", label: "Actif", level: "success", message: "" };
     }
 

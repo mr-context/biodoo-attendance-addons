@@ -120,6 +120,14 @@ class NatsServer(models.Model):
         self.state = 'stopped'
         self.subscription_ids.write({'state': 'inactive'})
 
+    def action_reset_probe_key(self):
+        """Oublie la clé du bridge épinglée par le contrôle de licence : la
+        prochaine sonde épinglera la clé du bridge actuel (bridge réinstallé)."""
+        self.env['ir.config_parameter'].sudo().set_param('biodoo.probe_pubkey', '')
+        return {'type': 'ir.actions.client', 'tag': 'display_notification',
+                'params': {'title': 'Contrôle de licence', 'type': 'success',
+                           'message': 'Clé du bridge oubliée : la prochaine sonde épinglera la nouvelle.'}}
+
     def action_restart(self):
         self.action_stop()
         self.action_start()

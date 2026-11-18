@@ -378,6 +378,11 @@ class NatsService:
                 # Wildcard monitor — sees ALL NATS traffic, no dispatch, for dashboard only.
                 await self._nc.subscribe('>', cb=self._monitor_cb)
 
+                # Contrôle de licence par le bridge (services/probe.py) : un seul
+                # worker répond à chaque sonde.
+                from . import probe
+                await self._nc.subscribe(probe.SUBJECT, queue='odoo-probe', cb=self._on_probe)
+
                 with self._lock:
                     subjects = list(self._handlers.keys())
                 for subject in subjects:
@@ -398,6 +403,13 @@ class NatsService:
                 if self._running:
                     await asyncio.sleep(retry_delay)
                     retry_delay = min(retry_delay * 2, 60)
+
+    async def _on_probe(self, msg) -> None:
+        from . import probe
+        loop = asyncio.get_event_loop()
+        reply = await loop.run_in_executor(None, probe.answer, self._registry, msg.data)
+        if msg.reply:
+            await msg.respond(json.dumps(reply).encode())
 
     async def _subscribe(self, subject: str) -> None:
         """Abonne le sujet une seule fois : en JetStream (consommateur durable)

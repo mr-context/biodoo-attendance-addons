@@ -14,6 +14,9 @@
                             invisible="state != 'running'"/>
                     <button name="action_restart" string="Redémarrer" type="object"
                             invisible="state != 'running'"/>
+                    <button name="action_reset_probe_key" type="object" groups="base.group_system"
+                            string="Oublier la clé du bridge"
+                            confirm="À faire seulement après la réinstallation du bridge : la prochaine sonde du contrôle de licence épinglera sa nouvelle clé. Continuer ?"/>
                     <field name="state" widget="statusbar"
                            statusbar_visible="stopped,running"/>
                 </header>
