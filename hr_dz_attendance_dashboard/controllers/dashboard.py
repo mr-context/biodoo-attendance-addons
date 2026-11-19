@@ -231,3 +231,21 @@ class AttendanceDashboardController(http.Controller):
             'device_status': device_status,
             'device_online_count': sum(1 for dvc in device_status if dvc['is_online']),
         }
+
+    @http.route('/biodoo_attendance/employee_assiduity', type='jsonrpc', auth='user')
+    def employee_assiduity(self, employee_id, date_from=None, date_to=None, **kw):
+        """Analyse d'assiduité d'un employé — voir models/assiduity_analysis.py."""
+        env = request.env
+        if not env.user.has_group('hr_attendance.group_hr_attendance_officer'):
+            return {'authorized': False}
+        employee = env['hr.employee'].browse(int(employee_id)).exists()
+        if not employee:
+            return {'authorized': True, 'missing': True}
+        employee.check_access('read')
+        result = env['hr.dz.assiduity.analysis'].analyse(
+            employee,
+            date.fromisoformat(date_from) if date_from else None,
+            date.fromisoformat(date_to) if date_to else None,
+        )
+        result['authorized'] = True
+        return result

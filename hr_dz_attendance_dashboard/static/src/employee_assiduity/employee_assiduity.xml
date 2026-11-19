@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="hr_dz_attendance_dashboard.EmployeeAssiduity">
+        <!-- .o_action est en overflow: hidden (webclient_layout.scss) : c'est
+             la zone intérieure qui défile. -->
+        <div class="o_action">
+        <div class="o_content o_biodoo_assiduity">
+            <t t-if="!d">
+                <div class="o_biodoo_as_empty" t-if="!state.loading">Aucun employé sélectionné.</div>
+            </t>
+            <t t-elif="!d.authorized">
+                <div class="o_biodoo_as_empty">Analyse réservée aux responsables des présences.</div>
+            </t>
+            <t t-elif="d.missing">
+                <div class="o_biodoo_as_empty">Cet employé n'existe plus.</div>
+            </t>
+            <t t-else="">
+                <!-- ── En-tête : employé · période · impression ───────────── -->
+                <div class="o_biodoo_as_header">
+                    <div class="o_biodoo_as_identity">
+                        <img class="o_biodoo_as_avatar" t-att-src="'/web/image/hr.employee/' + d.employee.id + '/avatar_128'" alt=""/>
+                        <div>
+                            <a href="#" class="o_biodoo_as_name" t-on-click.prevent="onOpenEmployee" t-esc="d.employee.name"/>
+                            <div class="o_biodoo_as_meta">
+                                <t t-esc="employeeSubtitle"/>
+                            </div>
+                            <div class="o_biodoo_as_meta">
+                                Planning <strong t-esc="d.employee.calendar || '—'"/> ·
+                                Politique <strong t-esc="d.employee.policy || '—'"/>
+                                (tolérance <t t-esc="d.employee.late_tolerance"/> min)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="o_biodoo_as_period">
+                        <button class="btn btn-light btn-sm" title="Période précédente" t-on-click="() => this.onShift(-1)">
+                            <i class="fa fa-chevron-left"/>
+                        </button>
+                        <select class="form-select form-select-sm" t-on-change="onPresetChange">
+                            <t t-foreach="presets" t-as="p" t-key="p.key">
+                                <option t-att-value="p.key" t-att-selected="p.key === state.preset" t-esc="p.label"/>
+                            </t>
+                        </select>
+                        <input type="date" class="form-control form-control-sm" t-att-value="state.dateFrom"
+                               t-on-change="(ev) => this.onDateChange('dateFrom', ev)"/>
+                        <span>→</span>
+                        <input type="date" class="form-control form-control-sm" t-att-value="state.dateTo"
+                               t-att-max="d.period.today"
+                               t-on-change="(ev) => this.onDateChange('dateTo', ev)"/>
+                        <button class="btn btn-light btn-sm" title="Période suivante" t-on-click="() => this.onShift(1)">
+                            <i class="fa fa-chevron-right"/>
+                        </button>
+                        <button class="btn btn-secondary btn-sm" t-on-click="onPrint">
+                            <i class="fa fa-print me-1"/>Relevé PDF
+                        </button>
+                        <i class="fa fa-circle-o-notch fa-spin text-muted" t-if="state.loading"/>
+                    </div>
+                </div>
+
+                <div t-attf-class="o_biodoo_as_body {{state.loading ? 'o_biodoo_as_loading' : ''}}">
+                    <!-- ── Score + indicateurs ─────────────────────────────── -->
+                    <div class="o_biodoo_as_top">
+                        <div t-attf-class="o_biodoo_as_score o_biodoo_as_level_{{d.summary.level}}">
+                            <div class="o_biodoo_as_score_value">
+                                <t t-esc="d.summary.score === null ? '—' : d.summary.score"/><small>/100</small>
+                            </div>
+                            <div class="o_biodoo_as_score_label">Score d'assiduité · <t t-esc="levelLabel"/></div>
+                            <div t-if="scoreDelta" t-attf-class="o_biodoo_as_delta o_biodoo_as_delta_{{scoreDelta.tone}}" t-esc="scoreDelta.text"/>
+                            <div class="o_biodoo_as_score_rule">
+                                −<t t-esc="d.config.late"/> par retard · −<t t-esc="d.config.early"/> par départ ·
+                                −<t t-esc="d.config.absent"/> par absence · −<t t-esc="d.config.missing"/> par pointage incomplet<t t-if="d.config.break"> · −<t t-esc="d.config.break"/> par pause dépassée</t>
+                            </div>
+                        </div>
+                        <div class="o_biodoo_as_kpis">
+                            <t t-foreach="kpis" t-as="k" t-key="k.key">
+                                <div t-attf-class="o_biodoo_as_kpi {{k.tone ? 'o_biodoo_as_kpi_' + k.tone : ''}} {{k.drill ? 'o_biodoo_as_clickable' : ''}}"
+                                     t-on-click="() => this.onDrill(k.drill)">
+                                    <div class="o_biodoo_as_kpi_label" t-esc="k.label"/>
+                                    <div class="o_biodoo_as_kpi_value" t-esc="k.value"/>
+                                    <div class="o_biodoo_as_kpi_sub" t-esc="k.sub"/>
+                                    <div t-if="k.delta" t-attf-class="o_biodoo_as_delta o_biodoo_as_delta_{{k.delta.tone}}" t-esc="k.delta.text"/>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+
+                    <!-- ── Signaux d'alerte ────────────────────────────────── -->
+                    <div class="o_biodoo_as_alerts" t-if="d.alerts.length">
+                        <t t-foreach="d.alerts" t-as="al" t-key="al_index">
+                            <div t-attf-class="o_biodoo_as_alert o_biodoo_as_alert_{{al.level}} {{al.drill ? 'o_biodoo_as_clickable' : ''}}"
+                                 t-on-click="() => this.onDrill(al.drill)">
+                                <i t-attf-class="fa {{al.icon}}"/>
+                                <div>
+                                    <div class="o_biodoo_as_alert_title" t-esc="al.title"/>
+                                    <div class="o_biodoo_as_alert_detail" t-if="al.detail" t-esc="al.detail"/>
+                                </div>
+                            </div>
+                        </t>
+                    </div>
+                    <div class="o_biodoo_as_alerts" t-else="">
+                        <div class="o_biodoo_as_alert o_biodoo_as_alert_ok">
+                            <i class="fa fa-check"/>
+                            <div class="o_biodoo_as_alert_title">Aucun signal sur la période.</div>
+                        </div>
+                    </div>
+
+                    <!-- ── Graphiques ──────────────────────────────────────── -->
+                    <div class="o_biodoo_as_grid">
+                        <div class="o_biodoo_as_card">
+                            <div class="o_biodoo_as_card_title">Évolution sur 12 mois</div>
+                            <div class="o_biodoo_as_chart"><canvas t-ref="trendChart"/></div>
+                        </div>
+                        <div class="o_biodoo_as_card">
+                            <div class="o_biodoo_as_card_title">Retards, départs et absences par jour de la semaine</div>
+                            <div class="o_biodoo_as_chart"><canvas t-ref="weekdayChart"/></div>
+                        </div>
+                        <div class="o_biodoo_as_card">
+                            <div class="o_biodoo_as_card_title">Heure d'arrivée par rapport au planning</div>
+                            <div class="o_biodoo_as_chart" t-if="d.arrivals.length"><canvas t-ref="arrivalChart"/></div>
+                            <div class="o_biodoo_as_none" t-else="">Aucune arrivée sur un jour planifié.</div>
+                        </div>
+                        <div class="o_biodoo_as_card">
+                            <div class="o_biodoo_as_card_title">
+                                Comparé à <t t-esc="d.comparison.scope"/>
+                                <span class="o_biodoo_as_muted">(moyenne de <t t-esc="d.comparison.peer_count"/> employé(s) ayant pointé)</span>
+                            </div>
+                            <div class="o_biodoo_as_compare">
+                                <t t-foreach="comparisonRows" t-as="r" t-key="r.label">
+                                    <div class="o_biodoo_as_compare_row">
+                                        <div class="o_biodoo_as_compare_label" t-esc="r.label"/>
+                                        <div class="o_biodoo_as_compare_bars">
+                                            <div class="o_biodoo_as_bar_line">
+                                                <div t-attf-class="o_biodoo_as_bar o_biodoo_as_bar_me {{r.worse ? 'o_biodoo_as_bar_worse' : ''}}"
+                                                     t-attf-style="width: {{r.meWidth}}%"/>
+                                                <span t-esc="r.me"/>
+                                            </div>
+                                            <div class="o_biodoo_as_bar_line">
+                                                <div class="o_biodoo_as_bar o_biodoo_as_bar_avg" t-attf-style="width: {{r.avgWidth}}%"/>
+                                                <span t-esc="r.avg"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </t>
+                                <div class="o_biodoo_as_legend">
+                                    <span><i class="o_biodoo_as_swatch o_biodoo_as_bar_me"/>Lui / elle</span>
+                                    <span><i class="o_biodoo_as_swatch o_biodoo_as_bar_avg"/>Moyenne</span>
+                                    <span t-if="d.comparison.late_rank" class="ms-auto">
+                                        <strong t-esc="d.comparison.late_rank"/><t t-if="d.comparison.late_rank === 1">er</t><t t-else="">e</t>
+                                        plus en retard sur <t t-esc="d.comparison.peer_count"/>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Calendrier ──────────────────────────────────────── -->
+                    <div class="o_biodoo_as_card">
+                        <div class="o_biodoo_as_card_title">
+                            Calendrier
+                            <span class="o_biodoo_as_cal_legend">
+                                <span><i class="o_biodoo_cal_present"/>Présent</span>
+                                <span><i class="o_biodoo_cal_present o_biodoo_cal_late"/>Retard / départ</span>
+                                <span><i class="o_biodoo_cal_missing_punch"/>Incomplet</span>
+                                <span><i class="o_biodoo_cal_absent"/>Absent</span>
+                                <span><i class="o_biodoo_cal_leave"/>Congé</span>
+                                <span><i class="o_biodoo_cal_holiday"/>Férié</span>
+                                <span><i class="o_biodoo_cal_off"/>Repos</span>
+                            </span>
+                        </div>
+                        <div t-attf-class="o_biodoo_as_months {{calendarCompact ? 'o_biodoo_as_months_compact' : ''}}">
+                            <t t-foreach="calendarMonths" t-as="month" t-key="month.key">
+                                <div class="o_biodoo_as_month">
+                                    <div class="o_biodoo_as_month_label" t-esc="month.label"/>
+                                    <div class="o_biodoo_as_cal">
+                                        <t t-foreach="weekdayShortNames" t-as="wd" t-key="wd_index">
+                                            <div class="o_biodoo_as_cal_head" t-esc="wd"/>
+                                        </t>
+                                        <t t-foreach="month.cells" t-as="cell" t-key="cell.day">
+                                            <div t-if="cell.empty" class="o_biodoo_as_cal_cell o_biodoo_as_cal_empty"/>
+                                            <div t-else="" t-attf-class="o_biodoo_as_cal_cell {{cell.css}}"
+                                                 t-att-title="cell.title" t-on-click="() => this.onDayClick(cell)">
+                                                <span t-esc="cell.number"/>
+                                                <small t-if="!calendarCompact and cell.late_min">+<t t-esc="cell.late_min"/></small>
+                                            </div>
+                                        </t>
+                                    </div>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+
+                    <!-- ── Journal ─────────────────────────────────────────── -->
+                    <div class="o_biodoo_as_card">
+                        <div class="o_biodoo_as_card_title">
+                            Journal des pointages
+                            <label class="o_biodoo_as_toggle">
+                                <input type="checkbox" t-att-checked="state.onlyIssues" t-on-change="onToggleIssues"/>
+                                Seulement les écarts
+                            </label>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover o_biodoo_as_table">
+                                <thead>
+                                    <tr>
+                                        <th>Jour</th><th>Statut</th><th>Prévu</th><th>Entrée</th><th>Sortie</th>
+                                        <th class="text-end">Travaillé</th><th class="text-end">Retard</th>
+                                        <th class="text-end">Départ</th><th>Pause</th><th>Anomalies / note</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-if="!journal.length"><td colspan="10" class="text-muted">Aucun écart sur la période.</td></tr>
+                                    <t t-foreach="journal" t-as="j" t-key="j.day">
+                                        <tr class="o_biodoo_as_clickable" t-on-click="() => this.onDayClick(j)">
+                                            <td t-esc="j.dayLabel"/>
+                                            <td><span t-attf-class="o_biodoo_as_pill o_biodoo_cal_{{j.status}}" t-esc="j.label"/></td>
+                                            <td t-esc="j.sched"/>
+                                            <td t-esc="j.check_in"/>
+                                            <td t-esc="j.check_out"/>
+                                            <td class="text-end"><t t-if="j.worked" t-esc="hours(j.worked)"/></td>
+                                            <td class="text-end text-warning"><t t-if="j.late_min"><t t-esc="j.late_min"/> min</t></td>
+                                            <td class="text-end text-warning"><t t-if="j.early_min"><t t-esc="j.early_min"/> min</t></td>
+                                            <td t-attf-class="{{j.breakOver ? 'text-danger' : j.breakShifted ? 'text-warning' : ''}}">
+                                                <t t-esc="j.breakLabel"/>
+                                                <t t-if="j.breakOver"> (+<t t-esc="j.breakOver"/> min)</t>
+                                            </td>
+                                            <td>
+                                                <t t-esc="j.anomalies.join(', ')"/>
+                                                <span class="o_biodoo_as_muted" t-if="j.note"> <t t-esc="j.note"/></span>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ── Corrections manuelles ───────────────────────────── -->
+                    <div class="o_biodoo_as_card" t-if="d.corrections.length">
+                        <div class="o_biodoo_as_card_title">Corrections manuelles</div>
+                        <div class="table-responsive">
+                            <table class="table table-sm o_biodoo_as_table">
+                                <thead><tr><th>Quand</th><th>Par</th><th>Quoi</th><th>Avant</th><th>Après</th></tr></thead>
+                                <tbody>
+                                    <t t-foreach="d.corrections" t-as="c" t-key="c_index">
+                                        <tr class="o_biodoo_as_clickable" t-on-click="() => this.openAttendances([c.attendance_id], 'Pointage corrigé')">
+                                            <td t-esc="c.when"/><td t-esc="c.author"/><td t-esc="c.what"/>
+                                            <td t-esc="c.before"/><td t-esc="c.after"/>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </div>
+        </div>
+    </t>
+
+</templates>

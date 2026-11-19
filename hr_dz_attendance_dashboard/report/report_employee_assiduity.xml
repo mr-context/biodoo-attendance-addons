@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="action_report_employee_assiduity" model="ir.actions.report">
+        <field name="name">Relevé d'assiduité</field>
+        <field name="model">hr.employee</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">hr_dz_attendance_dashboard.report_employee_assiduity</field>
+        <field name="report_file">hr_dz_attendance_dashboard.report_employee_assiduity</field>
+        <field name="print_report_name">"Assiduité - %s" % object.name</field>
+        <field name="binding_model_id" ref="hr.model_hr_employee"/>
+        <field name="binding_type">report</field>
+        <field name="group_ids" eval="[(4, ref('hr_attendance.group_hr_attendance_officer'))]"/>
+    </record>
+
+    <template id="report_employee_assiduity">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="employee">
+                <t t-set="a" t-value="analyses[employee.id]"/>
+                <t t-set="s" t-value="a['summary']"/>
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h3 class="mb-1">Relevé d'assiduité</h3>
+                        <div class="mb-3">
+                            <strong t-esc="employee.name"/>
+                            <span t-if="a['employee']['job']"> — <t t-esc="a['employee']['job']"/></span>
+                            <span t-if="a['employee']['department']"> — <t t-esc="a['employee']['department']"/></span>
+                            <br/>
+                            Période : <t t-esc="a['period']['label']"/>
+                            · Planning : <t t-esc="a['employee']['calendar'] or '—'"/>
+                            · Politique : <t t-esc="a['employee']['policy'] or '—'"/>
+                            (tolérance retard <t t-esc="a['employee']['late_tolerance']"/> min)
+                        </div>
+
+                        <table class="table table-sm table-bordered">
+                            <tbody>
+                                <tr>
+                                    <th>Score d'assiduité</th>
+                                    <td><strong t-esc="s['score'] if s['score'] is not None else '—'"/>/100
+                                        <span class="text-muted"> (période précédente :
+                                            <t t-esc="a['previous']['score'] if a['previous']['score'] is not None else '—'"/>)</span></td>
+                                    <th>Taux de présence</th>
+                                    <td><t t-esc="s['presence_rate'] if s['presence_rate'] is not None else '—'"/> %
+                                        (<t t-esc="s['present_days']"/>/<t t-esc="s['expected_days']"/> j)</td>
+                                </tr>
+                                <tr>
+                                    <th>Retards</th>
+                                    <td><t t-esc="s['late_count']"/> — <t t-esc="s['late_minutes']"/> min
+                                        (moy. <t t-esc="s['late_avg']"/>, max <t t-esc="s['late_max']"/>)</td>
+                                    <th>Départs anticipés</th>
+                                    <td><t t-esc="s['early_count']"/> — <t t-esc="s['early_minutes']"/> min</td>
+                                </tr>
+                                <tr>
+                                    <th>Absences injustifiées</th>
+                                    <td t-esc="s['absent_count']"/>
+                                    <th>Pointages incomplets</th>
+                                    <td t-esc="s['missing_count']"/>
+                                </tr>
+                                <tr>
+                                    <th>Heures dues / faites</th>
+                                    <td><t t-esc="'%.2f' % s['planned_hours']"/> h / <t t-esc="'%.2f' % s['worked_hours']"/> h
+                                        (écart <t t-esc="'%+.2f' % s['balance_hours']"/> h)</td>
+                                    <th>Heures sup. approuvées</th>
+                                    <td><t t-esc="'%.2f' % s['overtime_hours']"/> h</td>
+                                </tr>
+                                <tr>
+                                    <th>Pauses déjeuner dépassées</th>
+                                    <td><t t-esc="s['break_over_count']"/> — <t t-esc="s['break_over_minutes']"/> min en trop
+                                        (<t t-esc="s['break_days']"/> j mesurés)</td>
+                                    <th>Pauses hors horaire</th>
+                                    <td t-esc="s['break_shift_count']"/>
+                                </tr>
+                                <tr>
+                                    <th>Congés / fériés</th>
+                                    <td><t t-esc="s['leave_days']"/> j / <t t-esc="s['holiday_days']"/> j</td>
+                                    <th>Retenues</th>
+                                    <td><t t-esc="a['deductions']['validated']"/> retenue(s)
+                                        (<t t-esc="'%.2f' % a['deductions']['retained_hours']"/> h),
+                                        <t t-esc="a['deductions']['to_validate']"/> à décider</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <t t-if="a['alerts']">
+                            <h5>Signaux relevés</h5>
+                            <ul>
+                                <li t-foreach="a['alerts']" t-as="al">
+                                    <strong t-esc="al['title']"/>
+                                    <span t-if="al['detail']"> — <t t-esc="al['detail']"/></span>
+                                </li>
+                            </ul>
+                        </t>
+
+                        <h5>Évolution sur 12 mois</h5>
+                        <table class="table table-sm table-bordered text-center">
+                            <thead>
+                                <tr>
+                                    <th class="text-start">Mois</th>
+                                    <th>Score</th><th>Présence</th><th>Retards</th>
+                                    <th>Min. de retard</th><th>Absences</th><th>Départs</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="a['trend']" t-as="m">
+                                    <td class="text-start" t-esc="m['label']"/>
+                                    <td t-esc="m['score'] if m['score'] is not None else '—'"/>
+                                    <td><t t-esc="m['presence_rate'] if m['presence_rate'] is not None else '—'"/><t t-if="m['presence_rate'] is not None"> %</t></td>
+                                    <td t-esc="m['late_count']"/>
+                                    <td t-esc="m['late_minutes']"/>
+                                    <td t-esc="m['absent_count']"/>
+                                    <td t-esc="m['early_count']"/>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <t t-set="c" t-value="a['comparison']"/>
+                        <div style="page-break-inside: avoid;">
+                        <h5>Comparaison avec <t t-esc="c['scope']"/> (<t t-esc="c['peer_count']"/> employé(s))</h5>
+                        <table class="table table-sm table-bordered text-center">
+                            <thead>
+                                <tr><th class="text-start"/><th>Retards</th><th>Min. de retard</th>
+                                    <th>Départs</th><th>Heures travaillées</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="text-start"><t t-esc="employee.name"/></td>
+                                    <td t-esc="c['employee']['late_count']"/>
+                                    <td t-esc="c['employee']['late_minutes']"/>
+                                    <td t-esc="c['employee']['early_count']"/>
+                                    <td t-esc="c['employee']['worked_hours']"/>
+                                </tr>
+                                <tr>
+                                    <td class="text-start">Moyenne</td>
+                                    <td t-esc="c['average']['late_count']"/>
+                                    <td t-esc="c['average']['late_minutes']"/>
+                                    <td t-esc="c['average']['early_count']"/>
+                                    <td t-esc="c['average']['worked_hours']"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+
+                        <h5>Journal de la période</h5>
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr><th>Date</th><th>Statut</th><th>Prévu</th><th>Entrée</th><th>Sortie</th>
+                                    <th>Travaillé</th><th>Retard</th><th>Départ</th><th>Pause</th><th>Anomalies / note</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="a['journal']" t-as="j">
+                                    <td t-esc="j['day_label']"/>
+                                    <td t-esc="j['label']"/>
+                                    <td t-esc="j['sched']"/>
+                                    <td t-esc="j['check_in']"/>
+                                    <td t-esc="j['check_out']"/>
+                                    <td><t t-if="j['worked']" t-esc="'%d h %02d' % divmod(round(j['worked'] * 60), 60)"/></td>
+                                    <td><t t-if="j['late_min']"><t t-esc="j['late_min']"/> min</t></td>
+                                    <td><t t-if="j['early_min']"><t t-esc="j['early_min']"/> min</t></td>
+                                    <td><t t-if="j['break']"><t t-esc="j['break']['start']"/>–<t t-esc="j['break']['end']"/><t t-if="j['break']['over']"> (+<t t-esc="j['break']['over']"/>)</t></t></td>
+                                    <td><t t-esc="', '.join(j['anomalies'])"/><t t-if="j['note']"> <t t-esc="j['note']"/></t></td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <t t-if="a['corrections']">
+                            <h5>Corrections manuelles</h5>
+                            <table class="table table-sm table-bordered">
+                                <thead><tr><th>Quand</th><th>Par</th><th>Quoi</th><th>Avant</th><th>Après</th></tr></thead>
+                                <tbody>
+                                    <tr t-foreach="a['corrections']" t-as="cr">
+                                        <td t-esc="cr['when']"/><td t-esc="cr['author']"/><td t-esc="cr['what']"/>
+                                        <td t-esc="cr['before']"/><td t-esc="cr['after']"/>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </t>
+
+                        <div class="row mt-5" style="page-break-inside: avoid;">
+                            <div class="col-6">
+                                <strong>Le responsable RH</strong><br/>Date et signature
+                                <div style="height: 70px;"/>
+                            </div>
+                            <div class="col-6">
+                                <strong>L'employé</strong><br/>« Lu et pris connaissance », date et signature
+                                <div style="height: 70px;"/>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+</odoo>

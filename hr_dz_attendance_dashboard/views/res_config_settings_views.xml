@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_assiduity_score" model="ir.ui.view">
+        <field name="name">res.config.settings.assiduity.score</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="hr_dz_work_entry.res_config_settings_view_hr_late_sanction"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@name='late_sanction_setting_container']" position="after">
+                <block title="Score d'assiduité (fiche employé)" name="assiduity_score_setting_container">
+                    <setting id="assiduity_score_penalties"
+                             string="Pénalités"
+                             help="Le score part de 100 et perd ces points à chaque événement. Au-delà d'un mois de jours ouvrés, les pénalités sont ramenées à un mois type pour rester comparables.">
+                        <div class="row mt-2">
+                            <label for="dz_score_late_penalty" string="Retard" class="col-lg-6 o_light_label"/>
+                            <field name="dz_score_late_penalty" class="col-lg-3"/>
+                        </div>
+                        <div class="row">
+                            <label for="dz_score_early_penalty" string="Départ anticipé" class="col-lg-6 o_light_label"/>
+                            <field name="dz_score_early_penalty" class="col-lg-3"/>
+                        </div>
+                        <div class="row">
+                            <label for="dz_score_absence_penalty" string="Absence injustifiée" class="col-lg-6 o_light_label"/>
+                            <field name="dz_score_absence_penalty" class="col-lg-3"/>
+                        </div>
+                        <div class="row">
+                            <label for="dz_score_missing_penalty" string="Pointage incomplet" class="col-lg-6 o_light_label"/>
+                            <field name="dz_score_missing_penalty" class="col-lg-3"/>
+                        </div>
+                        <div class="row">
+                            <label for="dz_score_break_penalty" string="Pause déjeuner dépassée" class="col-lg-6 o_light_label"/>
+                            <field name="dz_score_break_penalty" class="col-lg-3"/>
+                        </div>
+                    </setting>
+                    <setting id="assiduity_score_levels" string="Niveaux et alertes"
+                             help="Vert au-dessus du premier seuil, orange au-dessus du second, rouge en dessous.">
+                        <div class="row mt-2">
+                            <label for="dz_score_good_threshold" string="Bon à partir de" class="col-lg-6 o_light_label"/>
+                            <field name="dz_score_good_threshold" class="col-lg-3"/>
+                        </div>
+                        <div class="row">
+                            <label for="dz_score_warning_threshold" string="À surveiller à partir de" class="col-lg-6 o_light_label"/>
+                            <field name="dz_score_warning_threshold" class="col-lg-3"/>
+                        </div>
+                        <div class="row">
+                            <label for="dz_alert_late_count" string="Alerte : retards en 30 jours" class="col-lg-6 o_light_label"/>
+                            <field name="dz_alert_late_count" class="col-lg-3"/>
+                        </div>
+                        <div class="row">
+                            <label for="dz_alert_tolerance_count" string="Alerte : arrivées dans la tolérance" class="col-lg-6 o_light_label"/>
+                            <field name="dz_alert_tolerance_count" class="col-lg-3"/>
+                        </div>
+                        <div class="row">
+                            <label for="dz_alert_break_count" string="Alerte forte : pauses dépassées" class="col-lg-6 o_light_label"/>
+                            <field name="dz_alert_break_count" class="col-lg-3"/>
+                        </div>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>

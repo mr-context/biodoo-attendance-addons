@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="hr_employee_view_form_assiduity_button" model="ir.ui.view">
+        <field name="name">hr.employee.form.assiduity.button</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_open_assiduity_analysis" type="object"
+                        class="oe_stat_button" icon="fa-line-chart"
+                        groups="hr_attendance.group_hr_attendance_officer">
+                    <div class="o_field_widget o_stat_info">
+                        <span class="o_stat_value">
+                            <span invisible="dz_assiduity_level != 'good'" class="text-success">
+                                <field name="dz_assiduity_score"/>/100
+                            </span>
+                            <span invisible="dz_assiduity_level != 'warning'" class="text-warning">
+                                <field name="dz_assiduity_score"/>/100
+                            </span>
+                            <span invisible="dz_assiduity_level != 'danger'" class="text-danger">
+                                <field name="dz_assiduity_score"/>/100
+                            </span>
+                            <span invisible="dz_assiduity_level != 'none'">—</span>
+                            <field name="dz_assiduity_level" invisible="1"/>
+                        </span>
+                        <span class="o_stat_text">
+                            Assiduité · <field name="dz_assiduity_late_count"/> ret.
+                        </span>
+                    </div>
+                </button>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

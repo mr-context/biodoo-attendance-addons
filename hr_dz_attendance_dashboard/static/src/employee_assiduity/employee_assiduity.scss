@@ -1,0 +1,358 @@
+// =============================================================================
+// Analyse d'assiduité d'un employé — même palette que attendance_dashboard.scss.
+// =============================================================================
+
+$as-purple:  #714B67;
+$as-teal:    #017e84;
+$as-success: #28a745;
+$as-warning: #e99d00;
+$as-danger:  #d44c59;
+$as-info:    #3a7bd5;
+$as-muted:   #7c7f89;
+
+.o_biodoo_assiduity {
+    --as-border: var(--bs-border-color, #e7e9ed);
+    --as-card: var(--bs-body-bg, #fff);
+    --as-soft: rgba(127, 127, 127, 0.06);
+    --as-muted: #{$as-muted};
+
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 16px;
+    background: var(--bs-tertiary-bg, #f9fafb);
+    color: var(--bs-body-color, #111827);
+
+    .o_biodoo_as_empty {
+        padding: 48px;
+        text-align: center;
+        color: var(--as-muted);
+    }
+
+    .o_biodoo_as_muted { color: var(--as-muted); font-weight: 400; }
+    .o_biodoo_as_clickable { cursor: pointer; }
+
+    // ── En-tête ─────────────────────────────────────────────────────────
+    .o_biodoo_as_header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .o_biodoo_as_identity {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .o_biodoo_as_avatar {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .o_biodoo_as_name {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: inherit;
+        &:hover { color: $as-purple; }
+    }
+
+    .o_biodoo_as_meta {
+        font-size: 0.85rem;
+        color: var(--as-muted);
+    }
+
+    .o_biodoo_as_period {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+
+        .form-select, .form-control { width: auto; }
+    }
+
+    .o_biodoo_as_body {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        transition: opacity 0.15s;
+    }
+
+    .o_biodoo_as_loading { opacity: 0.5; pointer-events: none; }
+
+    // ── Score + indicateurs ─────────────────────────────────────────────
+    .o_biodoo_as_top {
+        display: grid;
+        grid-template-columns: minmax(220px, 280px) 1fr;
+        gap: 16px;
+
+        @media (max-width: 900px) { grid-template-columns: 1fr; }
+    }
+
+    .o_biodoo_as_score {
+        border-radius: 8px;
+        padding: 16px;
+        color: #fff;
+        background: $as-muted;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 4px;
+
+        &.o_biodoo_as_level_good { background: $as-success; }
+        &.o_biodoo_as_level_warning { background: $as-warning; }
+        &.o_biodoo_as_level_danger { background: $as-danger; }
+
+        .o_biodoo_as_delta,
+        .o_biodoo_as_delta.o_biodoo_as_delta_worse,
+        .o_biodoo_as_delta.o_biodoo_as_delta_better,
+        .o_biodoo_as_delta.o_biodoo_as_delta_neutral { color: rgba(255, 255, 255, 0.92); font-weight: 600; }
+    }
+
+    .o_biodoo_as_score_value {
+        font-size: 3rem;
+        font-weight: 700;
+        line-height: 1;
+        small { font-size: 1.1rem; font-weight: 400; opacity: 0.8; }
+    }
+
+    .o_biodoo_as_score_label { font-weight: 600; }
+    .o_biodoo_as_score_rule { font-size: 0.72rem; opacity: 0.85; margin-top: 6px; }
+
+    .o_biodoo_as_kpis {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+        gap: 10px;
+    }
+
+    .o_biodoo_as_kpi {
+        background: var(--as-card);
+        border: 1px solid var(--as-border);
+        border-left: 4px solid $as-teal;
+        border-radius: 6px;
+        padding: 10px 12px;
+
+        &.o_biodoo_as_kpi_warning { border-left-color: $as-warning; }
+        &.o_biodoo_as_kpi_danger { border-left-color: $as-danger; }
+        &.o_biodoo_as_clickable:hover { background: var(--as-soft); }
+    }
+
+    .o_biodoo_as_kpi_label { font-size: 0.78rem; color: var(--as-muted); }
+    .o_biodoo_as_kpi_value { font-size: 1.6rem; font-weight: 700; }
+    .o_biodoo_as_kpi_sub { font-size: 0.75rem; color: var(--as-muted); min-height: 1em; }
+
+    .o_biodoo_as_delta {
+        font-size: 0.72rem;
+        margin-top: 2px;
+        &.o_biodoo_as_delta_worse { color: $as-danger; }
+        &.o_biodoo_as_delta_better { color: $as-success; }
+        &.o_biodoo_as_delta_neutral { color: var(--as-muted); }
+    }
+
+    // ── Alertes ─────────────────────────────────────────────────────────
+    .o_biodoo_as_alerts {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 8px;
+    }
+
+    .o_biodoo_as_alert {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 10px 12px;
+        border-radius: 6px;
+        border: 1px solid var(--as-border);
+        background: var(--as-card);
+
+        > .fa { font-size: 1.1rem; margin-top: 2px; }
+        &.o_biodoo_as_alert_danger { border-left: 4px solid $as-danger; > .fa { color: $as-danger; } }
+        &.o_biodoo_as_alert_warning { border-left: 4px solid $as-warning; > .fa { color: $as-warning; } }
+        &.o_biodoo_as_alert_info { border-left: 4px solid $as-info; > .fa { color: $as-info; } }
+        &.o_biodoo_as_alert_ok { border-left: 4px solid $as-success; > .fa { color: $as-success; } }
+        &.o_biodoo_as_clickable:hover { background: var(--as-soft); }
+    }
+
+    .o_biodoo_as_alert_title { font-weight: 600; }
+    .o_biodoo_as_alert_detail { font-size: 0.8rem; color: var(--as-muted); }
+
+    // ── Cartes et graphiques ────────────────────────────────────────────
+    .o_biodoo_as_grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+
+        @media (max-width: 900px) { grid-template-columns: 1fr; }
+    }
+
+    .o_biodoo_as_card {
+        background: var(--as-card);
+        border: 1px solid var(--as-border);
+        border-radius: 8px;
+        padding: 12px 14px;
+        min-width: 0;
+    }
+
+    .o_biodoo_as_card_title {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+
+    .o_biodoo_as_chart { position: relative; height: 240px; }
+    .o_biodoo_as_none { color: var(--as-muted); padding: 24px 0; text-align: center; }
+
+    // Comparaison
+    .o_biodoo_as_compare { display: flex; flex-direction: column; gap: 10px; }
+
+    .o_biodoo_as_compare_row {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        gap: 8px;
+        align-items: center;
+        font-size: 0.85rem;
+    }
+
+    .o_biodoo_as_bar_line {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        height: 16px;
+        span { font-size: 0.75rem; white-space: nowrap; }
+    }
+
+    .o_biodoo_as_bar {
+        height: 10px;
+        border-radius: 3px;
+        min-width: 2px;
+    }
+
+    .o_biodoo_as_bar_me { background: $as-teal; }
+    .o_biodoo_as_bar_worse { background: $as-danger; }
+    .o_biodoo_as_bar_avg { background: rgba(127, 127, 127, 0.45); }
+
+    .o_biodoo_as_legend {
+        display: flex;
+        gap: 14px;
+        font-size: 0.75rem;
+        color: var(--as-muted);
+    }
+
+    .o_biodoo_as_swatch {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        margin-right: 4px;
+        vertical-align: middle;
+    }
+
+    // ── Calendrier ──────────────────────────────────────────────────────
+    .o_biodoo_cal_present { background: rgba($as-success, 0.75); color: #fff; }
+    .o_biodoo_cal_present.o_biodoo_cal_late { background: $as-warning; color: #fff; }
+    .o_biodoo_cal_missing_punch { background: repeating-linear-gradient(45deg, $as-warning, $as-warning 4px, rgba($as-warning, 0.5) 4px, rgba($as-warning, 0.5) 8px); color: #fff; }
+    .o_biodoo_cal_absent { background: $as-danger; color: #fff; }
+    .o_biodoo_cal_leave { background: rgba($as-info, 0.7); color: #fff; }
+    .o_biodoo_cal_holiday { background: rgba($as-purple, 0.7); color: #fff; }
+    .o_biodoo_cal_off { background: rgba(127, 127, 127, 0.12); color: var(--as-muted); }
+    .o_biodoo_cal_pending { background: transparent; border: 1px dashed var(--as-border); color: var(--as-muted); }
+
+    .o_biodoo_as_cal_legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 0.72rem;
+        font-weight: 400;
+        color: var(--as-muted);
+        margin-left: auto;
+
+        i {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            margin-right: 4px;
+            vertical-align: middle;
+        }
+    }
+
+    .o_biodoo_as_months {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 16px;
+
+        &.o_biodoo_as_months_compact {
+            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+            .o_biodoo_as_cal_cell { min-height: 20px; font-size: 0.65rem; }
+            .o_biodoo_as_cal_head { font-size: 0.6rem; }
+        }
+    }
+
+    .o_biodoo_as_month_label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: capitalize;
+        margin-bottom: 4px;
+    }
+
+    .o_biodoo_as_cal {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 3px;
+    }
+
+    .o_biodoo_as_cal_head {
+        font-size: 0.7rem;
+        color: var(--as-muted);
+        text-align: center;
+    }
+
+    .o_biodoo_as_cal_cell {
+        min-height: 38px;
+        border-radius: 4px;
+        padding: 2px 4px;
+        font-size: 0.75rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        cursor: pointer;
+
+        small { font-size: 0.62rem; align-self: flex-end; }
+        &:hover { outline: 2px solid $as-purple; }
+        &.o_biodoo_cal_today { outline: 2px solid $as-teal; }
+    }
+
+    .o_biodoo_as_cal_empty { background: none; cursor: default; &:hover { outline: none; } }
+
+    // ── Journal ─────────────────────────────────────────────────────────
+    .o_biodoo_as_toggle {
+        margin-left: auto;
+        font-size: 0.8rem;
+        font-weight: 400;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+    }
+
+    .o_biodoo_as_table {
+        font-size: 0.85rem;
+        margin-bottom: 0;
+        td, th { white-space: nowrap; }
+    }
+
+    .o_biodoo_as_pill {
+        display: inline-block;
+        padding: 1px 8px;
+        border-radius: 10px;
+        font-size: 0.72rem;
+    }
+}
